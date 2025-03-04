@@ -1233,7 +1233,7 @@ Session <--)--------------------------+              +----(--> Session
                |                   server_key = PC-Verify(ctx2, resp)
                |                                  |
              ----------------------------------------
-           output SK2                 output server_key
+         output client_key                 output server_key
 
 7.  CPaceQUAKE+ Configurations
 
@@ -1266,8 +1266,8 @@ Session <--)--------------------------+              +----(--> Session
    *  H: SHA256
 
    *  DST:
-      "fd4b96eeb2fdd20d84f3328f116cb9221204d9445ff33b793bd294f48c18" (a
-      randomly generated 32-byte string)
+      "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672"
+      (a randomly generated 32-byte string)
 
    The RECOMMENDED parameters are (see Appendix A):
 
