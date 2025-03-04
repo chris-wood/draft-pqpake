@@ -1052,7 +1052,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos &amp; Wood</td>
-<td class="center">Expires 4 September 2025</td>
+<td class="center">Expires 5 September 2025</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1065,12 +1065,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2025-03-03" class="published">3 March 2025</time>
+<time datetime="2025-03-04" class="published">4 March 2025</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2025-09-04">4 September 2025</time></dd>
+<dd class="expires"><time datetime="2025-09-05">5 September 2025</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1126,7 +1126,7 @@ CPaceQUAKE+ and corresponding test vectors.<a href="#section-abstract-1" class="
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 September 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 September 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1651,9 +1651,9 @@ QUAKE between the server and client. We explain the composition in more detail i
         <h3 id="name-cpace-specification">
 <a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-cpace-specification" class="section-name selfRef">CPace Specification</a>
         </h3>
-<p id="section-5.1-1">CPace is a classical elliptic curve-based PAKE <span>[<a href="#CPace" class="cite xref">CPace</a>]</span>. This section wraps the CPace spec in a consistent interface.
-We use an interactive version of CPace that takes two rounds, in which there is a clear initiator and responder.
-In other words, the responder only starts executing the protocol after it received the first message.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-1">CPace is a classical elliptic curve-based PAKE <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span>. This section wraps the CPace specification in a consistent interface.
+We use an interactive version of CPace that takes two rounds, in which there is a designated initiator and responder.
+In other words, the responder only starts executing the protocol after it received the first message from the initiator.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
 <p id="section-5.1-2">The flow of the protocol consists of three messages sent between initiator and responder, produced by the functions
 Init, Respond, and Finish, described below. Both parties take as input a password-related
 string PRS, an optional unique shared session identifier sid, and an optional client identifier
@@ -1673,7 +1673,7 @@ To remain consistent with the other PAKEs in this specification, the channel ide
 of optional client and server identifiers.<a href="#section-5.1.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.1.1-2">
 <pre>
-Init
+CPace.Init
 
 Input:
 - PRS, password-related string, a byte string
@@ -1706,7 +1706,7 @@ Since it already received the initiator's message, it can immediately finish its
 It outputs the shared secret and a message Yb intended to be sent to the initiator.<a href="#section-5.1.2-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.1.2-2">
 <pre>
-Respond
+CPace.Respond
 
 Input:
 - PRS, password-related string, a byte string
@@ -1732,6 +1732,7 @@ def Respond(PRS, Ya, sid, U, S):
 
   K = G.scalar_mult_vfy(yb, Ya)
   If K = G.I, raise CPaceError
+
   ISK = H.hash(lv_cat(G.DSI || b"_ISK", sid, K) || transcript(Ya, Yb))
 
   return ISK, Yb
@@ -1748,7 +1749,7 @@ def Respond(PRS, Ya, sid, U, S):
 from the responder.<a href="#section-5.1.3-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.1.3-2">
 <pre>
-Finish
+CPace.Finish
 
 Input:
 - PRS, password-related string, a byte string
@@ -1770,6 +1771,7 @@ Exceptions:
 def Finish(PRS, ya, Yb, sid):
   K = G.scalar_mult_vfy(yb, Ya)
   If K = G.I, raise CPaceError
+
   ISK = H.hash(lv_cat(G.DSI || b"_ISK", sid, K) || transcript(Ya, Yb))
 
   return ISK
@@ -1820,7 +1822,7 @@ U and S. It produces a context for the initiator to store, as well as a protocol
 the responder. Its implementation is as follows.<a href="#section-5.2.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.2.1-2">
 <pre>
-Init
+QUAKE.Init
 
 Input:
 - PRS, password-related string, a byte string
@@ -1834,6 +1836,7 @@ Output:
 Parameters:
 - BUKEM, a BUKEM instance
 - KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 def Init(PRS, sid, U, S):
   seed = random(BUKEM.Nseed)
@@ -1841,18 +1844,43 @@ def Init(PRS, sid, U, S):
 
   r = random(3 * Nsec)
 
-  prk_r_pad = KDF.Extract(PRS, "QUAKE" || fullsid)
-  r_pad = KDF.Expand(prk_r_pad, "r_pad", Npk)
+  fullsid = encode_sid(sid, U, S)
+  prk_r_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid)
+  r_pad = KDF.Expand(prk_r_pad, DST || "r_pad", Npk)
   T = XOR(pk, r_pad)
 
-  prk_s_pad = KDF.Extract(PRS, "QUAKE" || T || fullsid)
-  s_pad = KDF.Expand(prk_s_pad, "s_pad", 3 * Nsec)
+  prk_s_pad = KDF.Extract(PRS, DST || "QUAKE" || T || fullsid)
+  s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
-  init_msg = (s, T)
+  init_msg = s || T
 
   return Context(PRS, sk, s, T, fullsid), init_msg
 </pre><a href="#section-5.2.1-2" class="pilcrow">¶</a>
+</div>
+<p id="section-5.2.1-3">The encode_sid function is defined below.<a href="#section-5.2.1-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5.2.1-4">
+<pre>
+encode_sid
+
+Input:
+- sid, session identifier, a byte string
+- U and S, client and server identifiers
+
+Output:
+- fullsid, a byte string
+
+Parameters:
+- BUKEM, a BUKEM instance
+- KDF, a KDF instance
+
+def encode_sid(sid, U, U):
+  fullsid =
+    bytes_to_int(len(sid), 4) || sid ||
+    bytes_to_int(len(U), 4) || U ||
+    bytes_to_int(len(S), 4) || S
+  return fullsid
+</pre><a href="#section-5.2.1-4" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -1867,7 +1895,7 @@ It produces a 32-byte symmetric key and a protocol message intended to be sent t
 is as follows.<a href="#section-5.2.2-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.2.2-2">
 <pre>
-Respond
+QUAKE.Respond
 
 Input:
 - PRS, password-related string, a byte string
@@ -1882,22 +1910,25 @@ Output:
 Parameters:
 - BUKEM, a BUKEM instance
 - KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 def Respond(PRS, init_msg, sid, U, S):
-  (s, T) = init_msg
-  prk_s_pad = KDF.Extract(PRS, "QUAKE" || T || fullsid)
-  s_pad = KDF.Expand(prk_s_pad, "s_pad", 3 * Nsec)
+  (s, T) = init_msg[0..(3 * Nsec)], init_msg[(3 * Nsec)..]
+
+  fullsid = encode_sid(sid, U, S)
+  prk_s_pad = KDF.Extract(PRS, DST || "QUAKE" || T || fullsid)
+  s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_r_pad = KDF.Extract(PRS, "QUAKE" || fullsid)
-  r_pad = KDF.Expand(prk_r_pad, "r_pad", Npk)
+  prk_r_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid)
+  r_pad = KDF.Expand(prk_r_pad, DST || "r_pad", Npk)
   pk = XOR(T, r_pad)
 
   (ct, k) = BUKEM.Encaps(pk)
   resp_msg = ct
 
-  prk_sk = KDF.Extract(k || PRS, "QUAKE" || fullsid)
-  key = KDF.Expand(prk_sk, "sk", Nkey)
+  prk_sk = KDF.Extract(k || PRS, DST || "QUAKE" || fullsid)
+  key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
   return resp_msg, key
 </pre><a href="#section-5.2.2-2" class="pilcrow">¶</a>
@@ -1915,7 +1946,7 @@ that is output to the initiator. Its implementation
 is as follows.<a href="#section-5.2.3-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.2.3-2">
 <pre>
-Finish
+QUAKE.Finish
 
 Input:
 - context, opaque state for the initiator to store TODO
@@ -1927,6 +1958,7 @@ Output:
 Parameters:
 - BUKEM, a BUKEM instance
 - KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 def Finish(context, resp_msg):
   (PRS, sk, s, T, fullsid) = context
@@ -1934,8 +1966,8 @@ def Finish(context, resp_msg):
 
   k = BUKEM.Decaps(sk, ct)
 
-  prk_sk = KDF.Extract(k || PRS, "QUAKE" || fullsid)
-  key = KDF.Expand(prk_sk, "sk", Nkey)
+  prk_sk = KDF.Extract(k || PRS, DST || "QUAKE" || fullsid)
+  key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
   return key
 </pre><a href="#section-5.2.3-2" class="pilcrow">¶</a>
@@ -1961,11 +1993,12 @@ QUAKE is instantiated with a quantum-resistant BUKEM.<a href="#section-5.3-1" cl
 establishing a session key SK1 with the associated transcript tr1. It
 then initiates QUAKE using the password-related string <code>H(fullsid, PRS, tr1, SK1)</code>;
 a secret derived from the the original password-related string and the outputs from
-the CPace instance. Here, <code>fullsid</code> is the tuple (sid, U, S). This is outlined in the
-diagram below. In CPaceQUAKE, CPace is initiated by the first party, while QUAKE is
-initiated by the other party. This results in a protocol that requires three rounds.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
-<div id="section-5.3-3">
-          <div class="alignLeft art-svg artwork" id="section-5.3-3.1">
+the CPace instance. Here, <code>fullsid</code> is the output of encode_sid(sid, U, S).<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<p id="section-5.3-3">This is outlined in the diagram below. In CPaceQUAKE, CPace is initiated by the
+first party, while QUAKE is initiated by the other party. This results in a protocol
+that requires three messages.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+<div id="section-5.3-4">
+          <div class="alignLeft art-svg artwork" id="section-5.3-4.1">
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="208" width="776" viewBox="0 0 776 208" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 104,32 L 104,56" fill="none" stroke="black"></path>
               <path d="M 104,72 L 104,152" fill="none" stroke="black"></path>
@@ -2040,25 +2073,23 @@ initiated by the other party. This results in a protocol that requires three rou
                 <text x="32" y="180">key</text>
                 <text x="736" y="180">key</text>
               </g>
-            </svg><a href="#section-5.3-3.1" class="pilcrow">¶</a>
+            </svg><a href="#section-5.3-4.1" class="pilcrow">¶</a>
 </div>
 </div>
-<p id="section-5.3-4">Unlike QUAKE, CPaceQUAKE does not require a shared session identifier sid, although this
+<p id="section-5.3-5">Unlike QUAKE, CPaceQUAKE does not require a shared session identifier sid, although this
 is strongly recommended. If no sid is provided, CPace will run without an sid, and QUAKE
 will use a random string generated with random material provided by both parties. If an
-sid is provided, both CPace and QUAKE will use this sid.<a href="#section-5.3-4" class="pilcrow">¶</a></p>
-<p id="section-5.3-5">An overview of the protocol flow is shown below. The protocol has four functions. Init and
+sid is provided, both CPace and QUAKE will use this sid.<a href="#section-5.3-5" class="pilcrow">¶</a></p>
+<p id="section-5.3-6">An overview of the protocol flow is shown below. The protocol has four functions. Init and
 InitiatorFinish are intended to be called by the initiator, and Respond and ResponderFinish
-are intended to be called by the responder. The following subsections specify these functions.<a href="#section-5.3-5" class="pilcrow">¶</a></p>
-<div id="section-5.3-6">
-          <div class="alignLeft art-svg artwork" id="section-5.3-6.1">
+are intended to be called by the responder. The following subsections specify these functions.<a href="#section-5.3-6" class="pilcrow">¶</a></p>
+<div id="section-5.3-7">
+          <div class="alignLeft art-svg artwork" id="section-5.3-7.1">
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="512" viewBox="0 0 512 432" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 112,96 L 112,240" fill="none" stroke="black"></path>
               <path d="M 112,304 L 112,392" fill="none" stroke="black"></path>
-              <path d="M 272,272 L 272,288" fill="none" stroke="black"></path>
-              <path d="M 352,128 L 352,144" fill="none" stroke="black"></path>
-              <path d="M 352,224 L 352,272" fill="none" stroke="black"></path>
-              <path d="M 352,304 L 352,336" fill="none" stroke="black"></path>
+              <path d="M 352,56 L 352,144" fill="none" stroke="black"></path>
+              <path d="M 352,192 L 352,336" fill="none" stroke="black"></path>
               <path d="M 72,48 L 392,48" fill="none" stroke="black"></path>
               <path d="M 120,128 L 344,128" fill="none" stroke="black"></path>
               <path d="M 120,224 L 344,224" fill="none" stroke="black"></path>
@@ -2076,30 +2107,23 @@ are intended to be called by the responder. The following subsections specify th
                 <text x="116" y="68">(msg1,</text>
                 <text x="160" y="68">s1)</text>
                 <text x="184" y="68">=</text>
-                <text x="336" y="68">|</text>
                 <text x="116" y="84">CPaceQUAKE.Init(PRS,sid,U,S)</text>
-                <text x="304" y="84">|</text>
-                <text x="352" y="100">|</text>
                 <text x="208" y="116">msg1,</text>
                 <text x="244" y="116">s1</text>
-                <text x="336" y="116">|</text>
                 <text x="264" y="164">ctx2,</text>
                 <text x="316" y="164">(msg2,</text>
                 <text x="368" y="164">msg3,</text>
                 <text x="408" y="164">s2)</text>
                 <text x="432" y="164">=</text>
                 <text x="320" y="180">CPaceQUAKE.Respond(PRS,(msg1,s1),sid,U,S)</text>
-                <text x="352" y="196">|</text>
                 <text x="192" y="212">msg2,</text>
                 <text x="240" y="212">msg3,</text>
                 <text x="276" y="212">s2</text>
-                <text x="336" y="212">|</text>
                 <text x="80" y="260">client_key,</text>
                 <text x="148" y="260">msg4</text>
                 <text x="176" y="260">=</text>
                 <text x="128" y="276">CPaceQUAKE.InitiatorFinish(PRS,</text>
-                <text x="264" y="276">.</text>
-                <text x="280" y="276">.</text>
+                <text x="272" y="276">...</text>
                 <text x="136" y="292">(ctx1,s1),(msg2,msg3,s2),sid,U,S)</text>
                 <text x="228" y="308">msg4</text>
                 <text x="340" y="356">server_key</text>
@@ -2112,7 +2136,7 @@ are intended to be called by the responder. The following subsections specify th
                 <text x="316" y="420">output</text>
                 <text x="388" y="420">server_key</text>
               </g>
-            </svg><a href="#section-5.3-6.1" class="pilcrow">¶</a>
+            </svg><a href="#section-5.3-7.1" class="pilcrow">¶</a>
 </div>
 </div>
 <div id="client-initiation">
@@ -2125,7 +2149,7 @@ and optional client and server identifiers U and S. The output of this process i
 completing the protocol and a protocol message. The client sends this message to the server.<a href="#section-5.3.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.3.1-2">
 <pre>
-Init
+CPaceQUAKE.Init
 
 Input:
 - PRS, password-related string, a byte string
@@ -2164,7 +2188,7 @@ session using both the PRS and the key established by CPace.<a href="#section-5.
 not have the correct length.<a href="#section-5.3.2-3" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.3.2-4">
 <pre>
-Respond
+CPaceQUAKE.Respond
 
 Input:
 - PRS, password-related string, a byte string
@@ -2179,18 +2203,21 @@ Output:
 Parameters:
 - CPace, parameterized instance of CPace
 - QUAKE, parameterized instance of QUAKE
+- DST, domain separation tag, a byte string
 
 def Respond(PRS, (msg1, s1), sid, U, S):
   key1, msg2 = CPace.Respond(PRS, msg1, sid, U, S)
 
   if len(sid) == 0:
     s2 = random(32)
-    sid = KDF.Expand(s1 || s2, "CPaceQUAKE_sid", 32)
+    sid_prk = KDF.Extract(s1 || s2, nil)
+    sid = KDF.Expand(sid_prk, DST || "SID", 32)
 
-  PRS2 = H(fullsid, PRS || msg1 || msg2 || key1)
+  fullsid = encode_sid(sid, U, S)
+  PRS2 = H(DST || fullsid || PRS || msg1 || msg2 || key1)
   ctx2, msg3 = QUAKE.Init(PRS2, sid, U, S)
 
-  client_key = H(fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
+  client_key = H(DST || fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
 
   return Context(fullsid, PRS, msg1, msg2, msg3, key1, ctx2), (msg2, msg3, s2)
 </pre><a href="#section-5.3.2-4" class="pilcrow">¶</a>
@@ -2209,7 +2236,7 @@ CPace session and responding to the QUAKE session.<a href="#section-5.3.3-1" cla
 The client should abort when the message does not have the correct length.<a href="#section-5.3.3-2" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.3.3-3">
 <pre>
-InitiatorFinish
+CPaceQUAKE.InitiatorFinish
 
 Input:
 - PRS, password-related string, a byte string
@@ -2225,17 +2252,20 @@ Output:
 Parameters:
 - CPace, parameterized instance of CPace
 - QUAKE, parameterized instance of QUAKE
+- DST, domain separation tag, a byte string
 
 def InitiatorFinish(PRS, (ctx1, s1), (msg2, msg3, s2), sid, U, S):
   key1 = CPace.Finish(ctx1, msg2, sid, U, S)
 
   if sid does not exist:
-    sid = KDF.Expand(s1 || s2, "CPaceQUAKE_sid", 32)
+    sid_prk = KDF.Extract(s1 || s2, DST)
+    sid = KDF.Expand(sid_prk, DST || "SID", 32)
 
-  PRS2 = H(fullsid || PRS || msg1 || msg2 || key1)
+  fullsid = encode_sid(sid, U, S)
+  PRS2 = H(DST || fullsid || PRS || msg1 || msg2 || key1)
   key2, msg4 = QUAKE.Respond(PRS2, sid, msg3, Nkey, U, S)
 
-  client_key = H(fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
+  client_key = H(DST || fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
 
   return client_key, msg4
 </pre><a href="#section-5.3.3-3" class="pilcrow">¶</a>
@@ -2251,7 +2281,7 @@ def InitiatorFinish(PRS, (ctx1, s1), (msg2, msg3, s2), sid, U, S):
 It should abort when the message does not have the correct length.<a href="#section-5.3.4-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.3.4-2">
 <pre>
-ResponderFinish
+CPaceQUAKE.ResponderFinish
 
 Input:
 - ctx, context from the server's Response
@@ -2262,13 +2292,14 @@ Output:
 
 Parameters:
 - QUAKE, parameterized instance of QUAKE
+- DST, domain separation tag, a byte string
 
 def ResponderFinish(ctx, msg4):
   (fullsid, PRS, msg1, msg2, msg3, key1, ctx2) = ctx
 
   key2 = QUAKE.Finish(ctx2, msg4)
 
-  client_key = H(fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
+  client_key = H(DST || fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
 
   return server_key
 </pre><a href="#section-5.3.4-2" class="pilcrow">¶</a>
@@ -2284,7 +2315,7 @@ def ResponderFinish(ctx, msg4):
       <h2 id="name-cpacequake-protocol-2">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-cpacequake-protocol-2" class="section-name selfRef">CPaceQUAKE+ Protocol</a>
       </h2>
-<p id="section-6-1">CPaceQUAKE+ is the 5-round aPAKE resulting from applying a KEM-based
+<p id="section-6-1">CPaceQUAKE+ is the 5 message aPAKE resulting from applying a KEM-based
 PAKE-to-aPAKE transformation to CPaceQUAKE. At a high level, this
 involves running CPaceQUAKE on a verifier of the client's password.
 To ensure that the client does indeed know the password pertaining
@@ -2298,7 +2329,8 @@ of the verifier and this public key as 'the verifiers'.<a href="#section-6-1" cl
         <h3 id="name-registering-clients">
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-registering-clients" class="section-name selfRef">Registering Clients</a>
         </h3>
-<p id="section-6.1-1">This subsection specifies functions for generating the verifiers and a protocol for registering clients.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-1">This subsection specifies functions for generating the verifiers and
+a protocol for registering clients.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <div id="generating-verifiers">
 <section id="section-6.1.1">
           <h4 id="name-generating-verifiers">
@@ -2325,9 +2357,10 @@ Output:
 
 Parameters:
 - KSF, a parameterized KSF instance
+- DST, domain separation tag, a byte string
 
 def GenVerifierMaterial(PRS, salt, U, S):
-  verifier_seed = KSF.Stretch(PRS || U || S, salt, Nverifier + Nseed)
+  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + Nseed)
   verifier = verifier_seed[0:Nverifier]
   seed = verifier_seed[Nverifier:Nverifier + Nseed]
   return verifier, seed
@@ -2503,27 +2536,24 @@ Output:
 Parameters:
 - KEM, a KEM instance
 - KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 def PC-Challenge(SK, transcript, pk, sid, U, S):
   (c, k) = KEM.Encaps(pk)
-  r = KDF.Expand(SK, "OTP", Nct)
+  r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  confirm_input =
-    bytes_to_int(len(sid), 4) || sid ||
-    bytes_to_int(len(U), 4) || U ||
-    bytes_to_int(len(S), 4) || S ||
-    SK || enc_c || transcript
+  confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
 
-  prk_k_h1 = KDF.Extract(confirm_input, "h1", nil)
-  prk_k_h2 = KDF.Extract(confirm_input || k, "h2", nil)
+  prk_k_h1 = KDF.Extract(confirm_input, DST || "h1", nil)
+  prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2", nil)
 
   // Derive h1 from the full transcript excluding k
-  client_confirm = KDF.Expand(prk_k_h1, "client_confirm", Nkc)
+  client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
 
   // Derive h2 || SK from the full transcript including k
-  server_confirm = KDF.Expand(prk_k_h2, "server_confirm", Nkc)
-  server_key = KDF.Expand(prk_k_h2, "key", Nkey)
+  server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
+  server_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
 
   challenge = (enc_c, client_confirm)
 
@@ -2568,30 +2598,27 @@ Exceptions:
 Parameters:
 - KEM, a KEM instance
 - KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 def PC-Response(SK, seed, transcript, challenge, sid, U, S):
   (enc_c, client_confirm_target) = challenge
-  r = KDF.Expand(SK, "OTP", Nct)
+  r = KDF.Expand(SK, DST || "OTP", Nct)
   c = XOR(enc_c, r)
 
   (pk, sk) = KEM.DeriveKeyPair(seed)
   k = KEM.Decaps(sk, c)
 
-  confirm_input =
-    bytes_to_int(len(sid), 4) || sid ||
-    bytes_to_int(len(U), 4) || U ||
-    bytes_to_int(len(S), 4) || S ||
-    SK || enc_c || transcript
+  confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
 
-  prk_k_h1 = KDF.Extract(confirm_input, "h1", nil)
-  prk_k_h2 = KDF.Extract(confirm_input || k, "h2", nil)
+  prk_k_h1 = KDF.Extract(confirm_input, DST || "h1", nil)
+  prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2", nil)
 
   // Derive h1 from the full transcript excluding k
-  client_confirm = KDF.Expand(prk_k_h1, "client_confirm", Nkc)
+  client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
 
   // Derive h2 || SK from the full transcript including k
-  server_confirm = KDF.Expand(prk_k_h2, "server_confirm", Nkc)
-  client_key = KDF.Expand(prk_k_h2, "key", Nkey)
+  server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
+  client_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
 
   if client_confirm != client_confirm_target:
     raise AuthenticationError
@@ -2881,6 +2908,9 @@ PAKE-KDF are the KDFs for the password confirmation stage and the CPaceQUAKE pro
 </li>
         <li class="normal" id="section-7-3.8">
           <p id="section-7-3.8.1">H: SHA256<a href="#section-7-3.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-3.9">
+          <p id="section-7-3.9.1">DST: "fd4b96eeb2fdd20d84f3328f116cb9221204d9445ff33b793bd294f48c18" (a randomly generated 32-byte string)<a href="#section-7-3.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-4">The <span class="bcp14">RECOMMENDED</span> parameters are (see <a href="#params" class="auto internal xref">Appendix A</a>):<a href="#section-7-4" class="pilcrow">¶</a></p>
