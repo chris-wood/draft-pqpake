@@ -1052,7 +1052,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos &amp; Wood</td>
-<td class="center">Expires 5 September 2025</td>
+<td class="center">Expires 10 September 2025</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1065,12 +1065,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2025-03-04" class="published">4 March 2025</time>
+<time datetime="2025-03-09" class="published">9 March 2025</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2025-09-05">5 September 2025</time></dd>
+<dd class="expires"><time datetime="2025-09-10">10 September 2025</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1126,7 +1126,7 @@ CPaceQUAKE+ and corresponding test vectors.<a href="#section-abstract-1" class="
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 5 September 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 10 September 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1510,8 +1510,8 @@ that are suitable for implementation.<a href="#section-4-3" class="pilcrow">¶</
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-key-encapsulation-mechanism" class="section-name selfRef">Key Encapsulation Mechanism</a>
         </h3>
 <p id="section-4.1-1">A Key Encapsulation Mechanism (KEM) is an algorithm that is used for exchanging
-a secret from one party to another. We require a KEM with key derivation from a seed.
-It consists of the following syntax.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+a secret from one party to another. We require an IND-CCA-secure KEM with key
+derivation from a seed. It consists of the following syntax.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4.1-2.1">
             <p id="section-4.1-2.1.1">DeriveKeyPair(seed): Deterministic algorithm to derive a key pair
@@ -1555,10 +1555,22 @@ its encapsulated representation <code>ct</code>. This function can raise a
 <a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-binary-uniform-kem" class="section-name selfRef">Binary Uniform KEM</a>
         </h3>
 <p id="section-4.2-1">A binary uniform KEM supports the same functions as defined above for a KEM, except that it
-also achieves stronger notions of security. Specifically, public keys and ciphertexts are
-indistinguishable from random strings of bytes (of the same length). This is crucial for the security of QUAKE.
-In other words, one <span class="bcp14">MUST NOT</span> use a KEM that is not uniform in place of a uniform KEM.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
-<p id="section-4.2-2">This specification uses a variant of ML-KEM768 <span>[<a href="#FIPS203-Draft" class="cite xref">FIPS203-Draft</a>]</span>, denoted ML-BUKEM768. This is instantiated with Kemeleon <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+also achieves stronger notions of security. Specifically, a binary uniform KEM requires:<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.2-2">
+<li id="section-4.2-2.1">
+            <p id="section-4.2-2.1.1">Public keys and ciphertexts are indistinguishable from random strings of bytes
+(of the same length); and<a href="#section-4.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.2-2.2">
+            <p id="section-4.2-2.2.1">Ciphertexts are anonymous (a property that follows from IND-CCA security).<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.2-3">These additional properties are crucial for the security of QUAKE. In other words, one <span class="bcp14">MUST NOT</span> use a KEM that is not uniform in place of a uniform KEM.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+<p id="section-4.2-4">This specification uses a variant of ML-KEM768 <span>[<a href="#FIPS203-Draft" class="cite xref">FIPS203-Draft</a>]</span>, denoted ML-BUKEM768.
+This is instantiated with Kemeleon <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>. Note that, while
+Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
+require uniform enoding for public keys. Future specifications can replace use of
+Kemeleon with a binary uniform KEM that is more efficient if one becomes available.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deps-symmetric">
@@ -1748,6 +1760,7 @@ def Respond(PRS, Ya, sid, U, S):
   return ISK, Yb
 </pre><a href="#section-5.1.2-2" class="pilcrow">¶</a>
 </div>
+<p id="section-5.1.2-3">The functions <code>lv_cat</code> and <code>transcript</code> are defined in <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span>.<a href="#section-5.1.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="finish">
@@ -1855,11 +1868,14 @@ def Init(PRS, sid, U, S):
   r = random(3 * Nsec)
 
   fullsid = encode_sid(sid, U, S)
-  prk_r_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid)
-  r_pad = KDF.Expand(prk_r_pad, DST || "r_pad", Npk)
-  T = XOR(pk, r_pad)
 
-  prk_s_pad = KDF.Extract(PRS, DST || "QUAKE" || T || fullsid)
+  // T = XOR(pk, H(fullsid, PRS, r))
+  prk_T_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
+  T = XOR(pk, T_pad)
+
+  // s = XOR(r, H(fullsid, PRS, T))
+  prk_s_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
@@ -1930,15 +1946,18 @@ def Respond(PRS, init_msg, sid, U, S):
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_r_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid)
-  r_pad = KDF.Expand(prk_r_pad, DST || "r_pad", Npk)
-  pk = XOR(T, r_pad)
+  prk_T_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
+  pk = XOR(T, T_pad)
 
   (ct, k) = BUKEM.Encaps(pk)
-  resp_msg = ct
 
-  prk_sk = KDF.Extract(k || PRS, DST || "QUAKE" || fullsid)
+  prk_sk = KDF.Extract(PRS, DST || "QUAKE" || fullsid || k)
   key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+
+  h = KDF.Expand(prk_sk, "confirm", Nkc)
+
+  resp_msg = ct || h
 
   return resp_msg, key
 </pre><a href="#section-5.2.2-2" class="pilcrow">¶</a>
@@ -1970,16 +1989,25 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
+Exceptions:
+- AuthenticationError, raised when the key confirmation fails
+
 def Finish(context, resp_msg):
   (PRS, sk, s, T, fullsid) = context
-  ct = resp_msg
+  ct, h = resp_msg[0..Npk], resp_msg[Npk..]
 
-  k = BUKEM.Decaps(sk, ct)
+  try:
+    k = BUKEM.Decaps(sk, ct)
+    prk_sk = KDF.Extract(PRS, DST || "QUAKE" || fullsid || k)
+    key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
-  prk_sk = KDF.Extract(k || PRS, DST || "QUAKE" || fullsid)
-  key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+    h_expected = KDF.Expand(prk_sk, "confirm", Nkc)
+    if h != h_expected:
+      return random(Nkey)
 
-  return key
+    return key
+  catch DecapsError:
+    return random(Nkey)
 </pre><a href="#section-5.2.3-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2003,56 +2031,62 @@ QUAKE is instantiated with a quantum-resistant BUKEM.<a href="#section-5.3-1" cl
 establishing a session key SK1 with the associated transcript tr1. It
 then initiates QUAKE using the password-related string <code>H(fullsid, PRS, tr1, SK1)</code>;
 a secret derived from the the original password-related string and the outputs from
-the CPace instance. Here, <code>fullsid</code> is the output of encode_sid(sid, U, S).<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+the CPace instance. Here, <code>fullsid</code> is the output of encode_sid(sid, U, S).
+The final session key is then a hash of fullsid, the original password-related string,
+both CPace and QUAKE transcripts (tr1 and tr2, respectively), and both session keys
+output from CPace and QUAKE (SK1 and SK2, respectively), i.e.,
+H(fullsid, tr1, tr2, SK1, SK2).<a href="#section-5.3-2" class="pilcrow">¶</a></p>
 <p id="section-5.3-3">This is outlined in the diagram below. In CPaceQUAKE, CPace is initiated by the
 first party, while QUAKE is initiated by the other party. This results in a protocol
 that requires three messages.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
 <div id="section-5.3-4">
           <div class="alignLeft art-svg artwork" id="section-5.3-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="208" width="776" viewBox="0 0 776 208" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="208" width="848" viewBox="0 0 848 208" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 104,32 L 104,56" fill="none" stroke="black"></path>
               <path d="M 104,72 L 104,152" fill="none" stroke="black"></path>
               <path d="M 104,168 L 104,192" fill="none" stroke="black"></path>
               <path d="M 216,64 L 216,128" fill="none" stroke="black"></path>
               <path d="M 296,80 L 296,128" fill="none" stroke="black"></path>
-              <path d="M 344,48 L 344,96" fill="none" stroke="black"></path>
-              <path d="M 344,128 L 344,176" fill="none" stroke="black"></path>
-              <path d="M 432,48 L 432,96" fill="none" stroke="black"></path>
-              <path d="M 432,128 L 432,176" fill="none" stroke="black"></path>
-              <path d="M 448,80 L 448,112" fill="none" stroke="black"></path>
-              <path d="M 560,64 L 560,104" fill="none" stroke="black"></path>
-              <path d="M 560,120 L 560,128" fill="none" stroke="black"></path>
-              <path d="M 640,112 L 640,128" fill="none" stroke="black"></path>
-              <path d="M 672,32 L 672,56" fill="none" stroke="black"></path>
-              <path d="M 672,72 L 672,152" fill="none" stroke="black"></path>
-              <path d="M 672,168 L 672,192" fill="none" stroke="black"></path>
-              <path d="M 104,32 L 672,32" fill="none" stroke="black"></path>
-              <path d="M 344,48 L 432,48" fill="none" stroke="black"></path>
+              <path d="M 376,48 L 376,96" fill="none" stroke="black"></path>
+              <path d="M 376,128 L 376,176" fill="none" stroke="black"></path>
+              <path d="M 464,48 L 464,96" fill="none" stroke="black"></path>
+              <path d="M 464,128 L 464,176" fill="none" stroke="black"></path>
+              <path d="M 480,80 L 480,112" fill="none" stroke="black"></path>
+              <path d="M 592,64 L 592,104" fill="none" stroke="black"></path>
+              <path d="M 592,120 L 592,128" fill="none" stroke="black"></path>
+              <path d="M 672,112 L 672,128" fill="none" stroke="black"></path>
+              <path d="M 744,32 L 744,56" fill="none" stroke="black"></path>
+              <path d="M 744,72 L 744,152" fill="none" stroke="black"></path>
+              <path d="M 744,168 L 744,192" fill="none" stroke="black"></path>
+              <path d="M 104,32 L 744,32" fill="none" stroke="black"></path>
+              <path d="M 376,48 L 464,48" fill="none" stroke="black"></path>
               <path d="M 80,64 L 240,64" fill="none" stroke="black"></path>
-              <path d="M 272,64 L 336,64" fill="none" stroke="black"></path>
-              <path d="M 440,64 L 456,64" fill="none" stroke="black"></path>
-              <path d="M 488,64 L 696,64" fill="none" stroke="black"></path>
-              <path d="M 296,80 L 344,80" fill="none" stroke="black"></path>
-              <path d="M 432,80 L 448,80" fill="none" stroke="black"></path>
-              <path d="M 344,96 L 432,96" fill="none" stroke="black"></path>
-              <path d="M 448,112 L 640,112" fill="none" stroke="black"></path>
-              <path d="M 344,128 L 432,128" fill="none" stroke="black"></path>
-              <path d="M 312,144 L 336,144" fill="none" stroke="black"></path>
-              <path d="M 440,144 L 456,144" fill="none" stroke="black"></path>
-              <path d="M 72,160 L 344,160" fill="none" stroke="black"></path>
-              <path d="M 432,160 L 696,160" fill="none" stroke="black"></path>
-              <path d="M 344,176 L 432,176" fill="none" stroke="black"></path>
-              <path d="M 104,192 L 672,192" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="704,160 692,154.4 692,165.6" fill="black" transform="rotate(0,696,160)"></polygon>
-              <path class="jump" d="M 672,168 C 666,168 666,152 672,152" fill="none" stroke="black"></path>
-              <path class="jump" d="M 672,72 C 666,72 666,56 672,56" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="648,128 636,122.4 636,133.6" fill="black" transform="rotate(90,640,128)"></polygon>
-              <polygon class="arrowhead" points="568,128 556,122.4 556,133.6" fill="black" transform="rotate(90,560,128)"></polygon>
-              <path class="jump" d="M 560,120 C 554,120 554,104 560,104" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="448,144 436,138.4 436,149.6" fill="black" transform="rotate(180,440,144)"></polygon>
-              <polygon class="arrowhead" points="448,64 436,58.4 436,69.6" fill="black" transform="rotate(180,440,64)"></polygon>
-              <polygon class="arrowhead" points="344,144 332,138.4 332,149.6" fill="black" transform="rotate(0,336,144)"></polygon>
-              <polygon class="arrowhead" points="344,64 332,58.4 332,69.6" fill="black" transform="rotate(0,336,64)"></polygon>
+              <path d="M 272,64 L 368,64" fill="none" stroke="black"></path>
+              <path d="M 472,64 L 488,64" fill="none" stroke="black"></path>
+              <path d="M 520,64 L 768,64" fill="none" stroke="black"></path>
+              <path d="M 296,80 L 376,80" fill="none" stroke="black"></path>
+              <path d="M 464,80 L 480,80" fill="none" stroke="black"></path>
+              <path d="M 376,96 L 464,96" fill="none" stroke="black"></path>
+              <path d="M 480,112 L 672,112" fill="none" stroke="black"></path>
+              <path d="M 376,128 L 464,128" fill="none" stroke="black"></path>
+              <path d="M 312,144 L 368,144" fill="none" stroke="black"></path>
+              <path d="M 472,144 L 488,144" fill="none" stroke="black"></path>
+              <path d="M 72,160 L 112,160" fill="none" stroke="black"></path>
+              <path d="M 352,160 L 376,160" fill="none" stroke="black"></path>
+              <path d="M 464,160 L 488,160" fill="none" stroke="black"></path>
+              <path d="M 728,160 L 768,160" fill="none" stroke="black"></path>
+              <path d="M 376,176 L 464,176" fill="none" stroke="black"></path>
+              <path d="M 104,192 L 744,192" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="776,160 764,154.4 764,165.6" fill="black" transform="rotate(0,768,160)"></polygon>
+              <path class="jump" d="M 744,168 C 738,168 738,152 744,152" fill="none" stroke="black"></path>
+              <path class="jump" d="M 744,72 C 738,72 738,56 744,56" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="680,128 668,122.4 668,133.6" fill="black" transform="rotate(90,672,128)"></polygon>
+              <polygon class="arrowhead" points="600,128 588,122.4 588,133.6" fill="black" transform="rotate(90,592,128)"></polygon>
+              <path class="jump" d="M 592,120 C 586,120 586,104 592,104" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="480,144 468,138.4 468,149.6" fill="black" transform="rotate(180,472,144)"></polygon>
+              <polygon class="arrowhead" points="480,64 468,58.4 468,69.6" fill="black" transform="rotate(180,472,64)"></polygon>
+              <polygon class="arrowhead" points="376,144 364,138.4 364,149.6" fill="black" transform="rotate(0,368,144)"></polygon>
+              <polygon class="arrowhead" points="376,64 364,58.4 364,69.6" fill="black" transform="rotate(0,368,64)"></polygon>
               <polygon class="arrowhead" points="304,128 292,122.4 292,133.6" fill="black" transform="rotate(90,296,128)"></polygon>
               <polygon class="arrowhead" points="224,128 212,122.4 212,133.6" fill="black" transform="rotate(90,216,128)"></polygon>
               <path class="jump" d="M 104,168 C 110,168 110,152 104,152" fill="none" stroke="black"></path>
@@ -2061,27 +2095,37 @@ that requires three messages.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
               <g class="text">
                 <text x="36" y="52">Client's</text>
                 <text x="156" y="52">CPaceQUAKE</text>
-                <text x="740" y="52">Server's</text>
+                <text x="812" y="52">Server's</text>
                 <text x="36" y="68">password</text>
                 <text x="256" y="68">PRS</text>
-                <text x="384" y="68">CPace</text>
-                <text x="472" y="68">PRS</text>
-                <text x="740" y="68">password</text>
-                <text x="388" y="84">protocol</text>
+                <text x="416" y="68">CPace</text>
+                <text x="504" y="68">PRS</text>
+                <text x="812" y="68">password</text>
+                <text x="420" y="84">protocol</text>
                 <text x="156" y="148">H(fullsid,</text>
                 <text x="220" y="148">PRS,</text>
                 <text x="260" y="148">tr1,</text>
                 <text x="296" y="148">SK1</text>
-                <text x="384" y="148">QUAKE</text>
-                <text x="500" y="148">H(fullsid,</text>
-                <text x="564" y="148">PRS,</text>
-                <text x="604" y="148">tr1,</text>
-                <text x="644" y="148">SK1)</text>
+                <text x="416" y="148">QUAKE</text>
+                <text x="532" y="148">H(fullsid,</text>
+                <text x="596" y="148">PRS,</text>
+                <text x="636" y="148">tr1,</text>
+                <text x="676" y="148">SK1)</text>
                 <text x="32" y="164">Session</text>
-                <text x="388" y="164">protocol</text>
-                <text x="736" y="164">Session</text>
+                <text x="156" y="164">H(fullsid,</text>
+                <text x="220" y="164">tr1,</text>
+                <text x="260" y="164">tr2,</text>
+                <text x="300" y="164">SK1,</text>
+                <text x="336" y="164">SK2</text>
+                <text x="420" y="164">protocol</text>
+                <text x="532" y="164">H(fullsid,</text>
+                <text x="596" y="164">tr1,</text>
+                <text x="636" y="164">tr2,</text>
+                <text x="676" y="164">SK1,</text>
+                <text x="712" y="164">SK2</text>
+                <text x="808" y="164">Session</text>
                 <text x="32" y="180">key</text>
-                <text x="736" y="180">key</text>
+                <text x="808" y="180">key</text>
               </g>
             </svg><a href="#section-5.3-4.1" class="pilcrow">¶</a>
 </div>
@@ -2216,21 +2260,25 @@ Parameters:
 
 def Respond(PRS, init_msg, sid, U, S):
   s1, msg1 = init_msg[0..32], lv_decode(init_msg[32..])
+
   key1, msg2 = CPace.Respond(PRS, msg1, sid, U, S)
+  key1A = KDF.Expand(key1, DST || "prs", Nkey)
+  key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
   s2 = random(32)
-  extended_sid_prk = KDF.Extract(s1 || s2, nil)
+  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceQUAKE")
   extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
-  PRS2 = H(DST || fullsid || PRS || msg1 || msg2 || key1)
-  ctx2, msg3 = QUAKE.Init(PRS2, extended_sid, U, S)
 
-  client_key = H(DST || fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
+  PRS2_prk = KDF.Extract(PRS, DST || "PRS2" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(PRS2_prk, Nkey)
+
+  ctx2, msg3 = QUAKE.Init(PRS2, extended_sid, U, S)
 
   resp_msg = s2 || lv_encode(msg2) || lv_encode(msg3)
 
-  return Context(fullsid, PRS, msg1, msg2, msg3, key1, ctx2), resp_msg
+  return Context(fullsid, PRS, msg1, msg2, msg3, key1B, ctx2), resp_msg
 </pre><a href="#section-5.3.2-4" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2271,15 +2319,20 @@ def InitiatorFinish(PRS, (ctx1, s1), (msg2, msg3, s2), sid, U, S):
   msg3 = lv_decode(resp_msg[32+len(msg2)..])
 
   key1 = CPace.Finish(ctx1, msg2, sid, U, S)
+  key1A = KDF.Expand(key1, DST || "prs", Nkey)
+  key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
-  extended_sid_prk = KDF.Extract(s1 || s2, DST)
+  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceQUAKE")
   extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
-  PRS2 = H(DST || fullsid || PRS || msg1 || msg2 || key1)
+  PRS2_prk = KDF.Extract(PRS, DST || "PRS2" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(PRS2_prk, Nkey)
+
   key2, msg4 = QUAKE.Respond(PRS2, extended_sid, msg3, Nkey, U, S)
 
-  client_key = H(DST || fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
+  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
+  client_key = KDF.Expand(sessionkey_prk, DST || "sessionkey", Nkey)
 
   return client_key, msg4
 </pre><a href="#section-5.3.3-3" class="pilcrow">¶</a>
@@ -2309,11 +2362,12 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def ResponderFinish(ctx, msg4):
-  (fullsid, PRS, msg1, msg2, msg3, key1, ctx2) = ctx
+  (fullsid, PRS, msg1, msg2, msg3, key1B, ctx2) = ctx
 
   key2 = QUAKE.Finish(ctx2, msg4)
 
-  client_key = H(DST || fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
+  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
+  server_key = KDF.Expand(sessionkey_prk, DST || "sessionkey", Nkey)
 
   return server_key
 </pre><a href="#section-5.3.4-2" class="pilcrow">¶</a>

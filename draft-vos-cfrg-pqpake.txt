@@ -5,8 +5,8 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                                          
 Intended status: Informational                                C. A. Wood
-Expires: 5 September 2025                                    Apple, Inc.
-                                                            4 March 2025
+Expires: 10 September 2025                                   Apple, Inc.
+                                                            9 March 2025
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 September 2025.
+   This Internet-Draft will expire on 10 September 2025.
 
 Copyright Notice
 
@@ -272,8 +272,9 @@ Table of Contents
 4.1.  Key Encapsulation Mechanism
 
    A Key Encapsulation Mechanism (KEM) is an algorithm that is used for
-   exchanging a secret from one party to another.  We require a KEM with
-   key derivation from a seed.  It consists of the following syntax.
+   exchanging a secret from one party to another.  We require an IND-
+   CCA-secure KEM with key derivation from a seed.  It consists of the
+   following syntax.
 
    *  DeriveKeyPair(seed): Deterministic algorithm to derive a key pair
       (sk, pk) from the byte string seed, where seed SHOULD have Nseed
@@ -308,13 +309,24 @@ Table of Contents
 
    A binary uniform KEM supports the same functions as defined above for
    a KEM, except that it also achieves stronger notions of security.
-   Specifically, public keys and ciphertexts are indistinguishable from
-   random strings of bytes (of the same length).  This is crucial for
-   the security of QUAKE.  In other words, one MUST NOT use a KEM that
-   is not uniform in place of a uniform KEM.
+   Specifically, a binary uniform KEM requires:
+
+   1.  Public keys and ciphertexts are indistinguishable from random
+       strings of bytes (of the same length); and
+
+   2.  Ciphertexts are anonymous (a property that follows from IND-CCA
+       security).
+
+   These additional properties are crucial for the security of QUAKE.
+   In other words, one MUST NOT use a KEM that is not uniform in place
+   of a uniform KEM.
 
    This specification uses a variant of ML-KEM768 [FIPS203-Draft],
    denoted ML-BUKEM768.  This is instantiated with Kemeleon [KEMELEON].
+   Note that, while Kemeleon provides uniform encoding for KEM
+   ciphertexts and public keys, we only require uniform enoding for
+   public keys.  Future specifications can replace use of Kemeleon with
+   a binary uniform KEM that is more efficient if one becomes available.
 
 4.3.  Key Derivation Function
 
@@ -457,6 +469,8 @@ def Init(PRS, sid, U, S):
 
     return ISK, Yb
 
+   The functions lv_cat and transcript are defined in [CPACE].
+
 5.1.3.  Finish
 
    The initiator finishes the protocol by combining the discrete
@@ -552,11 +566,14 @@ def Init(PRS, sid, U, S):
   r = random(3 * Nsec)
 
   fullsid = encode_sid(sid, U, S)
-  prk_r_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid)
-  r_pad = KDF.Expand(prk_r_pad, DST || "r_pad", Npk)
-  T = XOR(pk, r_pad)
 
-  prk_s_pad = KDF.Extract(PRS, DST || "QUAKE" || T || fullsid)
+  // T = XOR(pk, H(fullsid, PRS, r))
+  prk_T_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
+  T = XOR(pk, T_pad)
+
+  // s = XOR(r, H(fullsid, PRS, T))
+  prk_s_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
@@ -619,15 +636,18 @@ def Init(PRS, sid, U, S):
      s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
      r = XOR(s, s_pad)
 
-     prk_r_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid)
-     r_pad = KDF.Expand(prk_r_pad, DST || "r_pad", Npk)
-     pk = XOR(T, r_pad)
+     prk_T_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid)
+     T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
+     pk = XOR(T, T_pad)
 
      (ct, k) = BUKEM.Encaps(pk)
-     resp_msg = ct
 
-     prk_sk = KDF.Extract(k || PRS, DST || "QUAKE" || fullsid)
+     prk_sk = KDF.Extract(PRS, DST || "QUAKE" || fullsid || k)
      key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+
+     h = KDF.Expand(prk_sk, "confirm", Nkc)
+
+     resp_msg = ct || h
 
      return resp_msg, key
 
@@ -652,16 +672,25 @@ def Init(PRS, sid, U, S):
    - KDF, a KDF instance
    - DST, domain separation tag, a byte string
 
+   Exceptions:
+   - AuthenticationError, raised when the key confirmation fails
+
    def Finish(context, resp_msg):
      (PRS, sk, s, T, fullsid) = context
-     ct = resp_msg
+     ct, h = resp_msg[0..Npk], resp_msg[Npk..]
 
-     k = BUKEM.Decaps(sk, ct)
+     try:
+       k = BUKEM.Decaps(sk, ct)
+       prk_sk = KDF.Extract(PRS, DST || "QUAKE" || fullsid || k)
+       key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
-     prk_sk = KDF.Extract(k || PRS, DST || "QUAKE" || fullsid)
-     key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+       h_expected = KDF.Expand(prk_sk, "confirm", Nkc)
+       if h != h_expected:
+         return random(Nkey)
 
-     return key
+       return key
+     catch DecapsError:
+       return random(Nkey)
 
 5.3.  Composition of CPace & QUAKE
 
@@ -680,23 +709,27 @@ def Init(PRS, sid, U, S):
    transcript tr1.  It then initiates QUAKE using the password-related
    string H(fullsid, PRS, tr1, SK1); a secret derived from the the
    original password-related string and the outputs from the CPace
-   instance.  Here, fullsid is the output of encode_sid(sid, U, S).
+   instance.  Here, fullsid is the output of encode_sid(sid, U, S).  The
+   final session key is then a hash of fullsid, the original password-
+   related string, both CPace and QUAKE transcripts (tr1 and tr2,
+   respectively), and both session keys output from CPace and QUAKE (SK1
+   and SK2, respectively), i.e., H(fullsid, tr1, tr2, SK1, SK2).
 
    This is outlined in the diagram below.  In CPaceQUAKE, CPace is
    initiated by the first party, while QUAKE is initiated by the other
    party.  This results in a protocol that requires three messages.
 
-            +----------------------------------------------------------------------+
-Client's    | CPaceQUAKE                  +----------+                             |    Server's
-password ---)-------------+---PRS-------->|  CPace   +<--PRS---------+-------------(--- password
-            |             |         +-----+ protocol +-+             |             |
-            |             |         |     +----------+ |             |             |
-            |             |         |                  +-------------(---------+   |
-            |             v         v     +----------+               v         v   |
-            | H(fullsid, PRS, tr1, SK1)-->|  QUAKE   +<--H(fullsid, PRS, tr1, SK1) |
-Session <---)-----------------------------+ protocol +-----------------------------(--> Session
-  key       |                             +----------+                             |      key
-            +----------------------------------------------------------------------+
+            +-------------------------------------------------------------------------------+
+Client's    | CPaceQUAKE                      +----------+                                  |    Server's
+password ---)-------------+---PRS------------>|  CPace   +<--PRS---------+------------------(--- password
+            |             |         +---------+ protocol +-+             |                  |
+            |             |         |         +----------+ |             |                  |
+            |             |         |                      +-------------(---------+        |
+            |             v         v         +----------+               v         v        |
+            | H(fullsid, PRS, tr1, SK1)------>|  QUAKE   +<--H(fullsid, PRS, tr1, SK1)      |
+Session <---)-H(fullsid, tr1, tr2, SK1, SK2)--+ protocol +---H(fullsid, tr1, tr2, SK1, SK2)-(--> Session
+  key       |                                 +----------+                                  |      key
+            +-------------------------------------------------------------------------------+
 
    Unlike QUAKE, CPaceQUAKE does not require a shared session identifier
    sid, although this is strongly recommended.  If no sid is provided,
@@ -799,21 +832,25 @@ Parameters:
 
 def Respond(PRS, init_msg, sid, U, S):
   s1, msg1 = init_msg[0..32], lv_decode(init_msg[32..])
+
   key1, msg2 = CPace.Respond(PRS, msg1, sid, U, S)
+  key1A = KDF.Expand(key1, DST || "prs", Nkey)
+  key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
   s2 = random(32)
-  extended_sid_prk = KDF.Extract(s1 || s2, nil)
+  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceQUAKE")
   extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
-  PRS2 = H(DST || fullsid || PRS || msg1 || msg2 || key1)
-  ctx2, msg3 = QUAKE.Init(PRS2, extended_sid, U, S)
 
-  client_key = H(DST || fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
+  PRS2_prk = KDF.Extract(PRS, DST || "PRS2" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(PRS2_prk, Nkey)
+
+  ctx2, msg3 = QUAKE.Init(PRS2, extended_sid, U, S)
 
   resp_msg = s2 || lv_encode(msg2) || lv_encode(msg3)
 
-  return Context(fullsid, PRS, msg1, msg2, msg3, key1, ctx2), resp_msg
+  return Context(fullsid, PRS, msg1, msg2, msg3, key1B, ctx2), resp_msg
 
 5.3.3.  Client Finish
 
@@ -850,15 +887,20 @@ def InitiatorFinish(PRS, (ctx1, s1), (msg2, msg3, s2), sid, U, S):
   msg3 = lv_decode(resp_msg[32+len(msg2)..])
 
   key1 = CPace.Finish(ctx1, msg2, sid, U, S)
+  key1A = KDF.Expand(key1, DST || "prs", Nkey)
+  key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
-  extended_sid_prk = KDF.Extract(s1 || s2, DST)
+  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceQUAKE")
   extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
-  PRS2 = H(DST || fullsid || PRS || msg1 || msg2 || key1)
+  PRS2_prk = KDF.Extract(PRS, DST || "PRS2" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(PRS2_prk, Nkey)
+
   key2, msg4 = QUAKE.Respond(PRS2, extended_sid, msg3, Nkey, U, S)
 
-  client_key = H(DST || fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
+  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
+  client_key = KDF.Expand(sessionkey_prk, DST || "sessionkey", Nkey)
 
   return client_key, msg4
 
@@ -882,11 +924,12 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def ResponderFinish(ctx, msg4):
-  (fullsid, PRS, msg1, msg2, msg3, key1, ctx2) = ctx
+  (fullsid, PRS, msg1, msg2, msg3, key1B, ctx2) = ctx
 
   key2 = QUAKE.Finish(ctx2, msg4)
 
-  client_key = H(DST || fullsid || PRS || msg1 || msg2 || msg3 || msg4 || key1 || key2)
+  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
+  server_key = KDF.Expand(sessionkey_prk, DST || "sessionkey", Nkey)
 
   return server_key
 
