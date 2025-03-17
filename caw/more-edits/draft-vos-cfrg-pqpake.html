@@ -1340,7 +1340,8 @@ knowledge of the password. After registration, the client uses its password
 and the server uses the corresponding verifier to establish an authenticated
 shared secret such that the server learns nothing of the client's password.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">OPAQUE-3DH <span>[<a href="#OPAQUE" class="cite xref">OPAQUE</a>]</span> and SPAKE2+ <span>[<a href="#SPAKE2PLUS" class="cite xref">SPAKE2PLUS</a>]</span>
-are two examples of specified aPAKE protocols. These protocols provide security in classical threat models. However, in the presence
+are two examples of specified aPAKE protocols. These protocols provide
+security in classical threat models. However, in the presence
 of a quantum-capable attacker, both OPAQUE and SPAKE2+ fail to provide the
 desired level of security. Both protocols are vulnerable to a Harvest Now, Decrypt
 Later attack executed by a quantum-capable attacker, in which the attacker learns the shared secret and uses it
@@ -3117,10 +3118,6 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
 <a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
-<dt id="ABJ25">[ABJ25]</dt>
-        <dd>
-<span class="refAuthor">Arriaga, A.</span>, <span class="refAuthor">Barbosa, M.</span>, and <span class="refAuthor">S. Jarecki</span>, <span class="refTitle">"NoIC: PAKE from KEM without Ideal Ciphers"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2025/231.pdf">https://eprint.iacr.org/2025/231.pdf</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="ARGON2">[ARGON2]</dt>
         <dd>
 <span class="refAuthor">Biryukov, A.</span>, <span class="refAuthor">Dinu, D.</span>, <span class="refAuthor">Khovratovich, D.</span>, and <span class="refAuthor">S. Josefsson</span>, <span class="refTitle">"Argon2 Memory-Hard Function for Password Hashing and Proof-of-Work Applications"</span>, <span class="seriesInfo">RFC 9106</span>, <span class="seriesInfo">DOI 10.17487/RFC9106</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9106">https://www.rfc-editor.org/rfc/rfc9106</a>&gt;</span>. </dd>
@@ -3137,25 +3134,9 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
         <dd>
 <span class="refAuthor">National Institute of Standards and Technology (NIST)</span>, <span class="refTitle">"Module-Lattice-Based Key-Encapsulation Mechanism Standard"</span>, <time datetime="2024-08" class="refDate">August 2024</time>, <span>&lt;<a href="https://csrc.nist.gov/pubs/fips/203/final">https://csrc.nist.gov/pubs/fips/203/final</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="Gu24">[Gu24]</dt>
-        <dd>
-<span class="refAuthor">Gu, Y.</span>, <span class="refTitle">"New Paradigms For Efficient Password Authentication Protocols"</span>, <span>n.d.</span>, <span>&lt;<a href="https://www.escholarship.org/uc/item/7qm0220s">https://www.escholarship.org/uc/item/7qm0220s</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="HR24">[HR24]</dt>
-        <dd>
-<span class="refAuthor">Hesse, J.</span> and <span class="refAuthor">M. Rosenberg</span>, <span class="refTitle">"PAKE Combiners and Efficient Post-Quantum Instantiations"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1621.pdf">https://eprint.iacr.org/2024/1621.pdf</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="KEMELEON">[KEMELEON]</dt>
         <dd>
 <span class="refAuthor">Günther, F.</span>, <span class="refAuthor">Stebila, D.</span>, and <span class="refAuthor">S. Veitch</span>, <span class="refTitle">"Kemeleon Encodings"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-veitch-kemeleon-00</span>, <time datetime="2024-11-29" class="refDate">29 November 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-veitch-kemeleon-00">https://datatracker.ietf.org/doc/html/draft-veitch-kemeleon-00</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="LL24">[LL24]</dt>
-        <dd>
-<span class="refAuthor">Lyu, Y.</span> and <span class="refAuthor">S. Liu</span>, <span class="refTitle">"Hybrid Password Authentication Key Exchange in the UC Framework"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1630">https://eprint.iacr.org/2024/1630</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="LLH24">[LLH24]</dt>
-        <dd>
-<span class="refAuthor">Lyu, Y.</span>, <span class="refAuthor">Liu, S.</span>, and <span class="refAuthor">S. Han</span>, <span class="refTitle">"Efficient Asymmetric PAKE Compiler from KEM and AE"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1400">https://eprint.iacr.org/2024/1400</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
@@ -3182,6 +3163,26 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
 <a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="ABJ25">[ABJ25]</dt>
+        <dd>
+<span class="refAuthor">Arriaga, A.</span>, <span class="refAuthor">Barbosa, M.</span>, and <span class="refAuthor">S. Jarecki</span>, <span class="refTitle">"NoIC: PAKE from KEM without Ideal Ciphers"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2025/231.pdf">https://eprint.iacr.org/2025/231.pdf</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="Gu24">[Gu24]</dt>
+        <dd>
+<span class="refAuthor">Gu, Y.</span>, <span class="refTitle">"New Paradigms For Efficient Password Authentication Protocols"</span>, <span>n.d.</span>, <span>&lt;<a href="https://www.escholarship.org/uc/item/7qm0220s">https://www.escholarship.org/uc/item/7qm0220s</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="HR24">[HR24]</dt>
+        <dd>
+<span class="refAuthor">Hesse, J.</span> and <span class="refAuthor">M. Rosenberg</span>, <span class="refTitle">"PAKE Combiners and Efficient Post-Quantum Instantiations"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1621.pdf">https://eprint.iacr.org/2024/1621.pdf</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="LL24">[LL24]</dt>
+        <dd>
+<span class="refAuthor">Lyu, Y.</span> and <span class="refAuthor">S. Liu</span>, <span class="refTitle">"Hybrid Password Authentication Key Exchange in the UC Framework"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1630">https://eprint.iacr.org/2024/1630</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="LLH24">[LLH24]</dt>
+        <dd>
+<span class="refAuthor">Lyu, Y.</span>, <span class="refAuthor">Liu, S.</span>, and <span class="refAuthor">S. Han</span>, <span class="refTitle">"Efficient Asymmetric PAKE Compiler from KEM and AE"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1400">https://eprint.iacr.org/2024/1400</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="OPAQUE">[OPAQUE]</dt>
         <dd>
 <span class="refAuthor">Bourdrez, D.</span>, <span class="refAuthor">Krawczyk, H.</span>, <span class="refAuthor">Lewi, K.</span>, and <span class="refAuthor">C. A. Wood</span>, <span class="refTitle">"The OPAQUE Augmented PAKE Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-opaque-18</span>, <time datetime="2024-11-21" class="refDate">21 November 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-opaque-18">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-opaque-18</a>&gt;</span>. </dd>
