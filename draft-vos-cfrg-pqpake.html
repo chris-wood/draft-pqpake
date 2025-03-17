@@ -6,13 +6,16 @@
 <meta content="initial-scale=1.0" name="viewport">
 <title>Hybrid Post-Quantum Password Authenticated Key Exchange</title>
 <meta content="Jelle Vos" name="author">
+<meta content="Stanislaw Jarecki" name="author">
 <meta content="Christopher A. Wood" name="author">
 <meta content="
-       This document describes the CPaceQUAKE+ protocol, a hybrid asymmetric
+       This document describes the CPaceOQUAKE+ protocol, a hybrid asymmetric
 password-authenticated key exchange (aPAKE) that supports mutual
 authentication in a client-server setting secure against
-quantum-capable attackers. CPaceQUAKE+ is the result of a KEM-based transformation from the hybrid symmetric PAKE protocol called CPaceQUAKE that is also described in this document. This document recommends configurations for
-CPaceQUAKE+ and corresponding test vectors. 
+quantum-capable attackers. CPaceOQUAKE+ is the result of a KEM-based
+transformation from the hybrid symmetric PAKE protocol called CPaceOQUAKE
+that is also described in this document. This document recommends
+configurations for CPaceOQUAKE+. 
     " name="description">
 <meta content="xml2rfc 3.28.0" name="generator">
 <meta content="draft-vos-cfrg-pqpake-latest" name="ietf.draft">
@@ -1051,8 +1054,8 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <td class="right">March 2025</td>
 </tr></thead>
 <tfoot><tr>
-<td class="left">Vos &amp; Wood</td>
-<td class="center">Expires 10 September 2025</td>
+<td class="left">Vos, et al.</td>
+<td class="center">Expires 18 September 2025</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1065,16 +1068,20 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2025-03-09" class="published">9 March 2025</time>
+<time datetime="2025-03-17" class="published">17 March 2025</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2025-09-10">10 September 2025</time></dd>
+<dd class="expires"><time datetime="2025-09-18">18 September 2025</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
       <div class="author-name">J. Vos</div>
+</div>
+<div class="author">
+      <div class="author-name">S. Jarecki</div>
+<div class="org">University of California, Irvine</div>
 </div>
 <div class="author">
       <div class="author-name">C. A. Wood</div>
@@ -1086,11 +1093,13 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <h1 id="title">Hybrid Post-Quantum Password Authenticated Key Exchange</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">This document describes the CPaceQUAKE+ protocol, a hybrid asymmetric
+<p id="section-abstract-1">This document describes the CPaceOQUAKE+ protocol, a hybrid asymmetric
 password-authenticated key exchange (aPAKE) that supports mutual
 authentication in a client-server setting secure against
-quantum-capable attackers. CPaceQUAKE+ is the result of a KEM-based transformation from the hybrid symmetric PAKE protocol called CPaceQUAKE that is also described in this document. This document recommends configurations for
-CPaceQUAKE+ and corresponding test vectors.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+quantum-capable attackers. CPaceOQUAKE+ is the result of a KEM-based
+transformation from the hybrid symmetric PAKE protocol called CPaceOQUAKE
+that is also described in this document. This document recommends
+configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1126,7 +1135,7 @@ CPaceQUAKE+ and corresponding test vectors.<a href="#section-abstract-1" class="
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 September 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 18 September 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1184,7 +1193,7 @@ CPaceQUAKE+ and corresponding test vectors.<a href="#section-abstract-1" class="
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
-            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-cpacequake-protocol" class="internal xref">CPaceQUAKE Protocol</a></p>
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-cpaceoquake-protocol" class="internal xref">CPaceOQUAKE Protocol</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
                 <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-cpace-specification" class="internal xref">CPace Specification</a></p>
@@ -1201,7 +1210,7 @@ CPaceQUAKE+ and corresponding test vectors.<a href="#section-abstract-1" class="
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
-                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-quake-specification" class="internal xref">QUAKE Specification</a></p>
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-oquake-specification" class="internal xref">OQUAKE Specification</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2.2.1">
                     <p id="section-toc.1-1.5.2.2.2.1.1"><a href="#section-5.2.1" class="auto internal xref">5.2.1</a>.  <a href="#name-initiation-2" class="internal xref">Initiation</a></p>
@@ -1215,7 +1224,7 @@ CPaceQUAKE+ and corresponding test vectors.<a href="#section-abstract-1" class="
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
-                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-composition-of-cpace-quake" class="internal xref">Composition of CPace &amp; QUAKE</a></p>
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-composition-of-cpace-oquake" class="internal xref">Composition of CPace &amp; OQUAKE</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3.2.1">
                     <p id="section-toc.1-1.5.2.3.2.1.1"><a href="#section-5.3.1" class="auto internal xref">5.3.1</a>.  <a href="#name-client-initiation" class="internal xref">Client Initiation</a></p>
@@ -1234,7 +1243,7 @@ CPaceQUAKE+ and corresponding test vectors.<a href="#section-abstract-1" class="
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
-            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-cpacequake-protocol-2" class="internal xref">CPaceQUAKE+ Protocol</a></p>
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-cpaceoquake-protocol-2" class="internal xref">CPaceOQUAKE+ Protocol</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
                 <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-registering-clients" class="internal xref">Registering Clients</a></p>
@@ -1262,12 +1271,12 @@ CPaceQUAKE+ and corresponding test vectors.<a href="#section-abstract-1" class="
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
-                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-composition-of-cpacequake-p" class="internal xref">Composition of CPaceQUAKE &amp; Password Confirmation</a></p>
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-composition-of-cpaceoquake-" class="internal xref">Composition of CPaceOQUAKE &amp; Password Confirmation</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-cpacequake-configurations" class="internal xref">CPaceQUAKE+ Configurations</a></p>
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-cpaceoquake-configurations" class="internal xref">CPaceOQUAKE+ Configurations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-implementation-consideratio" class="internal xref">Implementation Considerations</a></p>
@@ -1293,16 +1302,16 @@ CPaceQUAKE+ and corresponding test vectors.<a href="#section-abstract-1" class="
             <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-deriving-parameters" class="internal xref">Deriving parameters</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
-                <p id="section-toc.1-1.12.2.1.1"><a href="#appendix-A.1" class="auto internal xref">A.1</a>.  <a href="#name-parameters-for-cpacequake" class="internal xref">Parameters for CPaceQUAKE+</a></p>
+                <p id="section-toc.1-1.12.2.1.1"><a href="#appendix-A.1" class="auto internal xref">A.1</a>.  <a href="#name-parameters-for-cpaceoquake" class="internal xref">Parameters for CPaceOQUAKE+</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
-                <p id="section-toc.1-1.12.2.2.1"><a href="#appendix-A.2" class="auto internal xref">A.2</a>.  <a href="#name-parameters-for-cpacequake-2" class="internal xref">Parameters for CPaceQUAKE</a></p>
+                <p id="section-toc.1-1.12.2.2.1"><a href="#appendix-A.2" class="auto internal xref">A.2</a>.  <a href="#name-parameters-for-cpaceoquake-2" class="internal xref">Parameters for CPaceOQUAKE</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.3">
                 <p id="section-toc.1-1.12.2.3.1"><a href="#appendix-A.3" class="auto internal xref">A.3</a>.  <a href="#name-parameters-for-cpace" class="internal xref">Parameters for CPace</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.4">
-                <p id="section-toc.1-1.12.2.4.1"><a href="#appendix-A.4" class="auto internal xref">A.4</a>.  <a href="#name-parameters-for-quake" class="internal xref">Parameters for QUAKE</a></p>
+                <p id="section-toc.1-1.12.2.4.1"><a href="#appendix-A.4" class="auto internal xref">A.4</a>.  <a href="#name-parameters-for-oquake" class="internal xref">Parameters for OQUAKE</a></p>
 </li>
             </ul>
 </li>
@@ -1326,12 +1335,13 @@ disclosing passwords to servers or other entities other than the client
 machine. The only stage where PKI is required is during a client's registration.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">In the asymmetric PAKE setting, the client first registers a password
 verifier with the server. A verifier is a value that is derived from the
-password and which the client will later use to demonstrate knowledge of
-the password. After registration, the client uses its password and the
-server uses the corresponding verifier to establish an authenticated
+password and which the server will later use to verify the client
+knowledge of the password. After registration, the client uses its password
+and the server uses the corresponding verifier to establish an authenticated
 shared secret such that the server learns nothing of the client's password.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">OPAQUE-3DH <span>[<a href="#OPAQUE" class="cite xref">OPAQUE</a>]</span> and SPAKE2+ <span>[<a href="#SPAKE2PLUS" class="cite xref">SPAKE2PLUS</a>]</span>
-are two examples of specified aPAKE protocols. These protocols provide security in classical threat models. However, in the presence
+are two examples of specified aPAKE protocols. These protocols provide
+security in classical threat models. However, in the presence
 of a quantum-capable attacker, both OPAQUE and SPAKE2+ fail to provide the
 desired level of security. Both protocols are vulnerable to a Harvest Now, Decrypt
 Later attack executed by a quantum-capable attacker, in which the attacker learns the shared secret and uses it
@@ -1340,11 +1350,11 @@ post-quantum security is non-trivial, especially as there are no known efficient
 constructions for certain building blocks used in these protocols (such as the OPRF
 used in OPAQUE-3DH). As the threat of quantum-capable attackers looms, the
 viability of existing aPAKE protocols in practice diminishes in time.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">This document describes the CPaceQUAKE+ protocol, an aPAKE that supports mutual
+<p id="section-1-4">This document describes the CPaceOQUAKE+ protocol, an aPAKE that supports mutual
 authentication in a client-server setting secure against
-quantum-capable attackers. CPaceQUAKE+ is the result of a KEM-based transformation
-from the hybrid symmetric PAKE protocol called CPaceQUAKE.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">This document fully specifies CPaceQUAKE+ and all dependencies necessary
+quantum-capable attackers. CPaceOQUAKE+ is the result of a KEM-based transformation
+from the hybrid symmetric PAKE protocol called CPaceOQUAKE.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">This document fully specifies CPaceOQUAKE+ and all dependencies necessary
 to implement it. <a href="#configurations" class="auto internal xref">Section 7</a> provides recommended configurations.<a href="#section-1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1412,11 +1422,11 @@ After registration, the client uses its password and the server uses the corresp
 verifier to establish an authenticated shared secret such that the server learns nothing
 of the client's password.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">The aPAKE specified in this document is composed of multiple smaller protocols, including
-the hybrid symmetric PAKE protocol called CPaceQUAKE. CPaceQUAKE is in turn a composition of two other
-PAKE protocols: the existing CPace <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span> and a new post-quantum PAKE called QUAKE.
+the hybrid symmetric PAKE protocol called CPaceOQUAKE. CPaceOQUAKE is in turn a composition of two other
+PAKE protocols: the existing CPace <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span> and a new post-quantum PAKE called OQUAKE.
 To achieve the asymmetric property, the aPAKE also builds upon a password
 confirmation sub-protocol as specified in <a href="#pcp" class="auto internal xref">Section 6.2</a>.<a href="#section-3-2" class="pilcrow">¶</a></p>
-<p id="section-3-3">We refer to the fully composed aPAKE as CPaceQUAKE+.
+<p id="section-3-3">We refer to the fully composed aPAKE as CPaceOQUAKE+.
 An abstract overview of the composition of this protocol is shown in the figure below.
 In the subsequent sections we break down the sub-protocols into even smaller building blocks.<a href="#section-3-3" class="pilcrow">¶</a></p>
 <div id="section-3-4">
@@ -1455,14 +1465,14 @@ In the subsequent sections we break down the sub-protocols into even smaller bui
             <polygon class="arrowhead" points="104,144 92,138.4 92,149.6" fill="black" transform="rotate(0,96,144)"></polygon>
             <polygon class="arrowhead" points="80,288 68,282.4 68,293.6" fill="black" transform="rotate(180,72,288)"></polygon>
             <g class="text">
-              <text x="160" y="52">CPaceQUAKE+</text>
-              <text x="180" y="84">CPaceQUAKE</text>
+              <text x="164" y="52">CPaceOQUAKE+</text>
+              <text x="184" y="84">CPaceOQUAKE</text>
               <text x="184" y="116">CPace</text>
               <text x="36" y="132">Client's</text>
               <text x="188" y="132">protocol</text>
               <text x="36" y="148">password</text>
               <text x="340" y="148">Verifier</text>
-              <text x="184" y="196">QUAKE</text>
+              <text x="188" y="196">OQUAKE</text>
               <text x="188" y="212">protocol</text>
               <text x="188" y="276">Password</text>
               <text x="32" y="292">Session</text>
@@ -1474,10 +1484,10 @@ In the subsequent sections we break down the sub-protocols into even smaller bui
           </svg><a href="#section-3-4.1" class="pilcrow">¶</a>
 </div>
 </div>
-<p id="section-3-5">We note that this standard only specifies the composition of CPace and QUAKE.
+<p id="section-3-5">We note that this standard only specifies the composition of CPace and OQUAKE.
 It is not necessarily true that one can securely compose all PAKEs this way.<a href="#section-3-5" class="pilcrow">¶</a></p>
-<p id="section-3-6">The rest of this document specifies CPaceQUAKE+ and its dependencies. <a href="#CPaceQUAKE" class="auto internal xref">Section 5</a>
-specifies the CPaceQUAKE protocol, and <a href="#CPaceQUAKEplus" class="auto internal xref">Section 6</a> specifies the CPaceQUAKE+ protocol,
+<p id="section-3-6">The rest of this document specifies CPaceOQUAKE+ and its dependencies. <a href="#CPaceOQUAKE" class="auto internal xref">Section 5</a>
+specifies the CPaceOQUAKE protocol, and <a href="#CPaceOQUAKEplus" class="auto internal xref">Section 6</a> specifies the CPaceOQUAKE+ protocol,
 incorporating the former protocol. Each of these pieces build upon the cryptographic dependencies
 specified in <a href="#crypto-deps" class="auto internal xref">Section 4</a>.<a href="#section-3-6" class="pilcrow">¶</a></p>
 </section>
@@ -1554,19 +1564,24 @@ its encapsulated representation <code>ct</code>. This function can raise a
         <h3 id="name-binary-uniform-kem">
 <a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-binary-uniform-kem" class="section-name selfRef">Binary Uniform KEM</a>
         </h3>
-<p id="section-4.2-1">A binary uniform KEM supports the same functions as defined above for a KEM, except that it
-also achieves stronger notions of security. Specifically, a binary uniform KEM requires:<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-1">A binary uniform KEM supports the same functions as defined above for
+a KEM, and it must also be IND-CCA secure, but it must also achieve
+two additional security properties. Namely, in addition to IND-CCA
+security, a binary uniform KEM requires that:<a href="#section-4.2-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-4.2-2">
 <li id="section-4.2-2.1">
-            <p id="section-4.2-2.1.1">Public keys and ciphertexts are indistinguishable from random strings of bytes
-(of the same length); and<a href="#section-4.2-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-4.2-2.1.1">Public keys are indistinguishable from random strings of bytes (of
+the same length); and<a href="#section-4.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.2-2.2">
-            <p id="section-4.2-2.2.1">Ciphertexts are anonymous (a property that follows from IND-CCA security).<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-4.2-2.2.1">Ciphertexts are anonymous in the presence of chosen ciphertext
+attack (ANO-CCA).<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-4.2-3">These additional properties are crucial for the security of QUAKE. In other words, one <span class="bcp14">MUST NOT</span> use a KEM that is not uniform in place of a uniform KEM.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
-<p id="section-4.2-4">This specification uses a variant of ML-KEM768 <span>[<a href="#FIPS203-Draft" class="cite xref">FIPS203-Draft</a>]</span>, denoted ML-BUKEM768.
+<p id="section-4.2-3">These additional properties are crucial for the security of OQUAKE. In
+other words, one <span class="bcp14">MUST NOT</span> use a KEM that has no uniform public keys
+and no anonymous ciphertexts in place of a uniform KEM.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+<p id="section-4.2-4">This specification uses a variant of ML-KEM768 <span>[<a href="#FIPS203" class="cite xref">FIPS203</a>]</span>, denoted ML-BUKEM768.
 This is instantiated with Kemeleon <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
 require uniform enoding for public keys. Future specifications can replace use of
@@ -1614,18 +1629,23 @@ needs to satisfy collision resistance. The output is a string of L bytes.<a href
 </div>
 </section>
 </div>
-<div id="CPaceQUAKE">
+<div id="CPaceOQUAKE">
 <section id="section-5">
-      <h2 id="name-cpacequake-protocol">
-<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-cpacequake-protocol" class="section-name selfRef">CPaceQUAKE Protocol</a>
+      <h2 id="name-cpaceoquake-protocol">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-cpaceoquake-protocol" class="section-name selfRef">CPaceOQUAKE Protocol</a>
       </h2>
-<p id="section-5-1">The hybrid, symmetric PAKE protocol, denoted CPaceQUAKE consists of CPace <span>[<a href="#CPace" class="cite xref">CPace</a>]</span>
-combined with QUAKE <span>[<a href="#QUAKE" class="cite xref">QUAKE</a>]</span>. At a high level, CPaceQUAKE
+<p id="section-5-1">The hybrid, symmetric PAKE protocol, denoted CPaceOQUAKE consists of CPace <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span>
+combined with OQUAKE <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>. OQUAKE is a PAKE built from a BUKEM and KDF, using a
+2-rounds of Feistel network to password-encrypt the BUKEM public key.
+The QUAKE protocol is based on the "NoIC" protocol analyzed in <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by
+<span>[<a href="#HR24" class="cite xref">HR24</a>]</span>. A very close variant of this protocol was also analyzed in <span>[<a href="#LL24" class="cite xref">LL24</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">At a high level, CPaceOQUAKE
 is a two-round protocol that runs between client and server wherein, upon completion, both parties
 share the same session key if they agree on the password-related string (PRS).
-Otherwise, they obtain random session keys. This is summarized in the diagram below.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<div id="section-5-2">
-        <div class="alignLeft art-svg artwork" id="section-5-2.1">
+Otherwise, they obtain random session keys. This is summarized in the diagram below.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<div id="section-5-4">
+        <div class="alignLeft art-svg artwork" id="section-5-4.1">
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="208" width="536" viewBox="0 0 536 208" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
             <path d="M 104,32 L 104,192" fill="none" stroke="black"></path>
             <path d="M 224,48 L 224,96" fill="none" stroke="black"></path>
@@ -1648,26 +1668,26 @@ Otherwise, they obtain random session keys. This is summarized in the diagram be
             <polygon class="arrowhead" points="104,96 92,90.4 92,101.6" fill="black" transform="rotate(0,96,96)"></polygon>
             <polygon class="arrowhead" points="80,160 68,154.4 68,165.6" fill="black" transform="rotate(180,72,160)"></polygon>
             <g class="text">
-              <text x="156" y="52">CPaceQUAKE</text>
+              <text x="160" y="52">CPaceOQUAKE</text>
               <text x="264" y="68">CPace</text>
               <text x="36" y="84">Client's</text>
               <text x="268" y="84">protocol</text>
               <text x="500" y="84">Server's</text>
               <text x="36" y="100">password</text>
               <text x="500" y="100">password</text>
-              <text x="264" y="148">QUAKE</text>
+              <text x="268" y="148">OQUAKE</text>
               <text x="32" y="164">Session</text>
               <text x="268" y="164">protocol</text>
               <text x="496" y="164">Session</text>
               <text x="32" y="180">key</text>
               <text x="496" y="180">key</text>
             </g>
-          </svg><a href="#section-5-2.1" class="pilcrow">¶</a>
+          </svg><a href="#section-5-4.1" class="pilcrow">¶</a>
 </div>
 </div>
-<p id="section-5-3">CPaceQUAKE composes CPace and QUAKE by first running CPace between
+<p id="section-5-5">CPaceOQUAKE composes CPace and OQUAKE by first running CPace between
 client and server, and then incorporating the CPace session key into the password before running
-QUAKE between the server and client. We explain the composition in more detail in <a href="#cpacequake-composition" class="auto internal xref">Section 5.3</a>.<a href="#section-5-3" class="pilcrow">¶</a></p>
+OQUAKE between the server and client. We explain the composition in more detail in <a href="#cpacequake-composition" class="auto internal xref">Section 5.3</a>.<a href="#section-5-5" class="pilcrow">¶</a></p>
 <div id="cpace">
 <section id="section-5.1">
         <h3 id="name-cpace-specification">
@@ -1806,11 +1826,11 @@ def Finish(PRS, ya, Yb, sid):
 </div>
 <div id="quake">
 <section id="section-5.2">
-        <h3 id="name-quake-specification">
-<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-quake-specification" class="section-name selfRef">QUAKE Specification</a>
+        <h3 id="name-oquake-specification">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-oquake-specification" class="section-name selfRef">OQUAKE Specification</a>
         </h3>
-<p id="section-5.2-1">QUAKE is a PAKE built on a BUKEM and KDF.  If the BUKEM provides security against quantum-enabled attacks,
-then so does QUAKE. It consists of three messages sent between initiator and responder, produced by
+<p id="section-5.2-1">OQUAKE is a PAKE built on a BUKEM and KDF.  If the BUKEM provides security against quantum-enabled attacks,
+then so does OQUAKE. It consists of three messages sent between initiator and responder, produced by
 the functions Init, Respond, and Finish, described below. Both parties take as input a password-related
 string PRS, a required unique shared session identifier sid, and an optional client identifier U and server
 identifier S. Upon completion, both parties obtain matching session keys if their PRS, sid, key length
@@ -1833,7 +1853,7 @@ identifier S. Upon completion, both parties obtain matching session keys if thei
             <p id="section-5.2-5.2.1">This session identifier has not been used before by the client or server in any session with any other party<a href="#section-5.2-5.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.2-6">These requirements originate from the security proof for QUAKE. If these requirements are not met, the proof
+<p id="section-5.2-6">These requirements originate from the security proof for OQUAKE. If these requirements are not met, the proof
 does not apply, but this does not mean that the protocol becomes vulnerable.<a href="#section-5.2-6" class="pilcrow">¶</a></p>
 <div id="initiation-1">
 <section id="section-5.2.1">
@@ -1845,7 +1865,7 @@ U and S. It produces a context for the initiator to store, as well as a protocol
 the responder. Its implementation is as follows.<a href="#section-5.2.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.2.1-2">
 <pre>
-QUAKE.Init
+OQUAKE.Init
 
 Input:
 - PRS, password-related string, a byte string
@@ -1870,12 +1890,12 @@ def Init(PRS, sid, U, S):
   fullsid = encode_sid(sid, U, S)
 
   // T = XOR(pk, H(fullsid, PRS, r))
-  prk_T_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid || r)
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
   T = XOR(pk, T_pad)
 
   // s = XOR(r, H(fullsid, PRS, T))
-  prk_s_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid || T)
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
@@ -1921,7 +1941,7 @@ It produces a 32-byte symmetric key and a protocol message intended to be sent t
 is as follows.<a href="#section-5.2.2-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.2.2-2">
 <pre>
-QUAKE.Respond
+OQUAKE.Respond
 
 Input:
 - PRS, password-related string, a byte string
@@ -1942,20 +1962,20 @@ def Respond(PRS, init_msg, sid, U, S):
   (s, T) = init_msg[0..(3 * Nsec)], init_msg[(3 * Nsec)..]
 
   fullsid = encode_sid(sid, U, S)
-  prk_s_pad = KDF.Extract(PRS, DST || "QUAKE" || T || fullsid)
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid)
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
   pk = XOR(T, T_pad)
 
   (ct, k) = BUKEM.Encaps(pk)
 
-  prk_sk = KDF.Extract(PRS, DST || "QUAKE" || fullsid || k)
+  prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || k)
   key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
-  h = KDF.Expand(prk_sk, "confirm", Nkc)
+  h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
 
   resp_msg = ct || h
 
@@ -1975,7 +1995,7 @@ that is output to the initiator. Its implementation
 is as follows.<a href="#section-5.2.3-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.2.3-2">
 <pre>
-QUAKE.Finish
+OQUAKE.Finish
 
 Input:
 - context, opaque state for the initiator to store TODO
@@ -1998,10 +2018,10 @@ def Finish(context, resp_msg):
 
   try:
     k = BUKEM.Decaps(sk, ct)
-    prk_sk = KDF.Extract(PRS, DST || "QUAKE" || fullsid || k)
+    prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || k)
     key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
-    h_expected = KDF.Expand(prk_sk, "confirm", Nkc)
+    h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
     if h != h_expected:
       return random(Nkey)
 
@@ -2016,28 +2036,28 @@ def Finish(context, resp_msg):
 </div>
 <div id="cpacequake-composition">
 <section id="section-5.3">
-        <h3 id="name-composition-of-cpace-quake">
-<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-composition-of-cpace-quake" class="section-name selfRef">Composition of CPace &amp; QUAKE</a>
+        <h3 id="name-composition-of-cpace-oquake">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-composition-of-cpace-oquake" class="section-name selfRef">Composition of CPace &amp; OQUAKE</a>
         </h3>
-<p id="section-5.3-1">CPaceQUAKE is a sequential composition of CPace (see <a href="#cpace" class="auto internal xref">Section 5.1</a>) and
-QUAKE (see <a href="#quake" class="auto internal xref">Section 5.2</a>). Whereas running CPace and QUAKE in parallel realizes
+<p id="section-5.3-1">CPaceOQUAKE is a sequential composition of CPace (see <a href="#cpace" class="auto internal xref">Section 5.1</a>) and
+OQUAKE (see <a href="#quake" class="auto internal xref">Section 5.2</a>). Whereas running CPace and OQUAKE in parallel realizes
 a worst-of-both worlds PAKE, this sequential composition realizes a
-best-of-both worlds PAKE. In other words, CPaceQUAKE remains as secure
+best-of-both worlds PAKE. In other words, CPaceOQUAKE remains as secure
 as the strongest PAKE, resisting attacks that break the classical CPace
 (e.g. by a quantum-capable attacker) or attacks that break the
-quantum-resistant QUAKE (e.g. by a flaw in the BUKEM). This assumes that
-QUAKE is instantiated with a quantum-resistant BUKEM.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
-<p id="section-5.3-2">To be precise, CPaceQUAKE first runs CPace using password-related string PRS,
+quantum-resistant OQUAKE (e.g. by a flaw in the BUKEM). This assumes that
+OQUAKE is instantiated with a quantum-resistant BUKEM.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">To be precise, CPaceOQUAKE first runs CPace using password-related string PRS,
 establishing a session key SK1 with the associated transcript tr1. It
-then initiates QUAKE using the password-related string <code>H(fullsid, PRS, tr1, SK1)</code>;
+then initiates OQUAKE using the password-related string <code>H(fullsid, PRS, tr1, SK1)</code>;
 a secret derived from the the original password-related string and the outputs from
 the CPace instance. Here, <code>fullsid</code> is the output of encode_sid(sid, U, S).
 The final session key is then a hash of fullsid, the original password-related string,
-both CPace and QUAKE transcripts (tr1 and tr2, respectively), and both session keys
-output from CPace and QUAKE (SK1 and SK2, respectively), i.e.,
+both CPace and OQUAKE transcripts (tr1 and tr2, respectively), and both session keys
+output from CPace and OQUAKE (SK1 and SK2, respectively), i.e.,
 H(fullsid, tr1, tr2, SK1, SK2).<a href="#section-5.3-2" class="pilcrow">¶</a></p>
-<p id="section-5.3-3">This is outlined in the diagram below. In CPaceQUAKE, CPace is initiated by the
-first party, while QUAKE is initiated by the other party. This results in a protocol
+<p id="section-5.3-3">This is outlined in the diagram below. In CPaceOQUAKE, CPace is initiated by the
+first party, while OQUAKE is initiated by the other party. This results in a protocol
 that requires three messages.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
 <div id="section-5.3-4">
           <div class="alignLeft art-svg artwork" id="section-5.3-4.1">
@@ -2094,7 +2114,7 @@ that requires three messages.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
               <polygon class="arrowhead" points="80,160 68,154.4 68,165.6" fill="black" transform="rotate(180,72,160)"></polygon>
               <g class="text">
                 <text x="36" y="52">Client's</text>
-                <text x="156" y="52">CPaceQUAKE</text>
+                <text x="160" y="52">CPaceOQUAKE</text>
                 <text x="812" y="52">Server's</text>
                 <text x="36" y="68">password</text>
                 <text x="256" y="68">PRS</text>
@@ -2106,7 +2126,7 @@ that requires three messages.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
                 <text x="220" y="148">PRS,</text>
                 <text x="260" y="148">tr1,</text>
                 <text x="296" y="148">SK1</text>
-                <text x="416" y="148">QUAKE</text>
+                <text x="420" y="148">OQUAKE</text>
                 <text x="532" y="148">H(fullsid,</text>
                 <text x="596" y="148">PRS,</text>
                 <text x="636" y="148">tr1,</text>
@@ -2130,20 +2150,22 @@ that requires three messages.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
             </svg><a href="#section-5.3-4.1" class="pilcrow">¶</a>
 </div>
 </div>
-<p id="section-5.3-5">Unlike QUAKE, CPaceQUAKE does not require a shared session identifier sid, although this
-is strongly recommended. If no sid is provided, CPace will run without an sid, and QUAKE
+<p id="section-5.3-5">Unlike OQUAKE, CPaceOQUAKE does not require a shared session identifier sid, although this
+is strongly recommended. If no sid is provided, CPace will run without an sid, and OQUAKE
 will use a random string generated with random material provided by both parties. If an
-sid is provided, both CPace and QUAKE will use this sid.<a href="#section-5.3-5" class="pilcrow">¶</a></p>
+sid is provided, both CPace and OQUAKE will use this sid.<a href="#section-5.3-5" class="pilcrow">¶</a></p>
 <p id="section-5.3-6">An overview of the protocol flow is shown below. The protocol has four functions. Init and
 InitiatorFinish are intended to be called by the initiator, and Respond and ResponderFinish
 are intended to be called by the responder. The following subsections specify these functions.<a href="#section-5.3-6" class="pilcrow">¶</a></p>
 <div id="section-5.3-7">
           <div class="alignLeft art-svg artwork" id="section-5.3-7.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="512" viewBox="0 0 512 432" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="520" viewBox="0 0 520 432" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 112,96 L 112,240" fill="none" stroke="black"></path>
               <path d="M 112,304 L 112,392" fill="none" stroke="black"></path>
-              <path d="M 352,56 L 352,144" fill="none" stroke="black"></path>
-              <path d="M 352,192 L 352,336" fill="none" stroke="black"></path>
+              <path d="M 136,64 L 136,72" fill="none" stroke="black"></path>
+              <path d="M 352,96 L 352,144" fill="none" stroke="black"></path>
+              <path d="M 352,184 L 352,256" fill="none" stroke="black"></path>
+              <path d="M 352,288 L 352,336" fill="none" stroke="black"></path>
               <path d="M 72,48 L 392,48" fill="none" stroke="black"></path>
               <path d="M 120,128 L 344,128" fill="none" stroke="black"></path>
               <path d="M 120,224 L 344,224" fill="none" stroke="black"></path>
@@ -2158,10 +2180,12 @@ are intended to be called by the responder. The following subsections specify th
                 <text x="240" y="36">Server:</text>
                 <text x="320" y="36">PRS,sid,U,S</text>
                 <text x="64" y="68">ctx1,</text>
-                <text x="116" y="68">(msg1,</text>
+                <text x="112" y="68">(msg1</text>
                 <text x="160" y="68">s1)</text>
                 <text x="184" y="68">=</text>
-                <text x="116" y="84">CPaceQUAKE.Init(PRS,sid,U,S)</text>
+                <text x="352" y="68">|</text>
+                <text x="120" y="84">CPaceOQUAKE.Init(PRS,sid,U,S)</text>
+                <text x="360" y="84">|</text>
                 <text x="208" y="116">msg1,</text>
                 <text x="244" y="116">s1</text>
                 <text x="264" y="164">ctx2,</text>
@@ -2169,21 +2193,22 @@ are intended to be called by the responder. The following subsections specify th
                 <text x="368" y="164">msg3,</text>
                 <text x="408" y="164">s2)</text>
                 <text x="432" y="164">=</text>
-                <text x="320" y="180">CPaceQUAKE.Respond(PRS,(msg1,s1),sid,U,S)</text>
+                <text x="324" y="180">CPaceOQUAKE.Respond(PRS,(msg1,s1),sid,U,S)</text>
                 <text x="192" y="212">msg2,</text>
                 <text x="240" y="212">msg3,</text>
                 <text x="276" y="212">s2</text>
                 <text x="80" y="260">client_key,</text>
                 <text x="148" y="260">msg4</text>
                 <text x="176" y="260">=</text>
-                <text x="128" y="276">CPaceQUAKE.InitiatorFinish(PRS,</text>
-                <text x="272" y="276">...</text>
+                <text x="132" y="276">CPaceOQUAKE.InitiatorFinish(PRS,</text>
+                <text x="280" y="276">...</text>
+                <text x="360" y="276">|</text>
                 <text x="136" y="292">(ctx1,s1),(msg2,msg3,s2),sid,U,S)</text>
                 <text x="228" y="308">msg4</text>
                 <text x="340" y="356">server_key</text>
                 <text x="392" y="356">=</text>
-                <text x="332" y="372">CPaceQUAKE.ResponderFinish(ctx2,</text>
-                <text x="488" y="372">msg4)</text>
+                <text x="336" y="372">CPaceOQUAKE.ResponderFinish(ctx2,</text>
+                <text x="496" y="372">msg4)</text>
                 <text x="352" y="388">|</text>
                 <text x="68" y="420">output</text>
                 <text x="140" y="420">client_key</text>
@@ -2203,7 +2228,7 @@ and optional client and server identifiers U and S. The output of this process i
 completing the protocol and a protocol message. The client sends this message to the server.<a href="#section-5.3.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.3.1-2">
 <pre>
-CPaceQUAKE.Init
+CPaceOQUAKE.Init
 
 Input:
 - PRS, password-related string, a byte string
@@ -2235,13 +2260,13 @@ def Init(PRS, sid, U, S):
 <p id="section-5.3.2-1">The server processes the client message using its input PRS, an optional session identifier sid, and
 optional client and server identifiers U and S. The first output of this function is a context that
 is used to finish the protocol later. The second output is a protocol message intended for the client.<a href="#section-5.3.2-1" class="pilcrow">¶</a></p>
-<p id="section-5.3.2-2">The server responds to the CPace session that the client initiated, and it initiates a new QUAKE
+<p id="section-5.3.2-2">The server responds to the CPace session that the client initiated, and it initiates a new OQUAKE
 session using both the PRS and the key established by CPace.<a href="#section-5.3.2-2" class="pilcrow">¶</a></p>
 <p id="section-5.3.2-3">The server <span class="bcp14">MUST</span> ensure that exactly one of <code>s1</code> and <code>sid</code> exists. It <span class="bcp14">MUST</span> abort if the message does
 not have the correct length.<a href="#section-5.3.2-3" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.3.2-4">
 <pre>
-CPaceQUAKE.Respond
+CPaceOQUAKE.Respond
 
 Input:
 - PRS, password-related string, a byte string
@@ -2255,26 +2280,26 @@ Output:
 
 Parameters:
 - CPace, parameterized instance of CPace
-- QUAKE, parameterized instance of QUAKE
+- OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
 def Respond(PRS, init_msg, sid, U, S):
   s1, msg1 = init_msg[0..32], lv_decode(init_msg[32..])
 
   key1, msg2 = CPace.Respond(PRS, msg1, sid, U, S)
-  key1A = KDF.Expand(key1, DST || "prs", Nkey)
+  key1A = KDF.Expand(key1, DST || "prskey", Nkey)
   key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
   s2 = random(32)
-  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceQUAKE")
+  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
   extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
 
-  PRS2_prk = KDF.Extract(PRS, DST || "PRS2" || fullsid || msg1 || msg2 || key1A)
-  PRS2 = KDF.Expand(PRS2_prk, Nkey)
+  PRS2_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(PRS2_prk, DST || "PRS2", Nkey)
 
-  ctx2, msg3 = QUAKE.Init(PRS2, extended_sid, U, S)
+  ctx2, msg3 = OQUAKE.Init(PRS2, extended_sid, U, S)
 
   resp_msg = s2 || lv_encode(msg2) || lv_encode(msg3)
 
@@ -2290,16 +2315,16 @@ def Respond(PRS, init_msg, sid, U, S):
           </h4>
 <p id="section-5.3.3-1">The client finishes the protocol by processing the server response. The client obtains a
 shared secret and a final message intended for the server. It does so by finishing the
-CPace session and responding to the QUAKE session.<a href="#section-5.3.3-1" class="pilcrow">¶</a></p>
+CPace session and responding to the OQUAKE session.<a href="#section-5.3.3-1" class="pilcrow">¶</a></p>
 <p id="section-5.3.3-2">The client must ensure that exactly one of (s1, s2) and sid exists.
 The client should abort when the message does not have the correct length.<a href="#section-5.3.3-2" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.3.3-3">
 <pre>
-CPaceQUAKE.InitiatorFinish
+CPaceOQUAKE.InitiatorFinish
 
 Input:
 - PRS, password-related string, a byte string
-- (ctx1, s1), the context generated by CPaceQUAKE.Init
+- (ctx1, s1), the context generated by CPaceOQUAKE.Init
 - resp_msg, the message received from the server
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
@@ -2310,7 +2335,7 @@ Output:
 
 Parameters:
 - CPace, parameterized instance of CPace
-- QUAKE, parameterized instance of QUAKE
+- OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
 def InitiatorFinish(PRS, (ctx1, s1), (msg2, msg3, s2), sid, U, S):
@@ -2319,19 +2344,19 @@ def InitiatorFinish(PRS, (ctx1, s1), (msg2, msg3, s2), sid, U, S):
   msg3 = lv_decode(resp_msg[32+len(msg2)..])
 
   key1 = CPace.Finish(ctx1, msg2, sid, U, S)
-  key1A = KDF.Expand(key1, DST || "prs", Nkey)
+  key1A = KDF.Expand(key1, DST || "prskey", Nkey)
   key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
-  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceQUAKE")
+  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
   extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
-  PRS2_prk = KDF.Extract(PRS, DST || "PRS2" || fullsid || msg1 || msg2 || key1A)
-  PRS2 = KDF.Expand(PRS2_prk, Nkey)
+  PRS2_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(PRS2_prk, DST || "PRS2", Nkey)
 
-  key2, msg4 = QUAKE.Respond(PRS2, extended_sid, msg3, Nkey, U, S)
+  key2, msg4 = OQUAKE.Respond(PRS2, extended_sid, msg3, Nkey, U, S)
 
-  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
+  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
   client_key = KDF.Expand(sessionkey_prk, DST || "sessionkey", Nkey)
 
   return client_key, msg4
@@ -2344,11 +2369,11 @@ def InitiatorFinish(PRS, (ctx1, s1), (msg2, msg3, s2), sid, U, S):
           <h4 id="name-server-finish">
 <a href="#section-5.3.4" class="section-number selfRef">5.3.4. </a><a href="#name-server-finish" class="section-name selfRef">Server Finish</a>
           </h4>
-<p id="section-5.3.4-1">The server finishes the protocol by finising QUAKE using the client's response, outputting a shared secret of N bytes.
+<p id="section-5.3.4-1">The server finishes the protocol by finising OQUAKE using the client's response, outputting a shared secret of N bytes.
 It should abort when the message does not have the correct length.<a href="#section-5.3.4-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.3.4-2">
 <pre>
-CPaceQUAKE.ResponderFinish
+CPaceOQUAKE.ResponderFinish
 
 Input:
 - ctx, context from the server's Response
@@ -2358,15 +2383,15 @@ Output:
 - key, an N-byte shared secret
 
 Parameters:
-- QUAKE, parameterized instance of QUAKE
+- OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
 def ResponderFinish(ctx, msg4):
   (fullsid, PRS, msg1, msg2, msg3, key1B, ctx2) = ctx
 
-  key2 = QUAKE.Finish(ctx2, msg4)
+  key2 = OQUAKE.Finish(ctx2, msg4)
 
-  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
+  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
   server_key = KDF.Expand(sessionkey_prk, DST || "sessionkey", Nkey)
 
   return server_key
@@ -2378,20 +2403,22 @@ def ResponderFinish(ctx, msg4):
 </div>
 </section>
 </div>
-<div id="CPaceQUAKEplus">
+<div id="CPaceOQUAKEplus">
 <section id="section-6">
-      <h2 id="name-cpacequake-protocol-2">
-<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-cpacequake-protocol-2" class="section-name selfRef">CPaceQUAKE+ Protocol</a>
+      <h2 id="name-cpaceoquake-protocol-2">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-cpaceoquake-protocol-2" class="section-name selfRef">CPaceOQUAKE+ Protocol</a>
       </h2>
-<p id="section-6-1">CPaceQUAKE+ is the 5 message aPAKE resulting from applying a KEM-based
-PAKE-to-aPAKE transformation to CPaceQUAKE. At a high level, this
-involves running CPaceQUAKE on a verifier of the client's password.
+<p id="section-6-1">CPaceOQUAKE+ is the 5 message aPAKE resulting from applying a KEM-based
+PAKE-to-aPAKE transformation to CPaceOQUAKE. At a high level, this
+involves running CPaceOQUAKE on a verifier of the client's password.
 To ensure that the client does indeed know the password pertaining
 to that verifier, there is an additional password confirmation
 stage that uses seed derived from the password. Both the verifier and
 the seed are derived from the password using a key stretching function.
 The seed is later used to derive a KEM public key. We refer to the collection
 of the verifier and this public key as 'the verifiers'.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">The CPaceOQUAKE+ protocol can be seen as a close variant (and a specific
+instance) of the `augmented PAKE' construction presented in <span>[<a href="#LLH24" class="cite xref">LLH24</a>]</span> and in <span>[<a href="#Gu24" class="cite xref">Gu24</a>]</span>.<a href="#section-6-2" class="pilcrow">¶</a></p>
 <div id="registering-clients">
 <section id="section-6.1">
         <h3 id="name-registering-clients">
@@ -2406,10 +2433,10 @@ a protocol for registering clients.<a href="#section-6.1-1" class="pilcrow">¶</
           </h4>
 <p id="section-6.1.1-1">Verifiers are random-looking value derived from password-related strings
 from which it is computionally impractical to derive the password-related
-string. To make verifiers unique between different clients with the same
-password or servers that they interact with, we employ a salt and optional
-client and server identifiers. The material required for the verifiers is
-generated as follows:<a href="#section-6.1.1-1" class="pilcrow">¶</a></p>
+string. To make verifiers unique between different users with the same
+password or servers that they interact with, we employ a salt, a user
+account identifier, and an optional server identifier. The material
+required for the verifiers is generated as follows:<a href="#section-6.1.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.1.1-2">
 <pre>
 GenVerifierMaterial
@@ -2449,7 +2476,7 @@ Output:
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
-- KSF, a parameterized KSF instance
+- KEM, a KEM instance
 
 def GenVerifiers(PRS, salt, U, S):
   verifier, seed = GenVerifierMaterial(PRS, salt, U, S)
@@ -2485,14 +2512,18 @@ additional communication flows. Instead, one may consider deriving the salt from
                 <g class="text">
                   <text x="32" y="36">Client:</text>
                   <text x="84" y="36">PRS,</text>
-                  <text x="124" y="36">salt</text>
+                  <text x="128" y="36">salt,</text>
+                  <text x="164" y="36">U,</text>
+                  <text x="184" y="36">S</text>
                   <text x="328" y="36">Server:</text>
                   <text x="376" y="36">N/A</text>
                   <text x="24" y="68">(v,</text>
                   <text x="56" y="68">pk)</text>
                   <text x="80" y="68">=</text>
                   <text x="160" y="68">GenVerifiers(PRS,</text>
-                  <text x="256" y="68">salt)</text>
+                  <text x="256" y="68">salt,</text>
+                  <text x="292" y="68">U,</text>
+                  <text x="316" y="68">S)</text>
                   <text x="184" y="100">salt,</text>
                   <text x="220" y="100">v,</text>
                   <text x="244" y="100">pk</text>
@@ -2516,7 +2547,7 @@ additional communication flows. Instead, one may consider deriving the salt from
         </h3>
 <p id="section-6.2-1">In the password confirmation (PC) stage, the client proves knowledge
 of its password without revealing it. It uses the registered verifiers from the
-previous subsection. To do so securely, it uses the key established by CPaceQUAKE,
+previous subsection. To do so securely, it uses the key established by CPaceOQUAKE,
 which allows it to realize a confidential but unauthenticated channel.
 In other words, this password confirmation stage cannot be used by itself.
 This PC stage is parameterized by a KEM, KDF, KSF, and is additionally bound
@@ -2525,13 +2556,14 @@ for specific parameter configurations.<a href="#section-6.2-1" class="pilcrow">�
 <p id="section-6.2-2">The password confirmation is a two-round challenge-response flow between the
 server and client. In particular, the server challenges the client to prove
 knowledge of its password. More precisely, it challenges the client to prove
-knowledge of a seed, derived from the password using a key stretching function.
+knowledge of a seed, derived from the the GenVerifierMaterial function (and
+in turn derived from the password using a key stretching function).
 Both client and server share a symmetric key as input. Additionally, the server
 has the client's public key and salt stored from the previous registration flow.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 <p id="section-6.2-3">A high level overview of this flow is below.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 <div id="section-6.2-4">
           <div class="alignLeft art-svg artwork" id="section-6.2-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="288" width="576" viewBox="0 0 576 288" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="288" width="584" viewBox="0 0 584 288" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 104,80 L 104,128" fill="none" stroke="black"></path>
               <path d="M 104,160 L 104,208" fill="none" stroke="black"></path>
               <path d="M 328,80 L 328,128" fill="none" stroke="black"></path>
@@ -2545,19 +2577,19 @@ has the client's public key and salt stored from the previous registration flow.
               <g class="text">
                 <text x="32" y="36">Client:</text>
                 <text x="80" y="36">SK,</text>
-                <text x="116" y="36">PRS,</text>
-                <text x="152" y="36">tx,</text>
-                <text x="188" y="36">sid,</text>
-                <text x="220" y="36">U,</text>
-                <text x="240" y="36">S</text>
-                <text x="320" y="36">Server:</text>
-                <text x="368" y="36">SK,</text>
-                <text x="408" y="36">salt,</text>
-                <text x="448" y="36">pk,</text>
-                <text x="480" y="36">tx,</text>
-                <text x="516" y="36">sid,</text>
-                <text x="548" y="36">U,</text>
-                <text x="568" y="36">S</text>
+                <text x="120" y="36">seed,</text>
+                <text x="160" y="36">tx,</text>
+                <text x="196" y="36">sid,</text>
+                <text x="228" y="36">U,</text>
+                <text x="248" y="36">S</text>
+                <text x="328" y="36">Server:</text>
+                <text x="376" y="36">SK,</text>
+                <text x="416" y="36">salt,</text>
+                <text x="456" y="36">pk,</text>
+                <text x="488" y="36">tx,</text>
+                <text x="524" y="36">sid,</text>
+                <text x="556" y="36">U,</text>
+                <text x="576" y="36">S</text>
                 <text x="100" y="68">ctx,</text>
                 <text x="160" y="68">challenge</text>
                 <text x="208" y="68">=</text>
@@ -2631,8 +2663,8 @@ def PC-Challenge(SK, transcript, pk, sid, U, S):
 
   confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
 
-  prk_k_h1 = KDF.Extract(confirm_input, DST || "h1", nil)
-  prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2", nil)
+  prk_k_h1 = KDF.Extract(confirm_input, DST || "h1")
+  prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2")
 
   // Derive h1 from the full transcript excluding k
   client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
@@ -2692,24 +2724,28 @@ def PC-Response(SK, seed, transcript, challenge, sid, U, S):
   c = XOR(enc_c, r)
 
   (pk, sk) = KEM.DeriveKeyPair(seed)
-  k = KEM.Decaps(sk, c)
 
-  confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
+  try:
+    k = KEM.Decaps(sk, c)
 
-  prk_k_h1 = KDF.Extract(confirm_input, DST || "h1", nil)
-  prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2", nil)
+    confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
 
-  // Derive h1 from the full transcript excluding k
-  client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
+    prk_k_h1 = KDF.Extract(confirm_input, DST || "h1")
+    prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2")
 
-  // Derive h2 || SK from the full transcript including k
-  server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
-  client_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
+    // Derive h1 from the full transcript excluding k
+    client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
 
-  if client_confirm != client_confirm_target:
+    // Derive h2 || SK from the full transcript including k
+    server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
+    client_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
+
+    if client_confirm != client_confirm_target:
+      raise AuthenticationError
+
+    return client_key, server_confirm
+  catch DecapsError:
     raise AuthenticationError
-
-  return client_key, server_confirm
 </pre><a href="#section-6.2.2-3" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2727,7 +2763,7 @@ PC-Verify
 
 Input:
 - context, opaque context produced by Challenge
-- response, client's response message, a byte string
+- server_confirm_target, client's response message, a byte string
 
 Output:
 - server_key, a 32-byte string
@@ -2748,13 +2784,13 @@ def PC-Verify(context, server_confirm_target):
 </div>
 </section>
 </div>
-<div id="composition-of-cpacequake-password-confirmation">
+<div id="composition-of-cpaceoquake-password-confirmation">
 <section id="section-6.3">
-        <h3 id="name-composition-of-cpacequake-p">
-<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-composition-of-cpacequake-p" class="section-name selfRef">Composition of CPaceQUAKE &amp; Password Confirmation</a>
+        <h3 id="name-composition-of-cpaceoquake-">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-composition-of-cpaceoquake-" class="section-name selfRef">Composition of CPaceOQUAKE &amp; Password Confirmation</a>
         </h3>
-<p id="section-6.3-1">The composition of CPaceQUAKE and the password confirmation stage is
-strictly sequential. First, the parties run CPaceQUAKE using the verifier.
+<p id="section-6.3-1">The composition of CPaceOQUAKE and the password confirmation stage is
+strictly sequential. First, the parties run CPaceOQUAKE using the verifier.
 The client recovers this verifier using the <code>GenVerifierMaterial</code> function.
 After that, the parties proceed with password confirmation, which is
 initiated by the server using the stored public key. The client uses the
@@ -2835,16 +2871,16 @@ overview of the composition is below.<a href="#section-6.3-1" class="pilcrow">¶
               <path class="jump" d="M 96,104 C 102,104 102,88 96,88" fill="none" stroke="black"></path>
               <polygon class="arrowhead" points="80,352 68,346.4 68,357.6" fill="black" transform="rotate(180,72,352)"></polygon>
               <g class="text">
-                <text x="152" y="52">CPaceQUAKE+</text>
+                <text x="156" y="52">CPaceOQUAKE+</text>
                 <text x="36" y="84">Client's</text>
-                <text x="364" y="84">CPaceQUAKE</text>
+                <text x="368" y="84">CPaceOQUAKE</text>
                 <text x="36" y="100">password</text>
                 <text x="208" y="100">GenVerifierMaterial</text>
                 <text x="368" y="116">CPace</text>
                 <text x="372" y="132">protocol</text>
                 <text x="252" y="148">Verifier</text>
                 <text x="532" y="148">Verifier</text>
-                <text x="368" y="196">QUAKE</text>
+                <text x="372" y="196">OQUAKE</text>
                 <text x="372" y="212">protocol</text>
                 <text x="292" y="260">SK</text>
                 <text x="452" y="260">SK</text>
@@ -2868,11 +2904,12 @@ Note here that if the client does not know the salt, the server must send
 it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
 <div id="section-6.3-4">
           <div class="alignLeft art-svg artwork" id="section-6.3-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="608" width="560" viewBox="0 0 560 608" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="608" width="568" viewBox="0 0 568 608" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 104,96 L 104,224" fill="none" stroke="black"></path>
               <path d="M 104,272 L 104,432" fill="none" stroke="black"></path>
               <path d="M 104,480 L 104,568" fill="none" stroke="black"></path>
-              <path d="M 384,56 L 384,320" fill="none" stroke="black"></path>
+              <path d="M 384,96 L 384,224" fill="none" stroke="black"></path>
+              <path d="M 384,256 L 384,320" fill="none" stroke="black"></path>
               <path d="M 384,384 L 384,448" fill="none" stroke="black"></path>
               <path d="M 384,480 L 384,536" fill="none" stroke="black"></path>
               <path d="M 88,48 L 400,48" fill="none" stroke="black"></path>
@@ -2882,6 +2919,7 @@ it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a
               <path d="M 112,416 L 376,416" fill="none" stroke="black"></path>
               <path d="M 112,512 L 376,512" fill="none" stroke="black"></path>
               <path d="M 88,576 L 400,576" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="392,168 380,162.4 380,173.6" fill="black" transform="rotate(90,384,168)"></polygon>
               <polygon class="arrowhead" points="384,512 372,506.4 372,517.6" fill="black" transform="rotate(0,376,512)"></polygon>
               <polygon class="arrowhead" points="384,304 372,298.4 372,309.6" fill="black" transform="rotate(0,376,304)"></polygon>
               <polygon class="arrowhead" points="384,128 372,122.4 372,133.6" fill="black" transform="rotate(0,376,128)"></polygon>
@@ -2897,26 +2935,29 @@ it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a
                 <text x="88" y="68">=</text>
                 <text x="196" y="68">GenVerifierMaterial(PRS,</text>
                 <text x="320" y="68">salt)</text>
+                <text x="384" y="68">|</text>
                 <text x="24" y="84">ctx1,</text>
                 <text x="68" y="84">msg1</text>
                 <text x="96" y="84">=</text>
-                <text x="212" y="84">CPaceQUAKE.Init(v,sid,U,S)</text>
+                <text x="216" y="84">CPaceOQUAKE.Init(v,sid,U,S)</text>
+                <text x="392" y="84">|</text>
                 <text x="244" y="116">msg1</text>
                 <text x="136" y="164">ctx2,</text>
                 <text x="180" y="164">msg2</text>
                 <text x="208" y="164">=</text>
-                <text x="300" y="164">CPaceQUAKE.Respond(v</text>
-                <text x="440" y="164">msg1,sid,U,S)</text>
+                <text x="300" y="164">CPaceOQUAKE.Respond(</text>
+                <text x="444" y="164">,msg1,sid,U,S)</text>
                 <text x="244" y="196">msg2</text>
                 <text x="16" y="244">SK,</text>
                 <text x="52" y="244">msg3</text>
                 <text x="80" y="244">=</text>
-                <text x="200" y="244">CPaceQUAKE.InitiatorFinish(</text>
+                <text x="204" y="244">CPaceOQUAKE.InitiatorFinish(</text>
+                <text x="392" y="244">|</text>
                 <text x="112" y="260">v,ctx1,msg2,32,sid,U,S)</text>
                 <text x="244" y="292">msg3</text>
                 <text x="228" y="340">SK</text>
                 <text x="248" y="340">=</text>
-                <text x="408" y="340">CPaceQUAKE.ResponderFinish(ctx2,msg3)</text>
+                <text x="412" y="340">CPaceOQUAKE.ResponderFinish(ctx2,msg3)</text>
                 <text x="228" y="356">tx</text>
                 <text x="248" y="356">=</text>
                 <text x="276" y="356">msg1</text>
@@ -2960,14 +3001,14 @@ it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a
 </div>
 <div id="configurations">
 <section id="section-7">
-      <h2 id="name-cpacequake-configurations">
-<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-cpacequake-configurations" class="section-name selfRef">CPaceQUAKE+ Configurations</a>
+      <h2 id="name-cpaceoquake-configurations">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-cpaceoquake-configurations" class="section-name selfRef">CPaceOQUAKE+ Configurations</a>
       </h2>
-<p id="section-7-1">CPaceQUAKE+ is instantiated by selecting a configuration of a group and hash function
-for the CPace protocol, a KEM, KDF, KSF, for password confirmation, and a KEM and KDF for CPaceQUAKE, and a general
+<p id="section-7-1">CPaceOQUAKE+ is instantiated by selecting a configuration of a group and hash function
+for the CPace protocol, a KEM, KDF, KSF, for password confirmation, and a KEM and KDF for CPaceOQUAKE, and a general
 purpose cryptographic hash function H.
 The KEM, KDF, are not required to be the same, so they are distinguished by "PC-" and "PAKE-" prefixes, e.g., PC-KDF and
-PAKE-KDF are the KDFs for the password confirmation stage and the CPaceQUAKE protocol, respectively.<a href="#section-7-1" class="pilcrow">¶</a></p>
+PAKE-KDF are the KDFs for the password confirmation stage and the CPaceOQUAKE protocol, respectively.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">The <span class="bcp14">RECOMMENDED</span> configuration is below.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-3.1">
@@ -3042,7 +3083,7 @@ are as follows:<a href="#section-8-1" class="pilcrow">¶</a></p>
 client or server; <a href="#pcp" class="auto internal xref">Section 6.2</a><a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-3">Beyond these explicit errors, CPaceQUAKE+ implementations can produce implicit errors.
+<p id="section-8-3">Beyond these explicit errors, CPaceOQUAKE+ implementations can produce implicit errors.
 For example, if protocol messages sent between client and server do not match
 their expected size, an implementation should produce an error.<a href="#section-8-3" class="pilcrow">¶</a></p>
 <p id="section-8-4">The errors in this document are meant as a guide for implementors. They are not an
@@ -3085,25 +3126,17 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
         <dd>
 <span class="refAuthor">Abdalla, M.</span>, <span class="refAuthor">Haase, B.</span>, and <span class="refAuthor">J. Hesse</span>, <span class="refTitle">"CPace, a balanced composable PAKE"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-cpace-13</span>, <time datetime="2024-10-14" class="refDate">14 October 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-13">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-13</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="CPace">[CPace]</dt>
-        <dd>
-<span class="refAuthor">Abdalla, M.</span>, <span class="refAuthor">Haase, B.</span>, and <span class="refAuthor">J. Hesse</span>, <span class="refTitle">"CPace, a balanced composable PAKE"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-cpace-13</span>, <time datetime="2024-10-14" class="refDate">14 October 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-13">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-13</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="FIPS202">[FIPS202]</dt>
         <dd>
 <span class="refAuthor">National Institute of Standards and Technology (NIST)</span>, <span class="refTitle">"SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions"</span>, <time datetime="2015-08" class="refDate">August 2015</time>, <span>&lt;<a href="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf">https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="FIPS203-Draft">[FIPS203-Draft]</dt>
+<dt id="FIPS203">[FIPS203]</dt>
         <dd>
-<span class="refAuthor">National Institute of Standards and Technology (NIST)</span>, <span class="refTitle">"Module-Lattice-Based Key-Encapsulation Mechanism Standard"</span>, <time datetime="2023-08" class="refDate">August 2023</time>, <span>&lt;<a href="https://csrc.nist.gov/pubs/fips/203/ipd">https://csrc.nist.gov/pubs/fips/203/ipd</a>&gt;</span>. </dd>
+<span class="refAuthor">National Institute of Standards and Technology (NIST)</span>, <span class="refTitle">"Module-Lattice-Based Key-Encapsulation Mechanism Standard"</span>, <time datetime="2024-08" class="refDate">August 2024</time>, <span>&lt;<a href="https://csrc.nist.gov/pubs/fips/203/final">https://csrc.nist.gov/pubs/fips/203/final</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="KEMELEON">[KEMELEON]</dt>
         <dd>
 <span class="refAuthor">Günther, F.</span>, <span class="refAuthor">Stebila, D.</span>, and <span class="refAuthor">S. Veitch</span>, <span class="refTitle">"Kemeleon Encodings"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-veitch-kemeleon-00</span>, <time datetime="2024-11-29" class="refDate">29 November 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-veitch-kemeleon-00">https://datatracker.ietf.org/doc/html/draft-veitch-kemeleon-00</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="QUAKE">[QUAKE]</dt>
-        <dd>
-<span class="refAuthor">Beguinet, H.</span>, <span class="refAuthor">Chevalier, C.</span>, <span class="refAuthor">Pointcheval, D.</span>, <span class="refAuthor">Ricosset, T.</span>, and <span class="refAuthor">M. Rossi</span>, <span class="refTitle">"GeT a CAKE: Generic Transformations from Key Encaspulation Mechanisms to Password Authenticated Key Exchanges"</span>, <span class="refContent">Springer Nature Switzerland</span>, <span class="seriesInfo">Lecture Notes in Computer Science pp. 516-538</span>, <span class="seriesInfo">DOI 10.1007/978-3-031-33491-7_19</span>, <span class="seriesInfo">ISBN ["9783031334900", "9783031334917"]</span>, <time datetime="2023" class="refDate">2023</time>, <span>&lt;<a href="https://doi.org/10.1007/978-3-031-33491-7_19">https://doi.org/10.1007/978-3-031-33491-7_19</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
@@ -3130,6 +3163,26 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
 <a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="ABJ25">[ABJ25]</dt>
+        <dd>
+<span class="refAuthor">Arriaga, A.</span>, <span class="refAuthor">Barbosa, M.</span>, and <span class="refAuthor">S. Jarecki</span>, <span class="refTitle">"NoIC: PAKE from KEM without Ideal Ciphers"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2025/231.pdf">https://eprint.iacr.org/2025/231.pdf</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="Gu24">[Gu24]</dt>
+        <dd>
+<span class="refAuthor">Gu, Y.</span>, <span class="refTitle">"New Paradigms For Efficient Password Authentication Protocols"</span>, <span>n.d.</span>, <span>&lt;<a href="https://www.escholarship.org/uc/item/7qm0220s">https://www.escholarship.org/uc/item/7qm0220s</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="HR24">[HR24]</dt>
+        <dd>
+<span class="refAuthor">Hesse, J.</span> and <span class="refAuthor">M. Rosenberg</span>, <span class="refTitle">"PAKE Combiners and Efficient Post-Quantum Instantiations"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1621.pdf">https://eprint.iacr.org/2024/1621.pdf</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="LL24">[LL24]</dt>
+        <dd>
+<span class="refAuthor">Lyu, Y.</span> and <span class="refAuthor">S. Liu</span>, <span class="refTitle">"Hybrid Password Authentication Key Exchange in the UC Framework"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1630">https://eprint.iacr.org/2024/1630</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="LLH24">[LLH24]</dt>
+        <dd>
+<span class="refAuthor">Lyu, Y.</span>, <span class="refAuthor">Liu, S.</span>, and <span class="refAuthor">S. Han</span>, <span class="refTitle">"Efficient Asymmetric PAKE Compiler from KEM and AE"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1400">https://eprint.iacr.org/2024/1400</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="OPAQUE">[OPAQUE]</dt>
         <dd>
 <span class="refAuthor">Bourdrez, D.</span>, <span class="refAuthor">Krawczyk, H.</span>, <span class="refAuthor">Lewi, K.</span>, and <span class="refAuthor">C. A. Wood</span>, <span class="refTitle">"The OPAQUE Augmented PAKE Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-opaque-18</span>, <time datetime="2024-11-21" class="refDate">21 November 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-opaque-18">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-opaque-18</a>&gt;</span>. </dd>
@@ -3149,10 +3202,10 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-deriving-parameters" class="section-name selfRef">Deriving parameters</a>
       </h2>
 <p id="appendix-A-1">This section discusses how to generate parameters, given an upper bound on an adversary's advantage in breaking the hybrid (a)PAKE. The parameters in this standard correspond to a classical hardness of 117 bits (considering the attacker can break CPace) and a quantum hardness of 100 bits. We assume that an adversary can perform at most 2^qq queries to random oracles or (a)PAKE sessions. We use qq = 64. The derivation below uses some approximations, ignoring small constants in the exponent such as 1 and 1.6. We also only study dominant terms in the advantage equations.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<div id="parameters-for-cpacequake">
+<div id="parameters-for-cpaceoquake">
 <section id="appendix-A.1">
-        <h3 id="name-parameters-for-cpacequake">
-<a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-parameters-for-cpacequake" class="section-name selfRef">Parameters for CPaceQUAKE+</a>
+        <h3 id="name-parameters-for-cpaceoquake">
+<a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-parameters-for-cpaceoquake" class="section-name selfRef">Parameters for CPaceOQUAKE+</a>
         </h3>
 <p id="appendix-A.1-1">We have the following requirements:<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -3175,33 +3228,33 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
             <p id="appendix-A.1-2.6.1">KEM ind vs quantum &lt;= -qq - quantum hardness<a href="#appendix-A.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.1-2.7">
-            <p id="appendix-A.1-2.7.1">CPaceQUAKE vs classical &lt;= classical hardness<a href="#appendix-A.1-2.7.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.1-2.7.1">CPaceOQUAKE vs classical &lt;= classical hardness<a href="#appendix-A.1-2.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.1-2.8">
-            <p id="appendix-A.1-2.8.1">CPaceQUAKE vs quantum &lt;= quantum hardness<a href="#appendix-A.1-2.8.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.1-2.8.1">CPaceOQUAKE vs quantum &lt;= quantum hardness<a href="#appendix-A.1-2.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="appendix-A.1-3">For ML-KEM we have Nseed = 32.
 For consistency, the spec uses Nverifier = 32.
 ML-KEM768's failure probability is 2^-165.2 and ML-KEM1024's failure probability is 2^-175.2. Both are slightly too large, but we deem them acceptable: the chance that an adversary encounters a failure is purely statistical and very small.<a href="#appendix-A.1-3" class="pilcrow">¶</a></p>
-<p id="appendix-A.1-4">The following subsection discusses the parameters and hardness of CPaceQUAKE.<a href="#appendix-A.1-4" class="pilcrow">¶</a></p>
+<p id="appendix-A.1-4">The following subsection discusses the parameters and hardness of CPaceOQUAKE.<a href="#appendix-A.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="parameters-for-cpacequake-1">
+<div id="parameters-for-cpaceoquake-1">
 <section id="appendix-A.2">
-        <h3 id="name-parameters-for-cpacequake-2">
-<a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-parameters-for-cpacequake-2" class="section-name selfRef">Parameters for CPaceQUAKE</a>
+        <h3 id="name-parameters-for-cpaceoquake-2">
+<a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-parameters-for-cpaceoquake-2" class="section-name selfRef">Parameters for CPaceOQUAKE</a>
         </h3>
-<p id="appendix-A.2-1">For the security of CPaceQUAKE+, we require that CPaceQUAKE provides:<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-1">For the security of CPaceOQUAKE+, we require that CPaceOQUAKE provides:<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A.2-2.1">
-            <p id="appendix-A.2-2.1.1">CPaceQUAKE vs classical &lt;= classical hardness<a href="#appendix-A.2-2.1.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.2-2.1.1">CPaceOQUAKE vs classical &lt;= classical hardness<a href="#appendix-A.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.2-2.2">
-            <p id="appendix-A.2-2.2.1">CPaceQUAKE vs quantum &lt;= quantum hardness<a href="#appendix-A.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.2-2.2.1">CPaceOQUAKE vs quantum &lt;= quantum hardness<a href="#appendix-A.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="appendix-A.2-3">We have the following requirements when CPaceQUAKE relies on CPace's security:<a href="#appendix-A.2-3" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-3">We have the following requirements when CPaceOQUAKE relies on CPace's security:<a href="#appendix-A.2-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A.2-4.1">
             <p id="appendix-A.2-4.1.1">CPace vs classical &lt;= classical hardness<a href="#appendix-A.2-4.1.1" class="pilcrow">¶</a></p>
@@ -3213,13 +3266,13 @@ ML-KEM768's failure probability is 2^-165.2 and ML-KEM1024's failure probability
             <p id="appendix-A.2-4.3.1">KEM failure &lt;= -qq - classical hardness<a href="#appendix-A.2-4.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="appendix-A.2-5">We have the following requirements when CPaceQUAKE relies on QUAKE's security:<a href="#appendix-A.2-5" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-5">We have the following requirements when CPaceOQUAKE relies on OQUAKE's security:<a href="#appendix-A.2-5" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A.2-6.1">
-            <p id="appendix-A.2-6.1.1">QUAKE vs classical &lt;= classical hardness<a href="#appendix-A.2-6.1.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.2-6.1.1">OQUAKE vs classical &lt;= classical hardness<a href="#appendix-A.2-6.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.2-6.2">
-            <p id="appendix-A.2-6.2.1">QUAKE vs quantum &lt;= quantum hardness<a href="#appendix-A.2-6.2.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.2-6.2.1">OQUAKE vs quantum &lt;= quantum hardness<a href="#appendix-A.2-6.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.2-6.3">
             <p id="appendix-A.2-6.3.1">Nkey * 8 &gt;= 2*qq + classical hardness<a href="#appendix-A.2-6.3.1" class="pilcrow">¶</a></p>
@@ -3227,7 +3280,7 @@ ML-KEM768's failure probability is 2^-165.2 and ML-KEM1024's failure probability
         </ul>
 <p id="appendix-A.2-7">So, the smallest Nkey = 32.
 We ignore the KEM failure following the same reasoning as above.<a href="#appendix-A.2-7" class="pilcrow">¶</a></p>
-<p id="appendix-A.2-8">The following subsections discuss the parameters and hardness of CPace and QUAKE.<a href="#appendix-A.2-8" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-8">The following subsections discuss the parameters and hardness of CPace and OQUAKE.<a href="#appendix-A.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="parameters-for-cpace">
@@ -3235,14 +3288,14 @@ We ignore the KEM failure following the same reasoning as above.<a href="#append
         <h3 id="name-parameters-for-cpace">
 <a href="#appendix-A.3" class="section-number selfRef">A.3. </a><a href="#name-parameters-for-cpace" class="section-name selfRef">Parameters for CPace</a>
         </h3>
-<p id="appendix-A.3-1">We refer to the CPace <span>[<a href="#CPace" class="cite xref">CPace</a>]</span>.
-This standard requires Nkey, the number of bytes in CPace's session key, to be 32, so one must set H.bmax_in_bytes = 32.<a href="#appendix-A.3-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.3-1">We refer to the CPace <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span>. This standard requires Nkey, the number of bytes in
+CPace's session key, to be 32, so one must set H.bmax_in_bytes = 32.<a href="#appendix-A.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="parameters-for-quake">
+<div id="parameters-for-oquake">
 <section id="appendix-A.4">
-        <h3 id="name-parameters-for-quake">
-<a href="#appendix-A.4" class="section-number selfRef">A.4. </a><a href="#name-parameters-for-quake" class="section-name selfRef">Parameters for QUAKE</a>
+        <h3 id="name-parameters-for-oquake">
+<a href="#appendix-A.4" class="section-number selfRef">A.4. </a><a href="#name-parameters-for-oquake" class="section-name selfRef">Parameters for OQUAKE</a>
         </h3>
 <p id="appendix-A.4-1">We have the following requirements:<a href="#appendix-A.4-1" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -3290,6 +3343,14 @@ We ignore the KEM failure following the same reasoning as above.<a href="#append
 <div class="email">
 <span>Email:</span>
 <a href="mailto:jvos@apple.com" class="email">jvos@apple.com</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Stanislaw Jarecki</span></div>
+<div dir="auto" class="left"><span class="org">University of California, Irvine</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:sjarecki@ics.uci.edu" class="email">sjarecki@ics.uci.edu</a>
 </div>
 </address>
 <address class="vcard">
