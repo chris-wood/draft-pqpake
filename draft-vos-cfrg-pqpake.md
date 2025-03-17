@@ -70,9 +70,9 @@ machine. The only stage where PKI is required is during a client's registration.
 
 In the asymmetric PAKE setting, the client first registers a password
 verifier with the server. A verifier is a value that is derived from the
-password and which the client will later use to demonstrate knowledge of
-the password. After registration, the client uses its password and the
-server uses the corresponding verifier to establish an authenticated
+password and which the server will later use to verify the client
+knowledge of the password. After registration, the client uses its password
+and the server uses the corresponding verifier to establish an authenticated
 shared secret such that the server learns nothing of the client's password.
 
 OPAQUE-3DH {{?OPAQUE=I-D.irtf-cfrg-opaque}} and SPAKE2+ {{?SPAKE2PLUS=RFC9838}}
