@@ -34,6 +34,22 @@ author:
 
 
 normative:
+  FIPS202:
+    title: "SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions"
+    target: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+    date: Aug, 2015
+    author:
+      -
+        org: National Institute of Standards and Technology (NIST)
+  FIPS203:
+    title: "Module-Lattice-Based Key-Encapsulation Mechanism Standard"
+    target: https://csrc.nist.gov/pubs/fips/203/final
+    date: Aug, 2024
+    author:
+      -
+        org: National Institute of Standards and Technology (NIST)
+
+informative:
   Gu24:
     title: "New Paradigms For Efficient Password Authentication Protocols"
     target: https://www.escholarship.org/uc/item/7qm0220s
@@ -76,20 +92,6 @@ normative:
         name: Manuel Barbosa
       -
         name: Stanislaw Jarecki
-  FIPS202:
-    title: "SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions"
-    target: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
-    date: Aug, 2015
-    author:
-      -
-        org: National Institute of Standards and Technology (NIST)
-  FIPS203:
-    title: "Module-Lattice-Based Key-Encapsulation Mechanism Standard"
-    target: https://csrc.nist.gov/pubs/fips/203/final
-    date: Aug, 2024
-    author:
-      -
-        org: National Institute of Standards and Technology (NIST)
 
 --- abstract
 
@@ -120,7 +122,8 @@ and the server uses the corresponding verifier to establish an authenticated
 shared secret such that the server learns nothing of the client's password.
 
 OPAQUE-3DH {{?OPAQUE=I-D.irtf-cfrg-opaque}} and SPAKE2+ {{?SPAKE2PLUS=RFC9838}}
-are two examples of specified aPAKE protocols. These protocols provide security in classical threat models. However, in the presence
+are two examples of specified aPAKE protocols. These protocols provide
+security in classical threat models. However, in the presence
 of a quantum-capable attacker, both OPAQUE and SPAKE2+ fail to provide the
 desired level of security. Both protocols are vulnerable to a Harvest Now, Decrypt
 Later attack executed by a quantum-capable attacker, in which the attacker learns the shared secret and uses it
