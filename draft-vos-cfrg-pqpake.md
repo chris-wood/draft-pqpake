@@ -41,10 +41,10 @@ normative:
     author:
       -
         org: National Institute of Standards and Technology (NIST)
-  FIPS203-Draft:
+  FIPS203:
     title: "Module-Lattice-Based Key-Encapsulation Mechanism Standard"
-    target: https://csrc.nist.gov/pubs/fips/203/ipd
-    date: Aug, 2023
+    target: https://csrc.nist.gov/pubs/fips/203/final
+    date: Aug, 2024
     author:
       -
         org: National Institute of Standards and Technology (NIST)
@@ -229,7 +229,7 @@ These additional properties are crucial for the security of QUAKE. In
 other words, one MUST NOT use a KEM that has no uniform public keys
 and no anonymous ciphertexts in place of a uniform KEM.
 
-This specification uses a variant of ML-KEM768 {{FIPS203-Draft}}, denoted ML-BUKEM768.
+This specification uses a variant of ML-KEM768 {{FIPS203}}, denoted ML-BUKEM768.
 This is instantiated with Kemeleon {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
 require uniform enoding for public keys. Future specifications can replace use of
