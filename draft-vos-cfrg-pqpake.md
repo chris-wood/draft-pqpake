@@ -22,6 +22,11 @@ author:
     name: Jelle Vos
     email: jvos@apple.com
  -
+    ins: S. Jarecki
+    name: Stanislaw Jarecki
+    organization: University of California, Irvine
+    email: sjarecki@ics.uci.edu
+ -
     ins: C. A. Wood
     name: Christopher A. Wood
     organization: Apple, Inc.
@@ -209,15 +214,20 @@ This specification uses X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}.
 
 ## Binary Uniform KEM {#deps-bukem}
 
-A binary uniform KEM supports the same functions as defined above for a KEM, except that it
-also achieves stronger notions of security. Specifically, a binary uniform KEM requires:
+A binary uniform KEM supports the same functions as defined above for
+a KEM, and it must also be IND-CCA secure, but it must also achieve
+two additional security properties. Namely, in addition to IND-CCA
+security, a binary uniform KEM requires that:
 
-1. Public keys and ciphertexts are indistinguishable from random strings of bytes
-   (of the same length); and
-2. Ciphertexts are anonymous (a property that follows from IND-CCA security).
+1. Public keys are indistinguishable from random strings of bytes (of
+the same length); and
 
-These additional properties are crucial for the security of QUAKE. In other words, one MUST
-NOT use a KEM that is not uniform in place of a uniform KEM.
+2. Ciphertexts are anonymous in the presence of chosen ciphertext
+attack (ANO-CCA).
+
+These additional properties are crucial for the security of QUAKE. In
+other words, one MUST NOT use a KEM that has no uniform public keys
+and no anonymous ciphertexts in place of a uniform KEM.
 
 This specification uses a variant of ML-KEM768 {{FIPS203-Draft}}, denoted ML-BUKEM768.
 This is instantiated with Kemeleon {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
@@ -514,11 +524,11 @@ def Respond(PRS, init_msg, sid, U, S):
   (s, T) = init_msg[0..(3 * Nsec)], init_msg[(3 * Nsec)..]
 
   fullsid = encode_sid(sid, U, S)
-  prk_s_pad = KDF.Extract(PRS, DST || "QUAKE" || T || fullsid)
+  prk_s_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid)
+  prk_T_pad = KDF.Extract(PRS, DST || "QUAKE" || fullsid || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
   pk = XOR(T, T_pad)
 
@@ -527,7 +537,7 @@ def Respond(PRS, init_msg, sid, U, S):
   prk_sk = KDF.Extract(PRS, DST || "QUAKE" || fullsid || k)
   key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
-  h = KDF.Expand(prk_sk, "confirm", Nkc)
+  h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
 
   resp_msg = ct || h
 
@@ -568,7 +578,7 @@ def Finish(context, resp_msg):
     prk_sk = KDF.Extract(PRS, DST || "QUAKE" || fullsid || k)
     key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
-    h_expected = KDF.Expand(prk_sk, "confirm", Nkc)
+    h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
     if h != h_expected:
       return random(Nkey)
 
@@ -718,7 +728,7 @@ def Respond(PRS, init_msg, sid, U, S):
   s1, msg1 = init_msg[0..32], lv_decode(init_msg[32..])
 
   key1, msg2 = CPace.Respond(PRS, msg1, sid, U, S)
-  key1A = KDF.Expand(key1, DST || "prs", Nkey)
+  key1A = KDF.Expand(key1, DST || "prskey", Nkey)
   key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
   s2 = random(32)
@@ -727,8 +737,8 @@ def Respond(PRS, init_msg, sid, U, S):
 
   fullsid = encode_sid(extended_sid, U, S)
 
-  PRS2_prk = KDF.Extract(PRS, DST || "PRS2" || fullsid || msg1 || msg2 || key1A)
-  PRS2 = KDF.Expand(PRS2_prk, Nkey)
+  PRS2_prk = KDF.Extract(PRS, DST || "CPaceQUAKE" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(PRS2_prk, DST || "PRS2", Nkey)
 
   ctx2, msg3 = QUAKE.Init(PRS2, extended_sid, U, S)
 
@@ -771,15 +781,15 @@ def InitiatorFinish(PRS, (ctx1, s1), (msg2, msg3, s2), sid, U, S):
   msg3 = lv_decode(resp_msg[32+len(msg2)..])
 
   key1 = CPace.Finish(ctx1, msg2, sid, U, S)
-  key1A = KDF.Expand(key1, DST || "prs", Nkey)
+  key1A = KDF.Expand(key1, DST || "prskey", Nkey)
   key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
   extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceQUAKE")
   extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
-  PRS2_prk = KDF.Extract(PRS, DST || "PRS2" || fullsid || msg1 || msg2 || key1A)
-  PRS2 = KDF.Expand(PRS2_prk, Nkey)
+  PRS2_prk = KDF.Extract(PRS, DST || "CPaceQUAKE" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(PRS2_prk, DST || "PRS2", Nkey)
 
   key2, msg4 = QUAKE.Respond(PRS2, extended_sid, msg3, Nkey, U, S)
 
