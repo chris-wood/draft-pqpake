@@ -829,7 +829,6 @@ def ResponderFinish(ctx, msg4):
   return server_key
 ~~~
 
-
 # CPaceOQUAKE+ Protocol {#CPaceOQUAKEplus}
 
 CPaceOQUAKE+ is the 5 message aPAKE resulting from applying a KEM-based
@@ -851,10 +850,10 @@ a protocol for registering clients.
 
 Verifiers are random-looking value derived from password-related strings
 from which it is computionally impractical to derive the password-related
-string. To make verifiers unique between different clients with the same
-password or servers that they interact with, we employ a salt and optional
-client and server identifiers. The material required for the verifiers is
-generated as follows:
+string. To make verifiers unique between different users with the same
+password or servers that they interact with, we employ a salt, a user
+account identifier, and an optional server identifier. The material
+required for the verifiers is generated as follows:
 
 ~~~
 GenVerifierMaterial
@@ -894,7 +893,7 @@ Output:
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
-- KSF, a parameterized KSF instance
+- KEM, a KEM instance
 
 def GenVerifiers(PRS, salt, U, S):
   verifier, seed = GenVerifierMaterial(PRS, salt, U, S)
@@ -918,9 +917,9 @@ additional communication flows. Instead, one may consider deriving the salt from
 A high level flow overview of the registration flow is below.
 
 ~~~aasvg
-Client: PRS, salt                    Server: N/A
+Client: PRS, salt, U, S              Server: N/A
        ---------------------------------------
- (v, pk) = GenVerifiers(PRS, salt)
+ (v, pk) = GenVerifiers(PRS, salt, U, S)
             |                           |
             |       salt, v, pk         |
             |-------------------------->|
@@ -945,14 +944,15 @@ for specific parameter configurations.
 The password confirmation is a two-round challenge-response flow between the
 server and client. In particular, the server challenges the client to prove
 knowledge of its password. More precisely, it challenges the client to prove
-knowledge of a seed, derived from the password using a key stretching function.
+knowledge of a seed, derived from the the GenVerifierMaterial function (and
+in turn derived from the password using a key stretching function).
 Both client and server share a symmetric key as input. Additionally, the server
 has the client's public key and salt stored from the previous registration flow.
 
 A high level overview of this flow is below.
 
 ~~~aasvg
-Client: SK, PRS, tx, sid, U, S      Server: SK, salt, pk, tx, sid, U, S
+Client: SK, seed, tx, sid, U, S      Server: SK, salt, pk, tx, sid, U, S
        ---------------------------------------
           ctx, challenge = PC-Challenge(SK, tx, pk, sid, U, S)
             |                           |
@@ -1006,8 +1006,8 @@ def PC-Challenge(SK, transcript, pk, sid, U, S):
 
   confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
 
-  prk_k_h1 = KDF.Extract(confirm_input, DST || "h1", nil)
-  prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2", nil)
+  prk_k_h1 = KDF.Extract(confirm_input, DST || "h1")
+  prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2")
 
   // Derive h1 from the full transcript excluding k
   client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
@@ -1063,24 +1063,28 @@ def PC-Response(SK, seed, transcript, challenge, sid, U, S):
   c = XOR(enc_c, r)
 
   (pk, sk) = KEM.DeriveKeyPair(seed)
-  k = KEM.Decaps(sk, c)
 
-  confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
+  try:
+    k = KEM.Decaps(sk, c)
 
-  prk_k_h1 = KDF.Extract(confirm_input, DST || "h1", nil)
-  prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2", nil)
+    confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
 
-  // Derive h1 from the full transcript excluding k
-  client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
+    prk_k_h1 = KDF.Extract(confirm_input, DST || "h1")
+    prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2")
 
-  // Derive h2 || SK from the full transcript including k
-  server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
-  client_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
+    // Derive h1 from the full transcript excluding k
+    client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
 
-  if client_confirm != client_confirm_target:
+    // Derive h2 || SK from the full transcript including k
+    server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
+    client_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
+
+    if client_confirm != client_confirm_target:
+      raise AuthenticationError
+
+    return client_key, server_confirm
+  catch DecapsError:
     raise AuthenticationError
-
-  return client_key, server_confirm
 ~~~
 
 ### Server Verify
@@ -1093,7 +1097,7 @@ PC-Verify
 
 Input:
 - context, opaque context produced by Challenge
-- response, client's response message, a byte string
+- server_confirm_target, client's response message, a byte string
 
 Output:
 - server_key, a 32-byte string
