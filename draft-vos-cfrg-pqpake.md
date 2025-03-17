@@ -34,6 +34,48 @@ author:
 
 
 normative:
+  Gu24:
+    title: "New Paradigms For Efficient Password Authentication Protocols"
+    target: https://www.escholarship.org/uc/item/7qm0220s
+    author:
+      -
+        name: Yanqi Gu
+  LLH24:
+    title: "Efficient Asymmetric PAKE Compiler from KEM and AE"
+    target: https://eprint.iacr.org/2024/1400
+    author:
+      -
+        name: You Lyu
+      -
+        name: Shengli Liu
+      -
+        name: Shuai Han
+  LL24:
+    title: "Hybrid Password Authentication Key Exchange in the UC Framework"
+    target: https://eprint.iacr.org/2024/1630
+    author:
+      -
+        name: You Lyu
+      -
+        name: Shengli Liu
+  HR24:
+    title: "PAKE Combiners and Efficient Post-Quantum Instantiations"
+    target: https://eprint.iacr.org/2024/1621.pdf
+    author:
+      -
+        name: Julia Hesse
+      -
+        name: Michael Rosenberg
+  ABJ25:
+    title: "NoIC: PAKE from KEM without Ideal Ciphers"
+    target: https://eprint.iacr.org/2025/231.pdf
+    author:
+      -
+        name: Afonso Arriaga
+      -
+        name: Manuel Barbosa
+      -
+        name: Stanislaw Jarecki
   FIPS202:
     title: "SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions"
     target: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
@@ -54,8 +96,10 @@ normative:
 This document describes the CPaceOQUAKE+ protocol, a hybrid asymmetric
 password-authenticated key exchange (aPAKE) that supports mutual
 authentication in a client-server setting secure against
-quantum-capable attackers. CPaceOQUAKE+ is the result of a KEM-based transformation from the hybrid symmetric PAKE protocol called CPaceOQUAKE that is also described in this document. This document recommends configurations for
-CPaceOQUAKE+ and corresponding test vectors.
+quantum-capable attackers. CPaceOQUAKE+ is the result of a KEM-based
+transformation from the hybrid symmetric PAKE protocol called CPaceOQUAKE
+that is also described in this document. This document recommends
+configurations for CPaceOQUAKE+.
 
 --- middle
 
@@ -260,8 +304,15 @@ needs to satisfy collision resistance. The output is a string of L bytes.
 
 # CPaceOQUAKE Protocol {#CPaceOQUAKE}
 
-The hybrid, symmetric PAKE protocol, denoted CPaceOQUAKE consists of CPace {{!CPace=I-D.irtf-cfrg-cpace}}
-combined with OQUAKE {{!OQUAKE=DOI.10.1007/978-3-031-33491-7_19}}. At a high level, CPaceOQUAKE
+The hybrid, symmetric PAKE protocol, denoted CPaceOQUAKE consists of CPace {{CPACE}}
+combined with OQUAKE {{ABJ25}}. OQUAKE is a PAKE built from a BUKEM and KDF, using a
+2-rounds of Feistel network to password-encrypt the BUKEM public key.
+The QUAKE protocol is based on the "NoIC" protocol analyzed in {{ABJ25}}.
+
+The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by
+{{HR24}}. A very close variant of this protocol was also analyzed in {{LL24}}.
+
+At a high level, CPaceOQUAKE
 is a two-round protocol that runs between client and server wherein, upon completion, both parties
 share the same session key if they agree on the password-related string (PRS).
 Otherwise, they obtain random session keys. This is summarized in the diagram below.
@@ -841,6 +892,9 @@ the seed are derived from the password using a key stretching function.
 The seed is later used to derive a KEM public key. We refer to the collection
 of the verifier and this public key as 'the verifiers'.
 
+The CPaceOQUAKE+ protocol can be seen as a close variant (and a specific
+instance) of the `augmented PAKE' construction presented in {{LLH24}} and in {{Gu24}}.
+
 ## Registering Clients
 
 This subsection specifies functions for generating the verifiers and
@@ -1307,8 +1361,9 @@ The following subsections discuss the parameters and hardness of CPace and OQUAK
 
 
 ## Parameters for CPace
-We refer to the CPace {{!CPace}}.
-This standard requires Nkey, the number of bytes in CPace's session key, to be 32, so one must set H.bmax_in_bytes = 32.
+
+We refer to the CPace {{CPACE}}. This standard requires Nkey, the number of bytes in
+CPace's session key, to be 32, so one must set H.bmax_in_bytes = 32.
 
 
 ## Parameters for OQUAKE
