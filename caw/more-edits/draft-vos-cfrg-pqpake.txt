@@ -22,8 +22,7 @@ Abstract
    quantum-capable attackers.  CPaceOQUAKE+ is the result of a KEM-based
    transformation from the hybrid symmetric PAKE protocol called
    CPaceOQUAKE that is also described in this document.  This document
-   recommends configurations for CPaceOQUAKE+ and corresponding test
-   vectors.
+   recommends configurations for CPaceOQUAKE+.
 
 About This Document
 
@@ -361,12 +360,20 @@ Table of Contents
 5.  CPaceOQUAKE Protocol
 
    The hybrid, symmetric PAKE protocol, denoted CPaceOQUAKE consists of
-   CPace [CPace] combined with OQUAKE [OQUAKE].  At a high level,
-   CPaceOQUAKE is a two-round protocol that runs between client and
-   server wherein, upon completion, both parties share the same session
-   key if they agree on the password-related string (PRS).  Otherwise,
-   they obtain random session keys.  This is summarized in the diagram
-   below.
+   CPace [CPACE] combined with OQUAKE [ABJ25].  OQUAKE is a PAKE built
+   from a BUKEM and KDF, using a 2-rounds of Feistel network to
+   password-encrypt the BUKEM public key.  The QUAKE protocol is based
+   on the "NoIC" protocol analyzed in [ABJ25].
+
+   The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner'
+   protocol proposed by [HR24].  A very close variant of this protocol
+   was also analyzed in [LL24].
+
+   At a high level, CPaceOQUAKE is a two-round protocol that runs
+   between client and server wherein, upon completion, both parties
+   share the same session key if they agree on the password-related
+   string (PRS).  Otherwise, they obtain random session keys.  This is
+   summarized in the diagram below.
 
                +----------------------------------------+
                | CPaceOQUAKE  +----------+              |
@@ -949,6 +956,10 @@ def ResponderFinish(ctx, msg4):
    key.  We refer to the collection of the verifier and this public key
    as 'the verifiers'.
 
+   The CPaceOQUAKE+ protocol can be seen as a close variant (and a
+   specific instance) of the `augmented PAKE' construction presented in
+   [LLH24] and in [Gu24].
+
 6.1.  Registering Clients
 
    This subsection specifies functions for generating the verifiers and
@@ -1388,6 +1399,10 @@ Session <--)--------------------------+              +----(--> Session
 
 11.1.  Normative References
 
+   [ABJ25]    Arriaga, A., Barbosa, M., and S. Jarecki, "NoIC: PAKE from
+              KEM without Ideal Ciphers", n.d.,
+              <https://eprint.iacr.org/2025/231.pdf>.
+
    [ARGON2]   Biryukov, A., Dinu, D., Khovratovich, D., and S.
               Josefsson, "Argon2 Memory-Hard Function for Password
               Hashing and Proof-of-Work Applications", RFC 9106,
@@ -1395,12 +1410,6 @@ Session <--)--------------------------+              +----(--> Session
               <https://www.rfc-editor.org/rfc/rfc9106>.
 
    [CPACE]    Abdalla, M., Haase, B., and J. Hesse, "CPace, a balanced
-              composable PAKE", Work in Progress, Internet-Draft, draft-
-              irtf-cfrg-cpace-13, 14 October 2024,
-              <https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-
-              cpace-13>.
-
-   [CPace]    Abdalla, M., Haase, B., and J. Hesse, "CPace, a balanced
               composable PAKE", Work in Progress, Internet-Draft, draft-
               irtf-cfrg-cpace-13, 14 October 2024,
               <https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-
@@ -1417,20 +1426,27 @@ Session <--)--------------------------+              +----(--> Session
               Standard", August 2024,
               <https://csrc.nist.gov/pubs/fips/203/final>.
 
+   [Gu24]     Gu, Y., "New Paradigms For Efficient Password
+              Authentication Protocols", n.d.,
+              <https://www.escholarship.org/uc/item/7qm0220s>.
+
+   [HR24]     Hesse, J. and M. Rosenberg, "PAKE Combiners and Efficient
+              Post-Quantum Instantiations", n.d.,
+              <https://eprint.iacr.org/2024/1621.pdf>.
+
    [KEMELEON] Günther, F., Stebila, D., and S. Veitch, "Kemeleon
               Encodings", Work in Progress, Internet-Draft, draft-
               veitch-kemeleon-00, 29 November 2024,
               <https://datatracker.ietf.org/doc/html/draft-veitch-
               kemeleon-00>.
 
-   [OQUAKE]   Beguinet, H., Chevalier, C., Pointcheval, D., Ricosset,
-              T., and M. Rossi, "GeT a CAKE: Generic Transformations
-              from Key Encaspulation Mechanisms to Password
-              Authenticated Key Exchanges", Springer Nature Switzerland,
-              Lecture Notes in Computer Science pp. 516-538,
-              DOI 10.1007/978-3-031-33491-7_19, ISBN ["9783031334900",
-              "9783031334917"], 2023,
-              <https://doi.org/10.1007/978-3-031-33491-7_19>.
+   [LL24]     Lyu, Y. and S. Liu, "Hybrid Password Authentication Key
+              Exchange in the UC Framework", n.d.,
+              <https://eprint.iacr.org/2024/1630>.
+
+   [LLH24]    Lyu, Y., Liu, S., and S. Han, "Efficient Asymmetric PAKE
+              Compiler from KEM and AE", n.d.,
+              <https://eprint.iacr.org/2024/1400>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -1540,7 +1556,7 @@ A.2.  Parameters for CPaceOQUAKE
 
 A.3.  Parameters for CPace
 
-   We refer to the CPace [CPace].  This standard requires Nkey, the
+   We refer to the CPace [CPACE].  This standard requires Nkey, the
    number of bytes in CPace's session key, to be 32, so one must set
    H.bmax_in_bytes = 32.
 
