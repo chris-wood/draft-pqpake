@@ -278,7 +278,7 @@ other words, one MUST NOT use a KEM that has no uniform public keys
 and no anonymous ciphertexts in place of a uniform KEM.
 
 This specification uses a variant of ML-KEM768 {{FIPS203}}, denoted ML-BUKEM768.
-This is instantiated with Kemeleon {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
+This is instantiated with "KemeleonNR - ML-KEM768" {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
 require uniform enoding for public keys. Future specifications can replace use of
 Kemeleon with a binary uniform KEM that is more efficient if one becomes available.
@@ -924,13 +924,14 @@ Output:
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
+- KEM, a KEM instance
 - KSF, a parameterized KSF instance
 - DST, domain separation tag, a byte string
 
 def GenVerifierMaterial(PRS, salt, U, S):
-  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + Nseed)
+  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + KEM.Nseed)
   verifier = verifier_seed[0:Nverifier]
-  seed = verifier_seed[Nverifier:Nverifier + Nseed]
+  seed = verifier_seed[Nverifier:Nverifier + KEM.Nseed]
   return verifier, seed
 ~~~
 
@@ -1265,17 +1266,16 @@ The RECOMMENDED configuration is below.
 
 - CPace-Group: ristretto255-SHA512
 - CPace-Hash: SHA-512
-- KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}
+- KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
-- BUKEM: ML-BUKEM768 {{deps-kem}}
+- BUKEM: ML-BUKEM768 {{deps-kem}}, where Nseed = 64, Nct = 1514, and Npk = 1172.
 - PAKE-KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672" (a randomly generated 32-byte string)
 
 The RECOMMENDED parameters are (see {{params}}):
 
-- Nseed = 32
 - Nverifier = 32
 - Nkc = 64
 - Nsec = 32
