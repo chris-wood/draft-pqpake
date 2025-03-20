@@ -1581,7 +1581,7 @@ attack (ANO-CCA).<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
 other words, one <span class="bcp14">MUST NOT</span> use a KEM that has no uniform public keys
 and no anonymous ciphertexts in place of a uniform KEM.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
 <p id="section-4.2-4">This specification uses a variant of ML-KEM768 <span>[<a href="#FIPS203" class="cite xref">FIPS203</a>]</span>, denoted ML-BUKEM768.
-This is instantiated with Kemeleon <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>. Note that, while
+This is instantiated with "KemeleonNR - ML-KEM768" <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
 require uniform enoding for public keys. Future specifications can replace use of
 Kemeleon with a binary uniform KEM that is more efficient if one becomes available.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
@@ -2444,13 +2444,14 @@ Output:
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
+- KEM, a KEM instance
 - KSF, a parameterized KSF instance
 - DST, domain separation tag, a byte string
 
 def GenVerifierMaterial(PRS, salt, U, S):
-  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + Nseed)
+  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + KEM.Nseed)
   verifier = verifier_seed[0:Nverifier]
-  seed = verifier_seed[Nverifier:Nverifier + Nseed]
+  seed = verifier_seed[Nverifier:Nverifier + KEM.Nseed]
   return verifier, seed
 </pre><a href="#section-6.1.1-2" class="pilcrow">¶</a>
 </div>
@@ -3007,7 +3008,7 @@ PAKE-KDF are the KDFs for the password confirmation stage and the CPaceOQUAKE pr
           <p id="section-7-3.2.1">CPace-Hash: SHA-512<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.3">
-          <p id="section-7-3.3.1">KEM: X-Wing <span>[<a href="#XWING" class="cite xref">XWING</a>]</span><a href="#section-7-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-7-3.3.1">KEM: X-Wing <span>[<a href="#XWING" class="cite xref">XWING</a>]</span>, where Nseed = 32, Nct = 1120, and Npk = 1216.<a href="#section-7-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.4">
           <p id="section-7-3.4.1">PC-KDF: HKDF-SHA-256<a href="#section-7-3.4.1" class="pilcrow">¶</a></p>
@@ -3016,7 +3017,7 @@ PAKE-KDF are the KDFs for the password confirmation stage and the CPaceOQUAKE pr
           <p id="section-7-3.5.1">PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) <span>[<a href="#ARGON2" class="cite xref">ARGON2</a>]</span><a href="#section-7-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.6">
-          <p id="section-7-3.6.1">BUKEM: ML-BUKEM768 <a href="#deps-kem" class="auto internal xref">Section 4.1</a><a href="#section-7-3.6.1" class="pilcrow">¶</a></p>
+          <p id="section-7-3.6.1">BUKEM: ML-BUKEM768 <a href="#deps-kem" class="auto internal xref">Section 4.1</a>, where Nseed = 64, Nct = 1514, and Npk = 1172.<a href="#section-7-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.7">
           <p id="section-7-3.7.1">PAKE-KDF: HKDF-SHA-256<a href="#section-7-3.7.1" class="pilcrow">¶</a></p>
@@ -3031,19 +3032,16 @@ PAKE-KDF are the KDFs for the password confirmation stage and the CPaceOQUAKE pr
 <p id="section-7-4">The <span class="bcp14">RECOMMENDED</span> parameters are (see <a href="#params" class="auto internal xref">Appendix A</a>):<a href="#section-7-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-5.1">
-          <p id="section-7-5.1.1">Nseed = 32<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
+          <p id="section-7-5.1.1">Nverifier = 32<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-5.2">
-          <p id="section-7-5.2.1">Nverifier = 32<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
+          <p id="section-7-5.2.1">Nkc = 64<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-5.3">
-          <p id="section-7-5.3.1">Nkc = 64<a href="#section-7-5.3.1" class="pilcrow">¶</a></p>
+          <p id="section-7-5.3.1">Nsec = 32<a href="#section-7-5.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-5.4">
-          <p id="section-7-5.4.1">Nsec = 32<a href="#section-7-5.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-7-5.5">
-          <p id="section-7-5.5.1">Nkey = 32, this is achieved by choosing H in CPace with H.b_in_bytes = 32<a href="#section-7-5.5.1" class="pilcrow">¶</a></p>
+          <p id="section-7-5.4.1">Nkey = 32, this is achieved by choosing H in CPace with H.b_in_bytes = 32<a href="#section-7-5.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-6">Other documents can define configurations as needed for their use case, subject to the following requirements:<a href="#section-7-6" class="pilcrow">¶</a></p>
