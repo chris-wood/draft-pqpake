@@ -316,10 +316,10 @@ The OQUAKE protocol is based on the "NoIC" protocol analyzed in {{ABJ25}}.
 The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by
 {{HR24}}. A very close variant of this protocol was also analyzed in {{LL24}}.
 
-At a high level, CPaceOQUAKE
-is a two-round protocol that runs between client and server wherein, upon completion, both parties
-share the same session key if they agree on the password-related string (PRS).
-Otherwise, they obtain random session keys. This is summarized in the diagram below.
+At a high level, CPaceOQUAKE is a two-round protocol that runs between client and server
+wherein, upon completion, both parties share the same session key if they agree
+on the password-related string (PRS). Otherwise, they obtain random session keys.
+This is summarized in the diagram below.
 
 ~~~ aasvg
             +----------------------------------------+
@@ -336,8 +336,14 @@ Session <---+              | protocol |              +--> Session
 ~~~
 
 CPaceOQUAKE composes CPace and OQUAKE by first running CPace between
-client and server, and then incorporating the CPace session key into the password before running
-OQUAKE between the server and client. We explain the composition in more detail in {{!cpacequake-composition}}.
+client and server, and then incorporating the CPace session key into
+the password before running OQUAKE between the server and client. We
+explain the composition in more detail in {{!cpacequake-composition}}.
+
+As describes in {{cpace}} and {{quake}}, both CPace and OQUAKE take
+as input optional client and server identifiers, denoted U and S,
+respectively. See {{identities}} for more discussion about these
+identities and how they are chosen in practice.
 
 ## CPace Specification {#cpace}
 
@@ -902,7 +908,7 @@ instance) of the `augmented PAKE' construction presented in {{LLH24}} and in {{G
 This subsection specifies functions for generating the verifiers and
 a protocol for registering clients.
 
-### Generating Verifiers
+### Generating Verifiers {#gen-verifiers}
 
 Verifiers are random-looking value derived from password-related strings
 from which it is computionally impractical to derive the password-related
@@ -1306,7 +1312,74 @@ implementation might run out of memory.
 
 # Security Considerations
 
-TODO: draft once the proofs are complete
+This section discusses security considerations for the protocols specified in
+this document.
+
+## Identities {#identities}
+
+Client and server identities are essential to authenticated key exchange protocols,
+and PAKEs are no exception. This section discusses the role and importance of
+identities in the PAKE protocols specified in this document.
+
+### Symmetric PAKE identities {#symmetric-identities}
+
+PAKEs are often analyzed in the universal composability (UC) framework,
+which imposes several requirements on the protocols: (1) the existence
+of a globally-unique session identifer associated with each protocol invocation,
+and (2) unique party identifiers. Both are considered as inputs to PAKEs, along
+with the password itself. In practice, however, computing or agreeing on session
+and party identifiers is non-trivial and cumbersome. For example, agreeing on a
+globally unique session identifier requires a protocol to run before the PAKE.
+Moreover, assigning identifiers to parties -- especially in symmetric PAKE settings --
+is problematic as there are rarely pragmatic choices to be made for each party's
+identifier. IP addresses are not always unique, PKI or some other registry
+mechanism for assigning names may not exist, and so on.
+
+Intuitively, in symmetric settings, passwords are the only secret input to the
+PAKE protocol; party identities are assumed to be public. As such, an adversary
+is assumed to know these identifiers are use them in practice. Fortunately,
+there exists a UC model in which symmetric PAKEs such as CPace are proven secure
+without requiring party or session identifiers -- the bare PAKE
+model {{?BARE-PAKE=DOI.10.1007/978-3-031-68379-4_6}}.
+The UC bare PAKE model, and proof of security for CPace in this model,
+demonstrate that PAKEs are universally composable without relying on
+unique party or session identifiers.
+
+As such, for the PAKEs in {{CPaceOQUAKE}}, both the party and session identifier
+are optional. Applications are free to choose values for these identifiers
+if applicable, but they are not required for security.
+
+### Asymmetric PAKE identities {#asymmetric-identities}
+
+In contrast to the symmetric PAKE setting, party identities in the asymmetric
+PAKE setting play a different role. The very nature of the asymmetric PAKE
+is that one server, with many different registered passwords, can authenticate
+many different clients. Consequently, when the protocol runs, the server
+needs some way to determine which password registration to use in the protocol.
+Beyond ensuring that the server is authenticating the correct client, the
+client's identity is what helps the server make this selection.
+
+However, the server identifier carries a similar burden. Indeed,
+the server identifier is used to distinguish distinct server instances
+from each other so, for example, a client cannot mistakenly authenticate
+with server A when communicating with server B. This is especially
+important if the client re-uses their identifier across server instances,
+since a password registration for server A would then be valid for server B
+if the server identity were not incorporated into the protocol.
+
+Based on this, client and server identities are RECOMMENDED for the asymmetric
+PAKEs specified in this document (in {{CPaceOQUAKEplus}}). Both
+client and server identities can be long-lived, e.g., a client identity
+could be an email address and a server identity could be a domain name.
+
+Practically, applications should be mindful of what happens when these
+identities change. Since they are both included in the password verifier
+(see {{gen-verifiers}}), changing either identifier will require the
+veirifer to be re-computed and the client to be re-registered. For a single
+client, this change is minimal, but for a single server, which can have
+many registered clients, this change can be expensive. Applications therefore
+ought to consider the longevitiy and uniquness of their party identifiers
+when instantiating these protocols.
 
 # IANA Considerations
 
@@ -1315,6 +1388,7 @@ This document has no IANA actions.
 --- back
 
 # Deriving parameters {#params}
+
 This section discusses how to generate parameters, given an upper bound on an adversary's advantage in breaking the hybrid (a)PAKE. The parameters in this standard correspond to a classical hardness of 117 bits (considering the attacker can break CPace) and a quantum hardness of 100 bits. We assume that an adversary can perform at most 2^qq queries to random oracles or (a)PAKE sessions. We use qq = 64. The derivation below uses some approximations, ignoring small constants in the exponent such as 1 and 1.6. We also only study dominant terms in the advantage equations.
 
 ## Parameters for CPaceOQUAKE+
