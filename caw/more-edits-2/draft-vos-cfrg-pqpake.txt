@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                                          
 Intended status: Informational                                S. Jarecki
-Expires: 21 September 2025              University of California, Irvine
+Expires: 13 October 2025                University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                           20 March 2025
+                                                           11 April 2025
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 21 September 2025.
+   This Internet-Draft will expire on 13 October 2025.
 
 Copyright Notice
 
@@ -104,6 +104,9 @@ Table of Contents
    7.  CPaceOQUAKE+ Configurations
    8.  Implementation Considerations
    9.  Security Considerations
+     9.1.  Identities
+       9.1.1.  Symmetric PAKE identities
+       9.1.2.  Asymmetric PAKE identities
    10. IANA Considerations
    11. References
      11.1.  Normative References
@@ -394,6 +397,11 @@ Table of Contents
    client and server, and then incorporating the CPace session key into
    the password before running OQUAKE between the server and client.  We
    explain the composition in more detail in Section 5.3.
+
+   As describes in Section 5.1 and Section 5.2, both CPace and OQUAKE
+   take as input optional client and server identifiers, denoted U and
+   S, respectively.  See Section 9.1 for more discussion about these
+   identities and how they are chosen in practice.
 
 5.1.  CPace Specification
 
@@ -1389,7 +1397,82 @@ Session <--)--------------------------+              +----(--> Session
 
 9.  Security Considerations
 
-   TODO: draft once the proofs are complete
+   This section discusses security considerations for the protocols
+   specified in this document.
+
+9.1.  Identities
+
+   Client and server identities are essential to authenticated key
+   exchange protocols, and PAKEs are no exception.  This section
+   discusses the role and importance of identities in the PAKE protocols
+   specified in this document.
+
+9.1.1.  Symmetric PAKE identities
+
+   PAKEs are often analyzed in the universal composability (UC)
+   framework, which imposes several requirements on the protocols: (1)
+   the existence of a globally-unique session identifer associated with
+   each protocol invocation, and (2) unique party identifiers.  Both are
+   considered as inputs to PAKEs, along with the password itself.  In
+   practice, however, computing or agreeing on session and party
+   identifiers is non-trivial and cumbersome.  For example, agreeing on
+   a globally unique session identifier requires a protocol to run
+   before the PAKE.  Moreover, assigning identifiers to parties --
+   especially in symmetric PAKE settings -- is problematic as there are
+   rarely pragmatic choices to be made for each party's identifier.  IP
+   addresses are not always unique, PKI or some other registry mechanism
+   for assigning names may not exist, and so on.
+
+   Intuitively, in symmetric settings, passwords are the only secret
+   input to the PAKE protocol; party identities are assumed to be
+   public.  As such, an adversary is assumed to know these identifiers
+   are use them in practice.  Fortunately, there exists a UC model in
+   which symmetric PAKEs such as CPace are proven secure without
+   requiring party or session identifiers -- the bare PAKE model
+   [BARE-PAKE].  The UC bare PAKE model, and proof of security for CPace
+   in this model, demonstrate that PAKEs are universally composable
+   without relying on unique party or session identifiers.
+
+   As such, for the PAKEs in Section 5, both the party and session
+   identifier are optional.  Applications are free to choose values for
+   these identifiers if applicable, but they are not required for
+   security.
+
+9.1.2.  Asymmetric PAKE identities
+
+   In contrast to the symmetric PAKE setting, party identities in the
+   asymmetric PAKE setting play a different role.  The very nature of
+   the asymmetric PAKE is that one server, with many different
+   registered passwords, can authenticate many different clients.
+   Consequently, when the protocol runs, the server needs some way to
+   determine which password registration to use in the protocol.  Beyond
+   ensuring that the server is authenticating the correct client, the
+   client's identity is what helps the server make this selection.
+
+   However, the server identifier carries a similar burden.  Indeed, the
+   server identifier is used to distinguish distinct server instances
+   from each other so, for example, a client cannot mistakenly
+   authenticate with server A when communicating with server B.  This is
+   especially important if the client re-uses their identifier across
+   server instances, since a password registration for server A would
+   then be valid for server B if the server identity were not
+   incorporated into the protocol.
+
+   Based on this, client and server identities are RECOMMENDED for the
+   asymmetric PAKEs specified in this document (in Section 6).  Both
+   client and server identities can be long-lived, e.g., a client
+   identity could be an email address and a server identity could be a
+   domain name.
+
+   Practically, applications should be mindful of what happens when
+   these identities change.  Since they are both included in the
+   password verifier (see Section 6.1.1), changing either identifier
+   will require the veirifer to be re-computed and the client to be re-
+   registered.  For a single client, this change is minimal, but for a
+   single server, which can have many registered clients, this change
+   can be expensive.  Applications therefore ought to consider the
+   longevitiy and uniquness of their party identifiers when
+   instantiating these protocols.
 
 10.  IANA Considerations
 
@@ -1454,6 +1537,15 @@ Session <--)--------------------------+              +----(--> Session
    [ABJ25]    Arriaga, A., Barbosa, M., and S. Jarecki, "NoIC: PAKE from
               KEM without Ideal Ciphers", n.d.,
               <https://eprint.iacr.org/2025/231>.
+
+   [BARE-PAKE]
+              Barbosa, M., Gellert, K., Hesse, J., and S. Jarecki, "Bare
+              PAKE: Universally Composable Key Exchange from Just
+              Passwords", Springer Nature Switzerland, Lecture Notes in
+              Computer Science pp. 183-217,
+              DOI 10.1007/978-3-031-68379-4_6, ISBN ["9783031683787",
+              "9783031683794"], 2024,
+              <https://doi.org/10.1007/978-3-031-68379-4_6>.
 
    [Gu24]     Gu, Y., "New Paradigms For Efficient Password
               Authentication Protocols", n.d.,
