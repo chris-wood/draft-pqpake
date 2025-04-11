@@ -76,7 +76,7 @@ informative:
         name: Shengli Liu
   HR24:
     title: "PAKE Combiners and Efficient Post-Quantum Instantiations"
-    target: https://eprint.iacr.org/2024/1621.pdf
+    target: https://eprint.iacr.org/2024/1621
     author:
       -
         name: Julia Hesse
@@ -84,7 +84,7 @@ informative:
         name: Michael Rosenberg
   ABJ25:
     title: "NoIC: PAKE from KEM without Ideal Ciphers"
-    target: https://eprint.iacr.org/2025/231.pdf
+    target: https://eprint.iacr.org/2025/231
     author:
       -
         name: Afonso Arriaga
@@ -121,7 +121,7 @@ knowledge of the password. After registration, the client uses its password
 and the server uses the corresponding verifier to establish an authenticated
 shared secret such that the server learns nothing of the client's password.
 
-OPAQUE-3DH {{?OPAQUE=I-D.irtf-cfrg-opaque}} and SPAKE2+ {{?SPAKE2PLUS=RFC9838}}
+OPAQUE-3DH {{?OPAQUE=I-D.irtf-cfrg-opaque}} and SPAKE2+ {{?SPAKE2PLUS=RFC9383}}
 are two examples of specified aPAKE protocols. These protocols provide
 security in classical threat models. However, in the presence
 of a quantum-capable attacker, both OPAQUE and SPAKE2+ fail to provide the
@@ -165,6 +165,9 @@ The following functions and operators are used throughout the document.
   `lv_decode((0x00, 0x03, 0x00, 0x01, 0x02)) = (0x00, 0x01, 0x02)`. Note that `lv_decode`
   can fail when the length of the actual bytes does not match that encoded in the
   prefix. For example, `lv_decode((0xFF, 0xFF, 0x00))` will fail.
+- The notation `bytes[l..h]` refers to the slice of byte array `bytes` starting
+  at index `l` and ending at index `h-1`. For example, given `bytes = (0x00, 0x01, 0x02)`, then `bytes[0..1] = 0x00` and `bytes[0..3] = (0x00, 0x01, 0x02)`. Similarly, the notation `bytes[l..]` refers to the slice of the byte
+  array `bytes` starting at `l` until the end of `bytes`, i.e.., `bytes[l..] = bytes[l..len(bytes)]`.
 
 All algorithms and procedures described in this document are laid out
 in a Python-like pseudocode. Each function takes a set of inputs and parameters
@@ -252,10 +255,8 @@ derivation from a seed. It consists of the following syntax.
   its encapsulated representation `ct`. This function can raise a
   `DecapsError` on decapsulation failure.
 - Nseed: The length in bytes of the seed used to derive a key pair.
-- Nsecret: The length in bytes of a shared secret produced by this KEM.
 - Nct: The length in bytes of an encapsulated key produced by this KEM.
 - Npk: The length in bytes of a public key for this KEM.
-- Nsk: The length in bytes of a secret key for this KEM.
 
 This specification uses X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}.
 
@@ -277,7 +278,7 @@ other words, one MUST NOT use a KEM that has no uniform public keys
 and no anonymous ciphertexts in place of a uniform KEM.
 
 This specification uses a variant of ML-KEM768 {{FIPS203}}, denoted ML-BUKEM768.
-This is instantiated with Kemeleon {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
+This is instantiated with "KemeleonNR - ML-KEM768" {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
 require uniform enoding for public keys. Future specifications can replace use of
 Kemeleon with a binary uniform KEM that is more efficient if one becomes available.
@@ -310,7 +311,7 @@ needs to satisfy collision resistance. The output is a string of L bytes.
 The hybrid, symmetric PAKE protocol, denoted CPaceOQUAKE consists of CPace {{CPACE}}
 combined with OQUAKE {{ABJ25}}. OQUAKE is a PAKE built from a BUKEM and KDF, using a
 2-rounds of Feistel network to password-encrypt the BUKEM public key.
-The QUAKE protocol is based on the "NoIC" protocol analyzed in {{ABJ25}}.
+The OQUAKE protocol is based on the "NoIC" protocol analyzed in {{ABJ25}}.
 
 The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by
 {{HR24}}. A very close variant of this protocol was also analyzed in {{LL24}}.
@@ -432,11 +433,9 @@ from the responder.
 CPace.Finish
 
 Input:
-- PRS, password-related string, a byte string
 - ya, discrete logarithm that was generated using CPace.Init
 - Yb, public point, received from the responder
 - sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - ISK, the established shared secret
@@ -448,8 +447,8 @@ Parameters:
 Exceptions:
 - CPaceError, raised when an invalid value was encountered in CPace
 
-def Finish(PRS, ya, Yb, sid):
-  K = G.scalar_mult_vfy(yb, Ya)
+def Finish(ya, Yb, sid):
+  K = G.scalar_mult_vfy(ya, Yb)
   If K = G.I, raise CPaceError
 
   ISK = H.hash(lv_cat(G.DSI || b"_ISK", sid, K) || transcript(Ya, Yb))
@@ -692,21 +691,21 @@ are intended to be called by the responder. The following subsections specify th
 ~~~aasvg
 Client: PRS,sid,U,S       Server: PRS,sid,U,S
         -----------------------------------------
-     ctx1, (msg1, s1) =                    |
-CPaceOQUAKE.Init(PRS,sid,U,S)               |
+     ctx1, (s1, msg1) =                    |
+CPaceOQUAKE.Init(PRS,sid,U,S)              |
              |                             |
-             |         msg1, s1            |
+             |         (s1, msg1)          |
              |---------------------------->|
              |                             |
-             |                ctx2, (msg2, msg3, s2) =
-             |     CPaceOQUAKE.Respond(PRS,(msg1,s1),sid,U,S)
+             |                ctx2, (s2, msg2, msg3) =
+             |     CPaceOQUAKE.Respond(PRS,(s1,msg1),sid,U,S)
              |                             |
-             |       msg2, msg3, s2        |
+             |       s2, msg2, msg3        |
              |<----------------------------|
              |                             |
     client_key, msg4 =                     |
-CPaceOQUAKE.InitiatorFinish(PRS, ...        |
-(ctx1,s1),(msg2,msg3,s2),sid,U,S)          |
+CPaceOQUAKE.InitiatorFinish(PRS, ...       |
+(ctx1,s1),(s2,msg2,msg3),sid,U,S)          |
              |            msg4             |
              |---------------------------->|
              |                             |
@@ -786,13 +785,13 @@ def Respond(PRS, init_msg, sid, U, S):
   key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
   s2 = random(32)
-  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
+  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
+  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
 
-  PRS2_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
-  PRS2 = KDF.Expand(PRS2_prk, DST || "PRS2", Nkey)
+  prk_PRS2 = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(prk_PRS2, DST || "PRS2", Nkey)
 
   ctx2, msg3 = OQUAKE.Init(PRS2, extended_sid, U, S)
 
@@ -829,26 +828,26 @@ Parameters:
 - OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
-def InitiatorFinish(PRS, (ctx1, s1), (msg2, msg3, s2), sid, U, S):
+def InitiatorFinish(PRS, (ctx1, s1), resp_msg, sid, U, S):
   s2 = resp_msg[0..32]
   msg2 = lv_decode(resp_msg[32..])
   msg3 = lv_decode(resp_msg[32+len(msg2)..])
 
-  key1 = CPace.Finish(ctx1, msg2, sid, U, S)
+  key1 = CPace.Finish(ctx1, msg2, sid)
   key1A = KDF.Expand(key1, DST || "prskey", Nkey)
   key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
-  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
+  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
+  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
-  PRS2_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
-  PRS2 = KDF.Expand(PRS2_prk, DST || "PRS2", Nkey)
+  prk_PRS2 = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(prk_PRS2, DST || "PRS2", Nkey)
 
-  key2, msg4 = OQUAKE.Respond(PRS2, extended_sid, msg3, Nkey, U, S)
+  key2, msg4 = OQUAKE.Respond(PRS2, msg3, extended_sid, U, S)
 
-  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
-  client_key = KDF.Expand(sessionkey_prk, DST || "sessionkey", Nkey)
+  prk_sessionkey = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
+  client_key = KDF.Expand(prk_sessionkey, DST || "sessionkey", Nkey)
 
   return client_key, msg4
 ~~~
@@ -877,8 +876,8 @@ def ResponderFinish(ctx, msg4):
 
   key2 = OQUAKE.Finish(ctx2, msg4)
 
-  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
-  server_key = KDF.Expand(sessionkey_prk, DST || "sessionkey", Nkey)
+  prk_sessionkey = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
+  server_key = KDF.Expand(prk_sessionkey, DST || "sessionkey", Nkey)
 
   return server_key
 ~~~
@@ -925,13 +924,14 @@ Output:
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
+- KEM, a KEM instance
 - KSF, a parameterized KSF instance
 - DST, domain separation tag, a byte string
 
 def GenVerifierMaterial(PRS, salt, U, S):
-  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + Nseed)
+  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + KEM.Nseed)
   verifier = verifier_seed[0:Nverifier]
-  seed = verifier_seed[Nverifier:Nverifier + Nseed]
+  seed = verifier_seed[Nverifier:Nverifier + KEM.Nseed]
   return verifier, seed
 ~~~
 
@@ -1001,7 +1001,7 @@ for specific parameter configurations.
 The password confirmation is a two-round challenge-response flow between the
 server and client. In particular, the server challenges the client to prove
 knowledge of its password. More precisely, it challenges the client to prove
-knowledge of a seed, derived from the the GenVerifierMaterial function (and
+knowledge of a seed, derived from the GenVerifierMaterial function (and
 in turn derived from the password using a key stretching function).
 Both client and server share a symmetric key as input. Additionally, the server
 has the client's public key and salt stored from the previous registration flow.
@@ -1061,10 +1061,10 @@ def PC-Challenge(SK, transcript, pk, sid, U, S):
   r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
+  confirm_input = encode_sid(sid, U, S) || enc_c || transcript
 
-  prk_k_h1 = KDF.Extract(confirm_input, DST || "h1")
-  prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2")
+  prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
+  prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
 
   // Derive h1 from the full transcript excluding k
   client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
@@ -1124,10 +1124,10 @@ def PC-Response(SK, seed, transcript, challenge, sid, U, S):
   try:
     k = KEM.Decaps(sk, c)
 
-    confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
+    confirm_input = encode_sid(sid, U, S) || enc_c || transcript
 
-    prk_k_h1 = KDF.Extract(confirm_input, DST || "h1")
-    prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2")
+    prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
+    prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
 
     // Derive h1 from the full transcript excluding k
     client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
@@ -1218,7 +1218,7 @@ it, which it can do in plain text.
 Client: PRS,salt,U,S,sid      Server: v,pk,U,S,sid
           ----------------------------------------
 (v, seed) = GenVerifierMaterial(PRS, salt)     |
-ctx1, msg1 = CPaceOQUAKE.Init(v,sid,U,S)        |
+ctx1, msg1 = CPaceOQUAKE.Init(v,sid,U,S)       |
             |                                  |
             |               msg1               |
             |--------------------------------->|
@@ -1228,8 +1228,8 @@ ctx1, msg1 = CPaceOQUAKE.Init(v,sid,U,S)        |
             |               msg2               |
             |<---------------------------------|
             |                                  |
-SK, msg3 = CPaceOQUAKE.InitiatorFinish(         |
-  v,ctx1,msg2,32,sid,U,S)                      |
+SK, msg3 = CPaceOQUAKE.InitiatorFinish(        |
+  v,ctx1,msg2,sid,U,S)                         |
             |                                  |
             |               msg3               |
             |--------------------------------->|
@@ -1266,17 +1266,16 @@ The RECOMMENDED configuration is below.
 
 - CPace-Group: ristretto255-SHA512
 - CPace-Hash: SHA-512
-- KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}
+- KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
-- BUKEM: ML-BUKEM768 {{deps-kem}}
+- BUKEM: ML-BUKEM768 {{deps-kem}}, where Nseed = 64, Nct = 1514, and Npk = 1172.
 - PAKE-KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672" (a randomly generated 32-byte string)
 
 The RECOMMENDED parameters are (see {{params}}):
 
-- Nseed = 32
 - Nverifier = 32
 - Nkc = 64
 - Nsec = 32
