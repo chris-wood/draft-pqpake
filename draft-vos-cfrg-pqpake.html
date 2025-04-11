@@ -17,17 +17,17 @@ transformation from the hybrid symmetric PAKE protocol called CPaceOQUAKE
 that is also described in this document. This document recommends
 configurations for CPaceOQUAKE+. 
     " name="description">
-<meta content="xml2rfc 3.28.0" name="generator">
+<meta content="xml2rfc 3.28.1" name="generator">
 <meta content="draft-vos-cfrg-pqpake-latest" name="ietf.draft">
 <!-- Generator version information:
-  xml2rfc 3.28.0
+  xml2rfc 3.28.1
     Python 3.12.9
     ConfigArgParse 1.7
     google-i18n-address 3.1.1
     intervaltree 3.1.0
-    Jinja2 3.1.5
+    Jinja2 3.1.6
     lxml 5.3.0
-    platformdirs 4.3.6
+    platformdirs 4.3.7
     pycountry 24.6.1
     PyYAML 6.0.2
     requests 2.32.3
@@ -1051,11 +1051,11 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">Hybrid PQ-PAKE</td>
-<td class="right">March 2025</td>
+<td class="right">April 2025</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 18 September 2025</td>
+<td class="center">Expires 13 October 2025</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1068,12 +1068,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2025-03-17" class="published">17 March 2025</time>
+<time datetime="2025-04-11" class="published">11 April 2025</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2025-09-18">18 September 2025</time></dd>
+<dd class="expires"><time datetime="2025-10-13">13 October 2025</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1135,7 +1135,7 @@ configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 18 September 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 13 October 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1399,6 +1399,11 @@ with a two-byte length preceding the remaining bytes, e.g.,
 can fail when the length of the actual bytes does not match that encoded in the
 prefix. For example, <code>lv_decode((0xFF, 0xFF, 0x00))</code> will fail.<a href="#section-2.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
+          <li class="normal" id="section-2.1-2.6">
+            <p id="section-2.1-2.6.1">The notation <code>bytes[l..h]</code> refers to the slice of byte array <code>bytes</code> starting
+at index <code>l</code> and ending at index <code>h-1</code>. For example, given <code>bytes = (0x00, 0x01, 0x02)</code>, then <code>bytes[0..1] = 0x00</code> and <code>bytes[0..3] = (0x00, 0x01, 0x02)</code>. Similarly, the notation <code>bytes[l..]</code> refers to the slice of the byte
+array <code>bytes</code> starting at <code>l</code> until the end of <code>bytes</code>, i.e.., <code>bytes[l..] = bytes[l..len(bytes)]</code>.<a href="#section-2.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
         </ul>
 <p id="section-2.1-3">All algorithms and procedures described in this document are laid out
 in a Python-like pseudocode. Each function takes a set of inputs and parameters
@@ -1544,16 +1549,10 @@ its encapsulated representation <code>ct</code>. This function can raise a
             <p id="section-4.1-2.4.1">Nseed: The length in bytes of the seed used to derive a key pair.<a href="#section-4.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.1-2.5">
-            <p id="section-4.1-2.5.1">Nsecret: The length in bytes of a shared secret produced by this KEM.<a href="#section-4.1-2.5.1" class="pilcrow">¶</a></p>
+            <p id="section-4.1-2.5.1">Nct: The length in bytes of an encapsulated key produced by this KEM.<a href="#section-4.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.1-2.6">
-            <p id="section-4.1-2.6.1">Nct: The length in bytes of an encapsulated key produced by this KEM.<a href="#section-4.1-2.6.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.1-2.7">
-            <p id="section-4.1-2.7.1">Npk: The length in bytes of a public key for this KEM.<a href="#section-4.1-2.7.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.1-2.8">
-            <p id="section-4.1-2.8.1">Nsk: The length in bytes of a secret key for this KEM.<a href="#section-4.1-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-4.1-2.6.1">Npk: The length in bytes of a public key for this KEM.<a href="#section-4.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-4.1-3">This specification uses X-Wing <span>[<a href="#XWING" class="cite xref">XWING</a>]</span>.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
@@ -1582,7 +1581,7 @@ attack (ANO-CCA).<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
 other words, one <span class="bcp14">MUST NOT</span> use a KEM that has no uniform public keys
 and no anonymous ciphertexts in place of a uniform KEM.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
 <p id="section-4.2-4">This specification uses a variant of ML-KEM768 <span>[<a href="#FIPS203" class="cite xref">FIPS203</a>]</span>, denoted ML-BUKEM768.
-This is instantiated with Kemeleon <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>. Note that, while
+This is instantiated with "KemeleonNR - ML-KEM768" <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
 require uniform enoding for public keys. Future specifications can replace use of
 Kemeleon with a binary uniform KEM that is more efficient if one becomes available.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
@@ -1637,7 +1636,7 @@ needs to satisfy collision resistance. The output is a string of L bytes.<a href
 <p id="section-5-1">The hybrid, symmetric PAKE protocol, denoted CPaceOQUAKE consists of CPace <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span>
 combined with OQUAKE <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>. OQUAKE is a PAKE built from a BUKEM and KDF, using a
 2-rounds of Feistel network to password-encrypt the BUKEM public key.
-The QUAKE protocol is based on the "NoIC" protocol analyzed in <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>.<a href="#section-5-1" class="pilcrow">¶</a></p>
+The OQUAKE protocol is based on the "NoIC" protocol analyzed in <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by
 <span>[<a href="#HR24" class="cite xref">HR24</a>]</span>. A very close variant of this protocol was also analyzed in <span>[<a href="#LL24" class="cite xref">LL24</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <p id="section-5-3">At a high level, CPaceOQUAKE
@@ -1795,11 +1794,9 @@ from the responder.<a href="#section-5.1.3-1" class="pilcrow">¶</a></p>
 CPace.Finish
 
 Input:
-- PRS, password-related string, a byte string
 - ya, discrete logarithm that was generated using CPace.Init
 - Yb, public point, received from the responder
 - sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - ISK, the established shared secret
@@ -1811,8 +1808,8 @@ Parameters:
 Exceptions:
 - CPaceError, raised when an invalid value was encountered in CPace
 
-def Finish(PRS, ya, Yb, sid):
-  K = G.scalar_mult_vfy(yb, Ya)
+def Finish(ya, Yb, sid):
+  K = G.scalar_mult_vfy(ya, Yb)
   If K = G.I, raise CPaceError
 
   ISK = H.hash(lv_cat(G.DSI || b"_ISK", sid, K) || transcript(Ya, Yb))
@@ -2161,11 +2158,9 @@ are intended to be called by the responder. The following subsections specify th
           <div class="alignLeft art-svg artwork" id="section-5.3-7.1">
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="520" viewBox="0 0 520 432" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 112,96 L 112,240" fill="none" stroke="black"></path>
-              <path d="M 112,304 L 112,392" fill="none" stroke="black"></path>
-              <path d="M 136,64 L 136,72" fill="none" stroke="black"></path>
-              <path d="M 352,96 L 352,144" fill="none" stroke="black"></path>
-              <path d="M 352,184 L 352,256" fill="none" stroke="black"></path>
-              <path d="M 352,288 L 352,336" fill="none" stroke="black"></path>
+              <path d="M 112,288 L 112,392" fill="none" stroke="black"></path>
+              <path d="M 352,56 L 352,144" fill="none" stroke="black"></path>
+              <path d="M 352,184 L 352,336" fill="none" stroke="black"></path>
               <path d="M 72,48 L 392,48" fill="none" stroke="black"></path>
               <path d="M 120,128 L 344,128" fill="none" stroke="black"></path>
               <path d="M 120,224 L 344,224" fill="none" stroke="black"></path>
@@ -2180,30 +2175,28 @@ are intended to be called by the responder. The following subsections specify th
                 <text x="240" y="36">Server:</text>
                 <text x="320" y="36">PRS,sid,U,S</text>
                 <text x="64" y="68">ctx1,</text>
-                <text x="112" y="68">(msg1</text>
-                <text x="160" y="68">s1)</text>
+                <text x="108" y="68">(s1,</text>
+                <text x="152" y="68">msg1)</text>
                 <text x="184" y="68">=</text>
-                <text x="352" y="68">|</text>
                 <text x="120" y="84">CPaceOQUAKE.Init(PRS,sid,U,S)</text>
-                <text x="360" y="84">|</text>
-                <text x="208" y="116">msg1,</text>
-                <text x="244" y="116">s1</text>
+                <text x="204" y="116">(s1,</text>
+                <text x="248" y="116">msg1)</text>
                 <text x="264" y="164">ctx2,</text>
-                <text x="316" y="164">(msg2,</text>
-                <text x="368" y="164">msg3,</text>
-                <text x="408" y="164">s2)</text>
+                <text x="308" y="164">(s2,</text>
+                <text x="352" y="164">msg2,</text>
+                <text x="400" y="164">msg3)</text>
                 <text x="432" y="164">=</text>
-                <text x="324" y="180">CPaceOQUAKE.Respond(PRS,(msg1,s1),sid,U,S)</text>
-                <text x="192" y="212">msg2,</text>
-                <text x="240" y="212">msg3,</text>
-                <text x="276" y="212">s2</text>
+                <text x="324" y="180">CPaceOQUAKE.Respond(PRS,(s1,msg1),sid,U,S)</text>
+                <text x="184" y="212">s2,</text>
+                <text x="224" y="212">msg2,</text>
+                <text x="268" y="212">msg3</text>
                 <text x="80" y="260">client_key,</text>
                 <text x="148" y="260">msg4</text>
                 <text x="176" y="260">=</text>
                 <text x="132" y="276">CPaceOQUAKE.InitiatorFinish(PRS,</text>
                 <text x="280" y="276">...</text>
-                <text x="360" y="276">|</text>
-                <text x="136" y="292">(ctx1,s1),(msg2,msg3,s2),sid,U,S)</text>
+                <text x="56" y="292">(ctx1,s1),(s2</text>
+                <text x="192" y="292">msg2,msg3),sid,U,S)</text>
                 <text x="228" y="308">msg4</text>
                 <text x="340" y="356">server_key</text>
                 <text x="392" y="356">=</text>
@@ -2291,13 +2284,13 @@ def Respond(PRS, init_msg, sid, U, S):
   key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
   s2 = random(32)
-  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
+  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
+  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
 
-  PRS2_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
-  PRS2 = KDF.Expand(PRS2_prk, DST || "PRS2", Nkey)
+  prk_PRS2 = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(prk_PRS2, DST || "PRS2", Nkey)
 
   ctx2, msg3 = OQUAKE.Init(PRS2, extended_sid, U, S)
 
@@ -2338,26 +2331,26 @@ Parameters:
 - OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
-def InitiatorFinish(PRS, (ctx1, s1), (msg2, msg3, s2), sid, U, S):
+def InitiatorFinish(PRS, (ctx1, s1), resp_msg, sid, U, S):
   s2 = resp_msg[0..32]
   msg2 = lv_decode(resp_msg[32..])
   msg3 = lv_decode(resp_msg[32+len(msg2)..])
 
-  key1 = CPace.Finish(ctx1, msg2, sid, U, S)
+  key1 = CPace.Finish(ctx1, msg2, sid)
   key1A = KDF.Expand(key1, DST || "prskey", Nkey)
   key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
-  extended_sid_prk = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(extended_sid_prk, DST || "SID", 32)
+  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
+  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
 
   fullsid = encode_sid(extended_sid, U, S)
-  PRS2_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
-  PRS2 = KDF.Expand(PRS2_prk, DST || "PRS2", Nkey)
+  prk_PRS2 = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
+  PRS2 = KDF.Expand(prk_PRS2, DST || "PRS2", Nkey)
 
-  key2, msg4 = OQUAKE.Respond(PRS2, extended_sid, msg3, Nkey, U, S)
+  key2, msg4 = OQUAKE.Respond(PRS2, msg3, extended_sid, U, S)
 
-  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
-  client_key = KDF.Expand(sessionkey_prk, DST || "sessionkey", Nkey)
+  prk_sessionkey = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
+  client_key = KDF.Expand(prk_sessionkey, DST || "sessionkey", Nkey)
 
   return client_key, msg4
 </pre><a href="#section-5.3.3-3" class="pilcrow">¶</a>
@@ -2391,8 +2384,8 @@ def ResponderFinish(ctx, msg4):
 
   key2 = OQUAKE.Finish(ctx2, msg4)
 
-  sessionkey_prk = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
-  server_key = KDF.Expand(sessionkey_prk, DST || "sessionkey", Nkey)
+  prk_sessionkey = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
+  server_key = KDF.Expand(prk_sessionkey, DST || "sessionkey", Nkey)
 
   return server_key
 </pre><a href="#section-5.3.4-2" class="pilcrow">¶</a>
@@ -2451,13 +2444,14 @@ Output:
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
+- KEM, a KEM instance
 - KSF, a parameterized KSF instance
 - DST, domain separation tag, a byte string
 
 def GenVerifierMaterial(PRS, salt, U, S):
-  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + Nseed)
+  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + KEM.Nseed)
   verifier = verifier_seed[0:Nverifier]
-  seed = verifier_seed[Nverifier:Nverifier + Nseed]
+  seed = verifier_seed[Nverifier:Nverifier + KEM.Nseed]
   return verifier, seed
 </pre><a href="#section-6.1.1-2" class="pilcrow">¶</a>
 </div>
@@ -2556,7 +2550,7 @@ for specific parameter configurations.<a href="#section-6.2-1" class="pilcrow">�
 <p id="section-6.2-2">The password confirmation is a two-round challenge-response flow between the
 server and client. In particular, the server challenges the client to prove
 knowledge of its password. More precisely, it challenges the client to prove
-knowledge of a seed, derived from the the GenVerifierMaterial function (and
+knowledge of a seed, derived from the GenVerifierMaterial function (and
 in turn derived from the password using a key stretching function).
 Both client and server share a symmetric key as input. Additionally, the server
 has the client's public key and salt stored from the previous registration flow.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
@@ -2661,10 +2655,10 @@ def PC-Challenge(SK, transcript, pk, sid, U, S):
   r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
+  confirm_input = encode_sid(sid, U, S) || enc_c || transcript
 
-  prk_k_h1 = KDF.Extract(confirm_input, DST || "h1")
-  prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2")
+  prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
+  prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
 
   // Derive h1 from the full transcript excluding k
   client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
@@ -2728,10 +2722,10 @@ def PC-Response(SK, seed, transcript, challenge, sid, U, S):
   try:
     k = KEM.Decaps(sk, c)
 
-    confirm_input = encode_sid(sid, U, S) || SK || enc_c || transcript
+    confirm_input = encode_sid(sid, U, S) || enc_c || transcript
 
-    prk_k_h1 = KDF.Extract(confirm_input, DST || "h1")
-    prk_k_h2 = KDF.Extract(confirm_input || k, DST || "h2")
+    prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
+    prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
 
     // Derive h1 from the full transcript excluding k
     client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
@@ -2908,8 +2902,7 @@ it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a
               <path d="M 104,96 L 104,224" fill="none" stroke="black"></path>
               <path d="M 104,272 L 104,432" fill="none" stroke="black"></path>
               <path d="M 104,480 L 104,568" fill="none" stroke="black"></path>
-              <path d="M 384,96 L 384,224" fill="none" stroke="black"></path>
-              <path d="M 384,256 L 384,320" fill="none" stroke="black"></path>
+              <path d="M 384,56 L 384,320" fill="none" stroke="black"></path>
               <path d="M 384,384 L 384,448" fill="none" stroke="black"></path>
               <path d="M 384,480 L 384,536" fill="none" stroke="black"></path>
               <path d="M 88,48 L 400,48" fill="none" stroke="black"></path>
@@ -2935,12 +2928,10 @@ it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a
                 <text x="88" y="68">=</text>
                 <text x="196" y="68">GenVerifierMaterial(PRS,</text>
                 <text x="320" y="68">salt)</text>
-                <text x="384" y="68">|</text>
                 <text x="24" y="84">ctx1,</text>
                 <text x="68" y="84">msg1</text>
                 <text x="96" y="84">=</text>
                 <text x="216" y="84">CPaceOQUAKE.Init(v,sid,U,S)</text>
-                <text x="392" y="84">|</text>
                 <text x="244" y="116">msg1</text>
                 <text x="136" y="164">ctx2,</text>
                 <text x="180" y="164">msg2</text>
@@ -2952,8 +2943,7 @@ it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a
                 <text x="52" y="244">msg3</text>
                 <text x="80" y="244">=</text>
                 <text x="204" y="244">CPaceOQUAKE.InitiatorFinish(</text>
-                <text x="392" y="244">|</text>
-                <text x="112" y="260">v,ctx1,msg2,32,sid,U,S)</text>
+                <text x="100" y="260">v,ctx1,msg2,sid,U,S)</text>
                 <text x="244" y="292">msg3</text>
                 <text x="228" y="340">SK</text>
                 <text x="248" y="340">=</text>
@@ -3018,7 +3008,7 @@ PAKE-KDF are the KDFs for the password confirmation stage and the CPaceOQUAKE pr
           <p id="section-7-3.2.1">CPace-Hash: SHA-512<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.3">
-          <p id="section-7-3.3.1">KEM: X-Wing <span>[<a href="#XWING" class="cite xref">XWING</a>]</span><a href="#section-7-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-7-3.3.1">KEM: X-Wing <span>[<a href="#XWING" class="cite xref">XWING</a>]</span>, where Nseed = 32, Nct = 1120, and Npk = 1216.<a href="#section-7-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.4">
           <p id="section-7-3.4.1">PC-KDF: HKDF-SHA-256<a href="#section-7-3.4.1" class="pilcrow">¶</a></p>
@@ -3027,7 +3017,7 @@ PAKE-KDF are the KDFs for the password confirmation stage and the CPaceOQUAKE pr
           <p id="section-7-3.5.1">PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) <span>[<a href="#ARGON2" class="cite xref">ARGON2</a>]</span><a href="#section-7-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.6">
-          <p id="section-7-3.6.1">BUKEM: ML-BUKEM768 <a href="#deps-kem" class="auto internal xref">Section 4.1</a><a href="#section-7-3.6.1" class="pilcrow">¶</a></p>
+          <p id="section-7-3.6.1">BUKEM: ML-BUKEM768 <a href="#deps-kem" class="auto internal xref">Section 4.1</a>, where Nseed = 64, Nct = 1514, and Npk = 1172.<a href="#section-7-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.7">
           <p id="section-7-3.7.1">PAKE-KDF: HKDF-SHA-256<a href="#section-7-3.7.1" class="pilcrow">¶</a></p>
@@ -3042,19 +3032,16 @@ PAKE-KDF are the KDFs for the password confirmation stage and the CPaceOQUAKE pr
 <p id="section-7-4">The <span class="bcp14">RECOMMENDED</span> parameters are (see <a href="#params" class="auto internal xref">Appendix A</a>):<a href="#section-7-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-5.1">
-          <p id="section-7-5.1.1">Nseed = 32<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
+          <p id="section-7-5.1.1">Nverifier = 32<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-5.2">
-          <p id="section-7-5.2.1">Nverifier = 32<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
+          <p id="section-7-5.2.1">Nkc = 64<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-5.3">
-          <p id="section-7-5.3.1">Nkc = 64<a href="#section-7-5.3.1" class="pilcrow">¶</a></p>
+          <p id="section-7-5.3.1">Nsec = 32<a href="#section-7-5.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-5.4">
-          <p id="section-7-5.4.1">Nsec = 32<a href="#section-7-5.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-7-5.5">
-          <p id="section-7-5.5.1">Nkey = 32, this is achieved by choosing H in CPace with H.b_in_bytes = 32<a href="#section-7-5.5.1" class="pilcrow">¶</a></p>
+          <p id="section-7-5.4.1">Nkey = 32, this is achieved by choosing H in CPace with H.b_in_bytes = 32<a href="#section-7-5.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-6">Other documents can define configurations as needed for their use case, subject to the following requirements:<a href="#section-7-6" class="pilcrow">¶</a></p>
@@ -3165,7 +3152,7 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
 <dl class="references">
 <dt id="ABJ25">[ABJ25]</dt>
         <dd>
-<span class="refAuthor">Arriaga, A.</span>, <span class="refAuthor">Barbosa, M.</span>, and <span class="refAuthor">S. Jarecki</span>, <span class="refTitle">"NoIC: PAKE from KEM without Ideal Ciphers"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2025/231.pdf">https://eprint.iacr.org/2025/231.pdf</a>&gt;</span>. </dd>
+<span class="refAuthor">Arriaga, A.</span>, <span class="refAuthor">Barbosa, M.</span>, and <span class="refAuthor">S. Jarecki</span>, <span class="refTitle">"NoIC: PAKE from KEM without Ideal Ciphers"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2025/231">https://eprint.iacr.org/2025/231</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="Gu24">[Gu24]</dt>
         <dd>
@@ -3173,7 +3160,7 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
 <dd class="break"></dd>
 <dt id="HR24">[HR24]</dt>
         <dd>
-<span class="refAuthor">Hesse, J.</span> and <span class="refAuthor">M. Rosenberg</span>, <span class="refTitle">"PAKE Combiners and Efficient Post-Quantum Instantiations"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1621.pdf">https://eprint.iacr.org/2024/1621.pdf</a>&gt;</span>. </dd>
+<span class="refAuthor">Hesse, J.</span> and <span class="refAuthor">M. Rosenberg</span>, <span class="refTitle">"PAKE Combiners and Efficient Post-Quantum Instantiations"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1621">https://eprint.iacr.org/2024/1621</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="LL24">[LL24]</dt>
         <dd>
@@ -3189,7 +3176,7 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
 <dd class="break"></dd>
 <dt id="SPAKE2PLUS">[SPAKE2PLUS]</dt>
       <dd>
-<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<span class="refAuthor">Taubert, T.</span> and <span class="refAuthor">C. A. Wood</span>, <span class="refTitle">"SPAKE2+, an Augmented Password-Authenticated Key Exchange (PAKE) Protocol"</span>, <span class="seriesInfo">RFC 9383</span>, <span class="seriesInfo">DOI 10.17487/RFC9383</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9383">https://www.rfc-editor.org/rfc/rfc9383</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
