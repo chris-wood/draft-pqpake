@@ -1055,7 +1055,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 13 October 2025</td>
+<td class="center">Expires 17 October 2025</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1068,12 +1068,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2025-04-11" class="published">11 April 2025</time>
+<time datetime="2025-04-15" class="published">15 April 2025</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2025-10-13">13 October 2025</time></dd>
+<dd class="expires"><time datetime="2025-10-17">17 October 2025</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1135,7 +1135,7 @@ configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 13 October 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 17 October 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1283,6 +1283,19 @@ configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
             <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-identities" class="internal xref">Identities</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1.2.1">
+                    <p id="section-toc.1-1.9.2.1.2.1.1"><a href="#section-9.1.1" class="auto internal xref">9.1.1</a>.  <a href="#name-symmetric-pake-identities" class="internal xref">Symmetric PAKE identities</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1.2.2">
+                    <p id="section-toc.1-1.9.2.1.2.2.1"><a href="#section-9.1.2" class="auto internal xref">9.1.2</a>.  <a href="#name-asymmetric-pake-identities" class="internal xref">Asymmetric PAKE identities</a></p>
+</li>
+                </ul>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
@@ -1639,10 +1652,10 @@ combined with OQUAKE <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>
 The OQUAKE protocol is based on the "NoIC" protocol analyzed in <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by
 <span>[<a href="#HR24" class="cite xref">HR24</a>]</span>. A very close variant of this protocol was also analyzed in <span>[<a href="#LL24" class="cite xref">LL24</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
-<p id="section-5-3">At a high level, CPaceOQUAKE
-is a two-round protocol that runs between client and server wherein, upon completion, both parties
-share the same session key if they agree on the password-related string (PRS).
-Otherwise, they obtain random session keys. This is summarized in the diagram below.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-3">At a high level, CPaceOQUAKE is a two-round protocol that runs between client and server
+wherein, upon completion, both parties share the same session key if they agree
+on the password-related string (PRS). Otherwise, they obtain random session keys.
+This is summarized in the diagram below.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <div id="section-5-4">
         <div class="alignLeft art-svg artwork" id="section-5-4.1">
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="208" width="536" viewBox="0 0 536 208" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
@@ -1685,8 +1698,13 @@ Otherwise, they obtain random session keys. This is summarized in the diagram be
 </div>
 </div>
 <p id="section-5-5">CPaceOQUAKE composes CPace and OQUAKE by first running CPace between
-client and server, and then incorporating the CPace session key into the password before running
-OQUAKE between the server and client. We explain the composition in more detail in <a href="#cpacequake-composition" class="auto internal xref">Section 5.3</a>.<a href="#section-5-5" class="pilcrow">¶</a></p>
+client and server, and then incorporating the CPace session key into
+the password before running OQUAKE between the server and client. We
+explain the composition in more detail in <a href="#cpacequake-composition" class="auto internal xref">Section 5.3</a>.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">As describes in <a href="#cpace" class="auto internal xref">Section 5.1</a> and <a href="#quake" class="auto internal xref">Section 5.2</a>, both CPace and OQUAKE take
+as input optional client and server identifiers, denoted U and S,
+respectively. See <a href="#identities" class="auto internal xref">Section 9.1</a> for more discussion about these
+identities and how they are chosen in practice.<a href="#section-5-6" class="pilcrow">¶</a></p>
 <div id="cpace">
 <section id="section-5.1">
         <h3 id="name-cpace-specification">
@@ -2419,7 +2437,7 @@ instance) of the `augmented PAKE' construction presented in <span>[<a href="#LLH
         </h3>
 <p id="section-6.1-1">This subsection specifies functions for generating the verifiers and
 a protocol for registering clients.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
-<div id="generating-verifiers">
+<div id="gen-verifiers">
 <section id="section-6.1.1">
           <h4 id="name-generating-verifiers">
 <a href="#section-6.1.1" class="section-number selfRef">6.1.1. </a><a href="#name-generating-verifiers" class="section-name selfRef">Generating Verifiers</a>
@@ -3083,7 +3101,81 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
       <h2 id="name-security-considerations">
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
-<p id="section-9-1">TODO: draft once the proofs are complete<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-1">This section discusses security considerations for the protocols specified in
+this document.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<div id="identities">
+<section id="section-9.1">
+        <h3 id="name-identities">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-identities" class="section-name selfRef">Identities</a>
+        </h3>
+<p id="section-9.1-1">Client and server identities are essential to authenticated key exchange protocols,
+and PAKEs are no exception. This section discusses the role and importance of
+identities in the PAKE protocols specified in this document.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<div id="symmetric-identities">
+<section id="section-9.1.1">
+          <h4 id="name-symmetric-pake-identities">
+<a href="#section-9.1.1" class="section-number selfRef">9.1.1. </a><a href="#name-symmetric-pake-identities" class="section-name selfRef">Symmetric PAKE identities</a>
+          </h4>
+<p id="section-9.1.1-1">PAKEs are often analyzed in the universal composability (UC) framework,
+which imposes several requirements on the protocols: (1) the existence
+of a globally-unique session identifer associated with each protocol invocation,
+and (2) unique party identifiers. Both are considered as inputs to PAKEs, along
+with the password itself. In practice, however, computing or agreeing on session
+and party identifiers is non-trivial and cumbersome. For example, agreeing on a
+globally unique session identifier requires a protocol to run before the PAKE.
+Moreover, assigning identifiers to parties -- especially in symmetric PAKE settings --
+is problematic as there are rarely pragmatic choices to be made for each party's
+identifier. IP addresses are not always unique, PKI or some other registry
+mechanism for assigning names may not exist, and so on.<a href="#section-9.1.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1.1-2">Intuitively, in symmetric settings, passwords are the only secret input to the
+PAKE protocol; party identities are assumed to be public. As such, an adversary
+is assumed to know these identifiers are use them in practice. Fortunately,
+there exists a UC model in which symmetric PAKEs such as CPace are proven secure
+without requiring party or session identifiers -- the bare PAKE
+model <span>[<a href="#BARE-PAKE" class="cite xref">BARE-PAKE</a>]</span>.
+The UC bare PAKE model, and proof of security for CPace in this model,
+demonstrate that PAKEs are universally composable without relying on
+unique party or session identifiers.<a href="#section-9.1.1-2" class="pilcrow">¶</a></p>
+<p id="section-9.1.1-3">As such, for the PAKEs in <a href="#CPaceOQUAKE" class="auto internal xref">Section 5</a>, both the party and session identifier
+are optional. Applications are free to choose values for these identifiers
+if applicable, but they are not required for security.<a href="#section-9.1.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="asymmetric-identities">
+<section id="section-9.1.2">
+          <h4 id="name-asymmetric-pake-identities">
+<a href="#section-9.1.2" class="section-number selfRef">9.1.2. </a><a href="#name-asymmetric-pake-identities" class="section-name selfRef">Asymmetric PAKE identities</a>
+          </h4>
+<p id="section-9.1.2-1">In contrast to the symmetric PAKE setting, party identities in the asymmetric
+PAKE setting play a different role. The very nature of the asymmetric PAKE
+is that one server, with many different registered passwords, can authenticate
+many different clients. Consequently, when the protocol runs, the server
+needs some way to determine which password registration to use in the protocol.
+Beyond ensuring that the server is authenticating the correct client, the
+client's identity is what helps the server make this selection.<a href="#section-9.1.2-1" class="pilcrow">¶</a></p>
+<p id="section-9.1.2-2">However, the server identifier carries a similar burden. Indeed,
+the server identifier is used to distinguish distinct server instances
+from each other so, for example, a client cannot mistakenly authenticate
+with server A when communicating with server B. This is especially
+important if the client re-uses their identifier across server instances,
+since a password registration for server A would then be valid for server B
+if the server identity were not incorporated into the protocol.<a href="#section-9.1.2-2" class="pilcrow">¶</a></p>
+<p id="section-9.1.2-3">Based on this, client and server identities are <span class="bcp14">RECOMMENDED</span> for the asymmetric
+PAKEs specified in this document (in <a href="#CPaceOQUAKEplus" class="auto internal xref">Section 6</a>). Both
+client and server identities can be long-lived, e.g., a client identity
+could be an email address and a server identity could be a domain name.<a href="#section-9.1.2-3" class="pilcrow">¶</a></p>
+<p id="section-9.1.2-4">Practically, applications should be mindful of what happens when these
+identities change. Since they are both included in the password verifier
+(see <a href="#gen-verifiers" class="auto internal xref">Section 6.1.1</a>), changing either identifier will require the
+veirifer to be re-computed and the client to be re-registered. For a single
+client, this change is minimal, but for a single server, which can have
+many registered clients, this change can be expensive. Applications therefore
+ought to consider the longevitiy and uniquness of their party identifiers
+when instantiating these protocols.<a href="#section-9.1.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
 </section>
 </div>
 <div id="iana-considerations">
@@ -3153,6 +3245,10 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
 <dt id="ABJ25">[ABJ25]</dt>
         <dd>
 <span class="refAuthor">Arriaga, A.</span>, <span class="refAuthor">Barbosa, M.</span>, and <span class="refAuthor">S. Jarecki</span>, <span class="refTitle">"NoIC: PAKE from KEM without Ideal Ciphers"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2025/231">https://eprint.iacr.org/2025/231</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="BARE-PAKE">[BARE-PAKE]</dt>
+        <dd>
+<span class="refAuthor">Barbosa, M.</span>, <span class="refAuthor">Gellert, K.</span>, <span class="refAuthor">Hesse, J.</span>, and <span class="refAuthor">S. Jarecki</span>, <span class="refTitle">"Bare PAKE: Universally Composable Key Exchange from Just Passwords"</span>, <span class="refContent">Springer Nature Switzerland</span>, <span class="seriesInfo">Lecture Notes in Computer Science pp. 183-217</span>, <span class="seriesInfo">DOI 10.1007/978-3-031-68379-4_6</span>, <span class="seriesInfo">ISBN ["9783031683787", "9783031683794"]</span>, <time datetime="2024" class="refDate">2024</time>, <span>&lt;<a href="https://doi.org/10.1007/978-3-031-68379-4_6">https://doi.org/10.1007/978-3-031-68379-4_6</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="Gu24">[Gu24]</dt>
         <dd>
