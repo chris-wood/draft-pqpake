@@ -486,7 +486,7 @@ does not apply, but this does not mean that the protocol becomes vulnerable.
 
 ### Initiation
 
-Init takes as input the initiator's PRS, session identifier sid, and optional client and server identifiers
+Init takes as input the initiator's PRS, an optional session identifier sid, and optional client and server identifiers
 U and S. It produces a context for the initiator to store, as well as a protocol message that is sent to
 the responder. Its implementation is as follows.
 
@@ -556,8 +556,7 @@ def encode_sid(sid, U, U):
 
 ### Response
 
-Respond takes as input the PRS, session identifier sid, the initiator's
-protocol message, and optional client and server identifiers.
+Respond takes as input the PRS, the initiator's protocol message, an optional session identifier, and optional client and server identifiers.
 It produces a 32-byte symmetric key and a protocol message intended to be sent to the initiator. Its implementation
 is as follows.
 
@@ -974,8 +973,10 @@ the client for future use in the verification flow. This phase requires a secure
 server in order to transfer the password verifier and public key.
 The salt can be sent in plain text.
 
-We recommend that the salt is a random byte string: `salt = random(32)`. However, in practice this may require
-additional communication flows. Instead, one may consider deriving the salt from some client-specific value that it knows locally.
+We recommend that the salt is a random byte string: `salt = random(32)`. However, in practice this
+may require an additional communication flow, used by the server to send the salt to the client 
+before protocol CPaceOQUAKE+ starts. Instead, one may consider deriving the salt from some 
+client-specific value that it knows and can retain locally.
 
 A high level flow overview of the registration flow is below.
 
@@ -984,10 +985,10 @@ Client: PRS, salt, U, S              Server: N/A
        ---------------------------------------
  (v, pk) = GenVerifiers(PRS, salt, U, S)
             |                           |
-            |       salt, v, pk         |
+            |    salt, v, pk, U, S      |
             |-------------------------->|
             |                           |
-            |                   Store (salt, v, pk)
+            |                Store (salt, v, pk, U, S)
             |                           |
        ---------------------------------------
 ~~~
@@ -1015,14 +1016,14 @@ has the client's public key and salt stored from the previous registration flow.
 A high level overview of this flow is below.
 
 ~~~aasvg
-Client: SK, seed, tx, sid, U, S      Server: SK, salt, pk, tx, sid, U, S
+Client: SK, tx, seed, sid, U, S      Server: SK, tx, pk, sid, U, S
        ---------------------------------------
           ctx, challenge = PC-Challenge(SK, tx, pk, sid, U, S)
             |                           |
             |         challenge         |
             |<--------------------------|
             |                           |
-client_key, response = PC-Response(SK, seed, tx, challenge, sid, U, S)
+client_key, response = PC-Response(SK, tx, seed, challenge, sid, U, S)
             |                           |
             |         response          |
             |-------------------------->|
@@ -1086,10 +1087,10 @@ def PC-Challenge(SK, transcript, pk, sid, U, S):
 
 ### Client Response
 
-Upon receipt of the challenge, the client decrypts the value and recovers
-the salt, KEM ciphertext, and password confirmation value. It then uses the
-seed to re-derive the KEM key pair, using the same procedure followed during
-the registration flow. The client then decapsulates the ciphertext to recover
+Upon receipt of the challenge, the client recovers the KEM ciphertext by decrypting 
+the one-time pad ciphertext included in the challenge, using the key derived from the shared secret. 
+It then uses the seed to re-derive the KEM key pair, using the same procedure followed during
+the registration flow. The client then decapsulates the KEM ciphertext to recover
 the shared secret and derive the same password confirmation values and new
 shared secret as the server.
 
@@ -1102,8 +1103,8 @@ PC-Response
 
 Input:
 - SK, 32-byte symmetric key, a byte string
-- seed, seed used to derive KEM public key
 - transcript, the transcript from previously executed protocols to which this protocol is bound, a byte string
+- seed, seed used to derive KEM public key
 - challenge, an encoded protocol message for the server to send to the client
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
@@ -1120,7 +1121,7 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def PC-Response(SK, seed, transcript, challenge, sid, U, S):
+def PC-Response(SK, transcript, seed, challenge, sid, U, S):
   (enc_c, client_confirm_target) = challenge
   r = KDF.Expand(SK, DST || "OTP", Nct)
   c = XOR(enc_c, r)
@@ -1152,8 +1153,9 @@ def PC-Response(SK, seed, transcript, challenge, sid, U, S):
 
 ### Server Verify
 
-Upon receipt of the response, the server validates that the password confirmation value matches its own value. If the value does not match, the
-server aborts. Otherwise, the server outputs the new shared secret as its output.
+Upon receipt of the response, the server validates that the password confirmation
+value matches its own value. If the value does not match, the server aborts. 
+Otherwise, the server outputs the new shared secret as its output.
 
 ~~~
 PC-Verify
@@ -1218,12 +1220,12 @@ Upon successful completion of the entire protocol, the client and server will sh
 symmetric key that was authenticated by knowledge of the password. The protocol
 aborts if the password did not match. The protocol flows are shown below.
 Note here that if the client does not know the salt, the server must send
-it, which it can do in plain text.
+it to the client before the protocol starts, which it can do in plain text.
 
 ~~~aasvg
 Client: PRS,salt,U,S,sid      Server: v,pk,U,S,sid
           ----------------------------------------
-(v, seed) = GenVerifierMaterial(PRS, salt)     |
+(v, seed) = GenVerifierMaterial(PRS,salt,U,S)  |
 ctx1, msg1 = CPaceOQUAKE.Init(v,sid,U,S)       |
             |                                  |
             |               msg1               |
@@ -1248,7 +1250,7 @@ SK, msg3 = CPaceOQUAKE.InitiatorFinish(        |
             |<---------------------------------|
             |                                  |
       tx = msg1 || msg2 || msg3                |
-client_key, resp = PC-Response(SK,seed,tx,chal,sid,U,S)
+client_key, resp = PC-Response(SK,tx,seed,chal,sid,U,S)
             |                                  |
             |               resp               |
             |--------------------------------->|
