@@ -1263,14 +1263,15 @@ client_key, resp = PC-Response(SK,seed,tx,chal,sid,U,S)
 # CPaceOQUAKE+ Configurations {#configurations}
 
 CPaceOQUAKE+ is instantiated by selecting a configuration of a group and hash function
-for the CPace protocol, a KEM, KDF, KSF, for password confirmation, and a KEM and KDF for CPaceOQUAKE, and a general
-purpose cryptographic hash function H.
-The KEM, KDF, are not required to be the same, so they are distinguished by "PC-" and "PAKE-" prefixes, e.g., PC-KDF and
-PAKE-KDF are the KDFs for the password confirmation stage and the CPaceOQUAKE protocol, respectively.
+for the CPace protocol, a KEM, KDF, KSF, for password confirmation, and a KEM and KDF
+for CPaceOQUAKE, and a general purpose cryptographic hash function H. The KEM, KDF,
+are not required to be the same, so they are distinguished by "PC-" and "PAKE-"
+prefixes, e.g., PC-KDF and PAKE-KDF are the KDFs for the password confirmation stage
+and the CPaceOQUAKE protocol, respectively.
 
 The RECOMMENDED configuration is below.
 
-- CPace-Group: ristretto255-SHA512
+- CPace-Group: CPACE-RISTR255-SHA512 {{Section 4 of CPACE}}
 - CPace-Hash: SHA-512
 - KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
@@ -1291,6 +1292,18 @@ Other documents can define configurations as needed for their use case, subject 
 
 1. KEM MUST be a hybrid KEM, i.e., one that achieves both classical and post-quantum security.
 2. The parameters must be chosen so they correspond with this KEM. E.g., Nseed must have the correct length.
+
+For instance, one possible additional configuration is as follows.
+
+- CPace-Group: CPACE-P256_XMD:SHA-256_SSWU_NU_-SHA256 {{Section 4 of CPACE}}
+- CPace-Hash: SHA-256
+- KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
+- PC-KDF: HKDF-SHA-256
+- PC-KSF: Scrypt(N = 32768, r = 8, p = 1) {{!SCRYPT=RFC7914}}
+- BUKEM: ML-BUKEM768 {{deps-bukem}}, where Nseed = 64, Nct = 1514, and Npk = 1172.
+- PAKE-KDF: HKDF-SHA-256
+- H: SHA256
+- DST: "b840fa4d4b4caec9e25d13d8c016cfe93e7468d54e936490bd0b0a3ffca1a01b" (a randomly generated 32-byte string)
 
 # Implementation Considerations
 
