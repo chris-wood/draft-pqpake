@@ -467,7 +467,7 @@ def Finish(ya, Yb, sid):
 OQUAKE is a PAKE built on a BUKEM and KDF.  If the BUKEM provides security against quantum-enabled attacks,
 then so does OQUAKE. It consists of three messages sent between initiator and responder, produced by
 the functions Init, Respond, and Finish, described below. Both parties take as input a password-related
-string PRS, a required unique shared session identifier sid, and an optional client identifier U and server
+string PRS, an optional session identifier sid, and an optional client identifier U and server
 identifier S. Upon completion, both parties obtain matching session keys if their PRS, sid, key length
 (specified by N), and client and server identifiers match. Otherwise, they obtain random session keys.
 
@@ -1337,17 +1337,22 @@ mechanism for assigning names may not exist, and so on.
 
 Intuitively, in symmetric settings, passwords are the only secret input to the
 PAKE protocol; party identities are assumed to be public. As such, an adversary
-is assumed to know these identifiers are use them in practice. Fortunately,
-there exists a UC model in which symmetric PAKEs such as CPace are proven secure
+is assumed to know these identifiers. Fortunately, there exists a UC
+model in which symmetric PAKEs such as CPace are proven secure
 without requiring party or session identifiers -- the bare PAKE
 model {{?BARE-PAKE=DOI.10.1007/978-3-031-68379-4_6}}.
 The UC bare PAKE model, and proof of security for CPace in this model,
 demonstrate that PAKEs are universally composable without relying on
-unique party or session identifiers.
+unique party or session identifiers. We believe that the current proof
+of security of OQUAKE in {{ABJ25}} can be extended to show that NoIC,
+the basis of OQUAKE, realizes the Bare PAKE model as well, although
+we note that that this proof has not been published yet.
 
 As such, for the PAKEs in {{CPaceOQUAKE}}, both the party and session identifier
 are optional. Applications are free to choose values for these identifiers
 if applicable, but they are not required for security.
+
+[[OPEN ISSUE: adjust the requirements for the identities in OQUAKE on the basis on the bare PAKE analysis]]
 
 ### Asymmetric PAKE identities {#asymmetric-identities}
 
@@ -1378,7 +1383,7 @@ identities change. Since they are both included in the password verifier
 veirifer to be re-computed and the client to be re-registered. For a single
 client, this change is minimal, but for a single server, which can have
 many registered clients, this change can be expensive. Applications therefore
-ought to consider the longevitiy and uniquness of their party identifiers
+ought to consider the longevitiy and uniqueness of their party identifiers
 when instantiating these protocols.
 
 # IANA Considerations
