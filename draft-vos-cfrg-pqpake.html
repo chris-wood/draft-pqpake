@@ -1875,7 +1875,7 @@ does not apply, but this does not mean that the protocol becomes vulnerable.<a h
           <h4 id="name-initiation-2">
 <a href="#section-5.2.1" class="section-number selfRef">5.2.1. </a><a href="#name-initiation-2" class="section-name selfRef">Initiation</a>
           </h4>
-<p id="section-5.2.1-1">Init takes as input the initiator's PRS, session identifier sid, and optional client and server identifiers
+<p id="section-5.2.1-1">Init takes as input the initiator's PRS, an optional session identifier sid, and optional client and server identifiers
 U and S. It produces a context for the initiator to store, as well as a protocol message that is sent to
 the responder. Its implementation is as follows.<a href="#section-5.2.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.2.1-2">
@@ -1950,8 +1950,7 @@ def encode_sid(sid, U, U):
           <h4 id="name-response-2">
 <a href="#section-5.2.2" class="section-number selfRef">5.2.2. </a><a href="#name-response-2" class="section-name selfRef">Response</a>
           </h4>
-<p id="section-5.2.2-1">Respond takes as input the PRS, session identifier sid, the initiator's
-protocol message, and optional client and server identifiers.
+<p id="section-5.2.2-1">Respond takes as input the PRS, the initiator's protocol message, an optional session identifier, and optional client and server identifiers.
 It produces a 32-byte symmetric key and a protocol message intended to be sent to the initiator. Its implementation
 is as follows.<a href="#section-5.2.2-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-5.2.2-2">
@@ -2509,14 +2508,16 @@ contains the verifier, a public key, and 32-byte salt. The server stores this in
 the client for future use in the verification flow. This phase requires a secure channel from client to
 server in order to transfer the password verifier and public key.
 The salt can be sent in plain text.<a href="#section-6.1.2-1" class="pilcrow">¶</a></p>
-<p id="section-6.1.2-2">We recommend that the salt is a random byte string: <code>salt = random(32)</code>. However, in practice this may require
-additional communication flows. Instead, one may consider deriving the salt from some client-specific value that it knows locally.<a href="#section-6.1.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.1.2-2">We recommend that the salt is a random byte string: <code>salt = random(32)</code>. However, in practice this
+may require an additional communication flow, used by the server to send the salt to the client
+before protocol CPaceOQUAKE+ starts. Instead, one may consider deriving the salt from some
+client-specific value that it knows and can retain locally.<a href="#section-6.1.2-2" class="pilcrow">¶</a></p>
 <p id="section-6.1.2-3">A high level flow overview of the registration flow is below.<a href="#section-6.1.2-3" class="pilcrow">¶</a></p>
 <div id="section-6.1.2-4">
             <div class="alignLeft art-svg artwork" id="section-6.1.2-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="192" width="416" viewBox="0 0 416 192" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="192" width="440" viewBox="0 0 440 192" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
                 <path d="M 104,80 L 104,168" fill="none" stroke="black"></path>
-                <path d="M 328,80 L 328,128" fill="none" stroke="black"></path>
+                <path d="M 328,80 L 328,168" fill="none" stroke="black"></path>
                 <path d="M 64,48 L 368,48" fill="none" stroke="black"></path>
                 <path d="M 112,112 L 320,112" fill="none" stroke="black"></path>
                 <path d="M 64,176 L 368,176" fill="none" stroke="black"></path>
@@ -2536,14 +2537,17 @@ additional communication flows. Instead, one may consider deriving the salt from
                   <text x="256" y="68">salt,</text>
                   <text x="292" y="68">U,</text>
                   <text x="316" y="68">S)</text>
-                  <text x="184" y="100">salt,</text>
-                  <text x="220" y="100">v,</text>
-                  <text x="244" y="100">pk</text>
-                  <text x="280" y="148">Store</text>
-                  <text x="332" y="148">(salt,</text>
-                  <text x="372" y="148">v,</text>
-                  <text x="400" y="148">pk)</text>
-                  <text x="328" y="164">|</text>
+                  <text x="160" y="100">salt,</text>
+                  <text x="196" y="100">v,</text>
+                  <text x="224" y="100">pk,</text>
+                  <text x="252" y="100">U,</text>
+                  <text x="272" y="100">S</text>
+                  <text x="256" y="148">Store</text>
+                  <text x="304" y="148">(salt</text>
+                  <text x="348" y="148">v,</text>
+                  <text x="376" y="148">pk,</text>
+                  <text x="404" y="148">U,</text>
+                  <text x="428" y="148">S)</text>
                 </g>
               </svg><a href="#section-6.1.2-4.1" class="pilcrow">¶</a>
 </div>
@@ -2575,7 +2579,7 @@ has the client's public key and salt stored from the previous registration flow.
 <p id="section-6.2-3">A high level overview of this flow is below.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 <div id="section-6.2-4">
           <div class="alignLeft art-svg artwork" id="section-6.2-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="288" width="584" viewBox="0 0 584 288" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="288" width="568" viewBox="0 0 568 288" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 104,80 L 104,128" fill="none" stroke="black"></path>
               <path d="M 104,160 L 104,208" fill="none" stroke="black"></path>
               <path d="M 328,80 L 328,128" fill="none" stroke="black"></path>
@@ -2589,19 +2593,18 @@ has the client's public key and salt stored from the previous registration flow.
               <g class="text">
                 <text x="32" y="36">Client:</text>
                 <text x="80" y="36">SK,</text>
-                <text x="120" y="36">seed,</text>
-                <text x="160" y="36">tx,</text>
+                <text x="112" y="36">tx,</text>
+                <text x="152" y="36">seed,</text>
                 <text x="196" y="36">sid,</text>
                 <text x="228" y="36">U,</text>
                 <text x="248" y="36">S</text>
                 <text x="328" y="36">Server:</text>
                 <text x="376" y="36">SK,</text>
-                <text x="416" y="36">salt,</text>
-                <text x="456" y="36">pk,</text>
-                <text x="488" y="36">tx,</text>
-                <text x="524" y="36">sid,</text>
-                <text x="556" y="36">U,</text>
-                <text x="576" y="36">S</text>
+                <text x="408" y="36">tx,</text>
+                <text x="440" y="36">pk,</text>
+                <text x="476" y="36">sid,</text>
+                <text x="508" y="36">U,</text>
+                <text x="528" y="36">S</text>
                 <text x="100" y="68">ctx,</text>
                 <text x="160" y="68">challenge</text>
                 <text x="208" y="68">=</text>
@@ -2616,8 +2619,8 @@ has the client's public key and salt stored from the previous registration flow.
                 <text x="132" y="148">response</text>
                 <text x="176" y="148">=</text>
                 <text x="248" y="148">PC-Response(SK,</text>
-                <text x="336" y="148">seed,</text>
-                <text x="376" y="148">tx,</text>
+                <text x="328" y="148">tx,</text>
+                <text x="368" y="148">seed,</text>
                 <text x="436" y="148">challenge,</text>
                 <text x="500" y="148">sid,</text>
                 <text x="532" y="148">U,</text>
@@ -2697,10 +2700,10 @@ def PC-Challenge(SK, transcript, pk, sid, U, S):
           <h4 id="name-client-response">
 <a href="#section-6.2.2" class="section-number selfRef">6.2.2. </a><a href="#name-client-response" class="section-name selfRef">Client Response</a>
           </h4>
-<p id="section-6.2.2-1">Upon receipt of the challenge, the client decrypts the value and recovers
-the salt, KEM ciphertext, and password confirmation value. It then uses the
-seed to re-derive the KEM key pair, using the same procedure followed during
-the registration flow. The client then decapsulates the ciphertext to recover
+<p id="section-6.2.2-1">Upon receipt of the challenge, the client recovers the KEM ciphertext by decrypting
+the one-time pad ciphertext included in the challenge, using the key derived from the shared secret.
+It then uses the seed to re-derive the KEM key pair, using the same procedure followed during
+the registration flow. The client then decapsulates the KEM ciphertext to recover
 the shared secret and derive the same password confirmation values and new
 shared secret as the server.<a href="#section-6.2.2-1" class="pilcrow">¶</a></p>
 <p id="section-6.2.2-2">The client then checks that the server-provided confirmation value matches its
@@ -2712,8 +2715,8 @@ PC-Response
 
 Input:
 - SK, 32-byte symmetric key, a byte string
-- seed, seed used to derive KEM public key
 - transcript, the transcript from previously executed protocols to which this protocol is bound, a byte string
+- seed, seed used to derive KEM public key
 - challenge, an encoded protocol message for the server to send to the client
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
@@ -2730,7 +2733,7 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def PC-Response(SK, seed, transcript, challenge, sid, U, S):
+def PC-Response(SK, transcript, seed, challenge, sid, U, S):
   (enc_c, client_confirm_target) = challenge
   r = KDF.Expand(SK, DST || "OTP", Nct)
   c = XOR(enc_c, r)
@@ -2767,8 +2770,9 @@ def PC-Response(SK, seed, transcript, challenge, sid, U, S):
           <h4 id="name-server-verify">
 <a href="#section-6.2.3" class="section-number selfRef">6.2.3. </a><a href="#name-server-verify" class="section-name selfRef">Server Verify</a>
           </h4>
-<p id="section-6.2.3-1">Upon receipt of the response, the server validates that the password confirmation value matches its own value. If the value does not match, the
-server aborts. Otherwise, the server outputs the new shared secret as its output.<a href="#section-6.2.3-1" class="pilcrow">¶</a></p>
+<p id="section-6.2.3-1">Upon receipt of the response, the server validates that the password confirmation
+value matches its own value. If the value does not match, the server aborts.
+Otherwise, the server outputs the new shared secret as its output.<a href="#section-6.2.3-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.2.3-2">
 <pre>
 PC-Verify
@@ -2913,7 +2917,7 @@ overview of the composition is below.<a href="#section-6.3-1" class="pilcrow">¶
 symmetric key that was authenticated by knowledge of the password. The protocol
 aborts if the password did not match. The protocol flows are shown below.
 Note here that if the client does not know the salt, the server must send
-it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
+it to the client before the protocol starts, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
 <div id="section-6.3-4">
           <div class="alignLeft art-svg artwork" id="section-6.3-4.1">
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="608" width="568" viewBox="0 0 568 608" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
@@ -2944,8 +2948,7 @@ it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a
                 <text x="16" y="68">(v,</text>
                 <text x="56" y="68">seed)</text>
                 <text x="88" y="68">=</text>
-                <text x="196" y="68">GenVerifierMaterial(PRS,</text>
-                <text x="320" y="68">salt)</text>
+                <text x="232" y="68">GenVerifierMaterial(PRS,salt,U,S)</text>
                 <text x="24" y="84">ctx1,</text>
                 <text x="68" y="84">msg1</text>
                 <text x="96" y="84">=</text>
@@ -2988,7 +2991,7 @@ it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a
                 <text x="48" y="468">client_key,</text>
                 <text x="116" y="468">resp</text>
                 <text x="144" y="468">=</text>
-                <text x="300" y="468">PC-Response(SK,seed,tx,chal,sid,U,S)</text>
+                <text x="300" y="468">PC-Response(SK,tx,seed,chal,sid,U,S)</text>
                 <text x="244" y="500">resp</text>
                 <text x="300" y="548">server_key</text>
                 <text x="352" y="548">=</text>
