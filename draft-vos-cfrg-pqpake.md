@@ -1275,7 +1275,7 @@ The RECOMMENDED configuration is below.
 - KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
-- BUKEM: ML-BUKEM768 {{deps-kem}}, where Nseed = 64, Nct = 1514, and Npk = 1172.
+- BUKEM: ML-BUKEM768 {{deps-bukem}}, where Nseed = 64, Nct = 1514, and Npk = 1172.
 - PAKE-KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672" (a randomly generated 32-byte string)
