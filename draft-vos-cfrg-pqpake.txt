@@ -1334,7 +1334,7 @@ Session <--)--------------------------+              +----(--> Session
 
    The RECOMMENDED configuration is below.
 
-   *  CPace-Group: ristretto255-SHA512
+   *  CPace-Group: CPACE-RISTR255-SHA512 Section 4 of [CPACE]
 
    *  CPace-Hash: SHA-512
 
@@ -1375,6 +1375,30 @@ Session <--)--------------------------+              +----(--> Session
 
    2.  The parameters must be chosen so they correspond with this KEM.
        E.g., Nseed must have the correct length.
+
+   For instance, one possible additional configuration is as follows.
+
+   *  CPace-Group: CPACE-P256_XMD:SHA-256_SSWU_NU_-SHA256 Section 4 of
+      [CPACE]
+
+   *  CPace-Hash: SHA-256
+
+   *  KEM: X-Wing [XWING], where Nseed = 32, Nct = 1120, and Npk = 1216.
+
+   *  PC-KDF: HKDF-SHA-256
+
+   *  PC-KSF: Scrypt(N = 32768, r = 8, p = 1) [SCRYPT]
+
+   *  BUKEM: ML-BUKEM768 Section 4.2, where Nseed = 64, Nct = 1514, and
+      Npk = 1172.
+
+   *  PAKE-KDF: HKDF-SHA-256
+
+   *  H: SHA256
+
+   *  DST:
+      "b840fa4d4b4caec9e25d13d8c016cfe93e7468d54e936490bd0b0a3ffca1a01b"
+      (a randomly generated 32-byte string)
 
 8.  Implementation Considerations
 
@@ -1530,6 +1554,10 @@ Session <--)--------------------------+              +----(--> Session
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [SCRYPT]   Percival, C. and S. Josefsson, "The scrypt Password-Based
+              Key Derivation Function", RFC 7914, DOI 10.17487/RFC7914,
+              August 2016, <https://www.rfc-editor.org/rfc/rfc7914>.
 
    [XWING]    Connolly, D., Schwabe, P., and B. Westerbaan, "X-Wing:
               general-purpose hybrid post-quantum KEM", Work in

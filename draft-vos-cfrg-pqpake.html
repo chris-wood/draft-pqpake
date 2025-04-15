@@ -3013,14 +3013,15 @@ it, which it can do in plain text.<a href="#section-6.3-3" class="pilcrow">¶</a
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-cpaceoquake-configurations" class="section-name selfRef">CPaceOQUAKE+ Configurations</a>
       </h2>
 <p id="section-7-1">CPaceOQUAKE+ is instantiated by selecting a configuration of a group and hash function
-for the CPace protocol, a KEM, KDF, KSF, for password confirmation, and a KEM and KDF for CPaceOQUAKE, and a general
-purpose cryptographic hash function H.
-The KEM, KDF, are not required to be the same, so they are distinguished by "PC-" and "PAKE-" prefixes, e.g., PC-KDF and
-PAKE-KDF are the KDFs for the password confirmation stage and the CPaceOQUAKE protocol, respectively.<a href="#section-7-1" class="pilcrow">¶</a></p>
+for the CPace protocol, a KEM, KDF, KSF, for password confirmation, and a KEM and KDF
+for CPaceOQUAKE, and a general purpose cryptographic hash function H. The KEM, KDF,
+are not required to be the same, so they are distinguished by "PC-" and "PAKE-"
+prefixes, e.g., PC-KDF and PAKE-KDF are the KDFs for the password confirmation stage
+and the CPaceOQUAKE protocol, respectively.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">The <span class="bcp14">RECOMMENDED</span> configuration is below.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-3.1">
-          <p id="section-7-3.1.1">CPace-Group: ristretto255-SHA512<a href="#section-7-3.1.1" class="pilcrow">¶</a></p>
+          <p id="section-7-3.1.1">CPace-Group: CPACE-RISTR255-SHA512 <span><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-13#section-4" class="relref">Section 4</a> of [<a href="#CPACE" class="cite xref">CPACE</a>]</span><a href="#section-7-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.2">
           <p id="section-7-3.2.1">CPace-Hash: SHA-512<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
@@ -3071,6 +3072,36 @@ PAKE-KDF are the KDFs for the password confirmation stage and the CPaceOQUAKE pr
           <p id="section-7-7.2.1">The parameters must be chosen so they correspond with this KEM. E.g., Nseed must have the correct length.<a href="#section-7-7.2.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
+<p id="section-7-8">For instance, one possible additional configuration is as follows.<a href="#section-7-8" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7-9.1">
+          <p id="section-7-9.1.1">CPace-Group: CPACE-P256<em>XMD:SHA-256_SSWU_NU</em>-SHA256 <span><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-13#section-4" class="relref">Section 4</a> of [<a href="#CPACE" class="cite xref">CPACE</a>]</span><a href="#section-7-9.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-9.2">
+          <p id="section-7-9.2.1">CPace-Hash: SHA-256<a href="#section-7-9.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-9.3">
+          <p id="section-7-9.3.1">KEM: X-Wing <span>[<a href="#XWING" class="cite xref">XWING</a>]</span>, where Nseed = 32, Nct = 1120, and Npk = 1216.<a href="#section-7-9.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-9.4">
+          <p id="section-7-9.4.1">PC-KDF: HKDF-SHA-256<a href="#section-7-9.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-9.5">
+          <p id="section-7-9.5.1">PC-KSF: Scrypt(N = 32768, r = 8, p = 1) <span>[<a href="#SCRYPT" class="cite xref">SCRYPT</a>]</span><a href="#section-7-9.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-9.6">
+          <p id="section-7-9.6.1">BUKEM: ML-BUKEM768 <a href="#deps-bukem" class="auto internal xref">Section 4.2</a>, where Nseed = 64, Nct = 1514, and Npk = 1172.<a href="#section-7-9.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-9.7">
+          <p id="section-7-9.7.1">PAKE-KDF: HKDF-SHA-256<a href="#section-7-9.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-9.8">
+          <p id="section-7-9.8.1">H: SHA256<a href="#section-7-9.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-9.9">
+          <p id="section-7-9.9.1">DST: "b840fa4d4b4caec9e25d13d8c016cfe93e7468d54e936490bd0b0a3ffca1a01b" (a randomly generated 32-byte string)<a href="#section-7-9.9.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
 <div id="implementation-considerations">
@@ -3232,6 +3263,10 @@ when instantiating these protocols.<a href="#section-9.1.2-4" class="pilcrow">¶
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="SCRYPT">[SCRYPT]</dt>
+        <dd>
+<span class="refAuthor">Percival, C.</span> and <span class="refAuthor">S. Josefsson</span>, <span class="refTitle">"The scrypt Password-Based Key Derivation Function"</span>, <span class="seriesInfo">RFC 7914</span>, <span class="seriesInfo">DOI 10.17487/RFC7914</span>, <time datetime="2016-08" class="refDate">August 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7914">https://www.rfc-editor.org/rfc/rfc7914</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="XWING">[XWING]</dt>
       <dd>
