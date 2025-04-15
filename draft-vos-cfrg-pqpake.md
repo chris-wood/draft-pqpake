@@ -974,8 +974,8 @@ server in order to transfer the password verifier and public key.
 The salt can be sent in plain text.
 
 We recommend that the salt is a random byte string: `salt = random(32)`. However, in practice this
-may require an additional communication flow, used by the server to send the salt to the client 
-before protocol CPaceOQUAKE+ starts. Instead, one may consider deriving the salt from some 
+may require an additional communication flow, used by the server to send the salt to the client
+before protocol CPaceOQUAKE+ starts. Instead, one may consider deriving the salt from some
 client-specific value that it knows and can retain locally.
 
 A high level flow overview of the registration flow is below.
@@ -1087,8 +1087,8 @@ def PC-Challenge(SK, transcript, pk, sid, U, S):
 
 ### Client Response
 
-Upon receipt of the challenge, the client recovers the KEM ciphertext by decrypting 
-the one-time pad ciphertext included in the challenge, using the key derived from the shared secret. 
+Upon receipt of the challenge, the client recovers the KEM ciphertext by decrypting
+the one-time pad ciphertext included in the challenge, using the key derived from the shared secret.
 It then uses the seed to re-derive the KEM key pair, using the same procedure followed during
 the registration flow. The client then decapsulates the KEM ciphertext to recover
 the shared secret and derive the same password confirmation values and new
@@ -1154,7 +1154,7 @@ def PC-Response(SK, transcript, seed, challenge, sid, U, S):
 ### Server Verify
 
 Upon receipt of the response, the server validates that the password confirmation
-value matches its own value. If the value does not match, the server aborts. 
+value matches its own value. If the value does not match, the server aborts.
 Otherwise, the server outputs the new shared secret as its output.
 
 ~~~
