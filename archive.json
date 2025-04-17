@@ -1,0 +1,649 @@
+{
+  "magic": "E!vIA5L86J2I",
+  "timestamp": "2025-04-17T00:16:27.496355+00:00",
+  "repo": "chris-wood/draft-pqpake",
+  "labels": [
+    {
+      "name": "bug",
+      "description": "Something isn't working",
+      "color": "d73a4a"
+    },
+    {
+      "name": "documentation",
+      "description": "Improvements or additions to documentation",
+      "color": "0075ca"
+    },
+    {
+      "name": "duplicate",
+      "description": "This issue or pull request already exists",
+      "color": "cfd3d7"
+    },
+    {
+      "name": "enhancement",
+      "description": "New feature or request",
+      "color": "a2eeef"
+    },
+    {
+      "name": "good first issue",
+      "description": "Good for newcomers",
+      "color": "7057ff"
+    },
+    {
+      "name": "help wanted",
+      "description": "Extra attention is needed",
+      "color": "008672"
+    },
+    {
+      "name": "invalid",
+      "description": "This doesn't seem right",
+      "color": "e4e669"
+    },
+    {
+      "name": "question",
+      "description": "Further information is requested",
+      "color": "d876e3"
+    },
+    {
+      "name": "wontfix",
+      "description": "This will not be worked on",
+      "color": "ffffff"
+    }
+  ],
+  "issues": [
+    {
+      "number": 1,
+      "id": "I_kwDOOCmp3s6szR1y",
+      "title": "feedback on IETF draft (March 5), Sections 4 and 5",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/1",
+      "state": "CLOSED",
+      "author": "stanislawjarecki",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "I'm not sure I got everything, but I'm listing the edits I see in the order of appearance, marking the edits which I think are higher importance with (*) and highest importance with (**).\n\nSecs 4.1and 4.2:  \n\nCan we add in 4.1 that we rely on the underlying KEM to be CCA secure?\n\nSec 4.2, BUKEM (*):  \n\nCan we add that we only care about uniform encodings of public keys, and not ciphertexts?  We refer to KEMELEON for how BUKEM is to be implemented, but does KEMELEON give an option that only public keys are encoded as bitstrings but ciphertexts are not?  If you switch on both of these randomized encodings then you will add computational/bandwidth overhead in Encaps and Decaps, which is not needed.  \n\nIt would also be better, I think, if the requirements that we need of this (BU)KEM module are stated more precisely.  Right now the draft says:  \"Specifically, public keys and ciphertexts are indistinguishable from random strings of bytes (of the same length). This is crucial for the security of QUAKE.\"  This is not exactly right:  What is crucial is that (1) public keys are indistinguishable from random strings [...], and (2) ciphertexts are anonymous.  (And that anonymity as well as standard security hold under CCA attack.)\n\nSec 5.1, CPace:\n\nI don't see definition of transcript(...) function, i.e. is transcript(Ya,Yb) just Ya|Yb?\n\nSec 5.2, QUAKE, in Init and Respond:  \n\n- (*) value \"r\" is missing in the KDF.Extract inputs that compute prk_r_pad\n\n- \"r_pad\" and \"s_pad\" are not consistently named:  \nr_pad is computed on input \"r\", and it is used to compute T from pk in Init and pk from T in Respond;\ns_pad is computed on input \"T\", and it is used to compute s from r in Init and r from s i Respond;\n\nTo make this terminology more consistent, how about naming these pads from the input used to compute them, because this part will be the same in Init and Respond?  \n\nAssuming that we rename \"s_pad\" to \"T_pad\", currently you derive the two values like this, for x=s and x=T:\nprk_x_pad = KDF.Extract(PRS , DST | \"QUAKE\" | x | fullsid)\nx_pad = KDF.Expand(prk_x_pad, DST | \"x_pad\", [x_pad_length])\n\nTwo proposals about the above:\n(1) Switch the order of x and fullsid inputs in KDF.Extract, because if we use a convention that identifiers come first and high-entropy values last, then fullsid is an identifier and x is the high-entropy secret.\n(2) You can skip the info = DST | \"x_pad\" input in KDF.Expand, because the labels are already used in the KDF.Extract that created prk_x_pad, and this prk_x_pad value is not used anywhere else.\n\nIn other words, I propose the following syntax:\nprk_x_pad = KDF.Extract(PRS, DST || \"QUAKE\" || fullsid || x)\nx_pad = KDF.Expand(prk_s_pad, [x_pad_length])\n\n\nSec 5.2, QUAKE, in Respond and Finish:\n\n- (**)  you changed the protocol to eliminate the authentication tag, but that's not what NoIC does, and I don't think this is what we agreed on.   In other words, right now resp_msg is just a KEM ciphertext \"ct\".  Instead, it should be resp_msg = ct || h, where h is computed as\nh = KDF.Expand(prk_sk, \"confirm\", Nkc)\n\n- (**)  in Finish the BUKEM.Decaps doesn't handle the decapsulation error, and you removed error-handling due to mismatch in the \"h\" key confirmation message (because you removed that message).  Both should be handled by sampling and returning a random key.\n\n- You currently create the session key like this:\nprk_sk = KDF.Extract(k || PRS, DST || \"QUAKE\" || fullsid)\nkey = KDF.Expand(prk_sk, DST || \"sk\", Nkey)\n\nFor consistency with the usage of Extract+Expand in 2Feistel hashes, and because Expand doesn't need the \"DST\" input, I propose to change it to:\nprk_sk = KDF.Extract(PRS, DST || \"QUAKE\" || fullsid || k)\nkey = KDF.Expand(prk_sk, \"sk\", Nkey)\n\n\nSec 5.3, CPaceQUAKE:\n\n- (*) in the diagram picture just above the line \"Unlike QUAKE, [...]\", the session key output by CPaceQUAKE is still the session key of QUAKE, but it should be instead a hash of (fullsid, tr1, tr2, SK12, SK2)\n\n- in the same diagram there is a missing closing bracket in the \"H(fullsid,PRS,tr1,SK1\" expression on the left\n\n- (*) extended_sid_prk is computed using different ikm input in Respond (ikm=nil) and InitiatorFinish (ikm+\n\n- In Respond and InitiatorFinish you currently derive extended_sid like this:\nextended_sid_prk = KDF.Extract(s1||s2, DST) \nextended_sid = KDF.Expand(extended_sid_prk, DST||\"SID\", 32)\n\nTo be consistent with the format used above, I propose to change it to:\nextended_sid_prk = KDF.Extract(s1||s2, DST||\"SID\") \nextended_sid = KDF.Expand(extended_sid_prk, 32)\n\n- (*) you have a line computing client_key in Respond, but that's too early:  this line is missing inputs and should be deleted\n   \n- (*) in ResponderFinish you should rename \"client_key\" to \"server_key\"\n\n- (*) why are all the RO hashes above handled via KDF=HMAC Extract+Expand calls, but the hashes deriving PRS2 and the \"key\" output are using hash \"H\" directly?  This does not seem consistent.\n\nFirst, to be consistent with the [HKL24] Hybrid construction, we should do this:\nkey1A = KDF.Expand(key1,\"prs\",Nkey)\nkey1B = KDF.Expand(key1,\"outputkey\",Nkey)\n\nSecond, to be consistent with the same implementation of random oracle hashes via KDF(=HMAC) as is used in other cases, we should set:\nPRS2_prk = KDF.Extract(PRS, DST || \"PRS2\" || fullsid || msg1 || msg2 || key1A) \nPRS2 = KDF.Expand(PRS2_prk, Nkey)\nand:\nsessionkey_prk = KDF.Extract(PRS, DST || \"sessionkey\" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2) \n[client/server]_key = KDF.Expand(sessionkey_prk, Nkey)\n\n\n\n",
+      "createdAt": "2025-03-06T02:18:53Z",
+      "updatedAt": "2025-03-09T17:42:58Z",
+      "closedAt": "2025-03-09T17:42:58Z",
+      "comments": []
+    },
+    {
+      "number": 3,
+      "id": "I_kwDOOCmp3s6tEAaq",
+      "title": "Add package.json",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/3",
+      "state": "CLOSED",
+      "author": "jellevos",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "This will ensure you can call make without having to install aasvg yourself.\n\n```\n{\n  \"dependencies\": {\n    \"aasvg\": \"^0.4.2\"\n  }\n}\n```",
+      "createdAt": "2025-03-07T17:03:01Z",
+      "updatedAt": "2025-04-15T16:57:49Z",
+      "closedAt": "2025-04-15T16:57:48Z",
+      "comments": [
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "Fixed [directly on main](https://github.com/chris-wood/draft-pqpake/commit/2df182929a9914f460f43ace98360b8fbee68973).",
+          "createdAt": "2025-04-15T16:57:48Z",
+          "updatedAt": "2025-04-15T16:57:48Z"
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "id": "I_kwDOOCmp3s6tEBHN",
+      "title": "Rename CPaceQUAKE to CPaceOQUAKE",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/4",
+      "state": "CLOSED",
+      "author": "jellevos",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Sorry for not catching this before, but this version of our protocol is actually CPaceOQUAKE (and the subprotocol is OQUAKE). The aPAKE is CPaceOQUAKE+. So QUAKE -> OQUAKE.",
+      "createdAt": "2025-03-07T17:04:25Z",
+      "updatedAt": "2025-03-17T14:20:59Z",
+      "closedAt": "2025-03-17T14:20:59Z",
+      "comments": []
+    },
+    {
+      "number": 5,
+      "id": "I_kwDOOCmp3s6tEC55",
+      "title": "Refrain from using the term binary uniform kem to refer to a kem that is not uniform",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/5",
+      "state": "OPEN",
+      "author": "jellevos",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "I think we should change the wording of Section 4.2. The KEM that we need (as pointed out by Stanislaw) does not require ciphertext uniformity; only ciphertext anonymity. If we want to explicitly mention this, then maybe we can call it 'Binary KEM with uniformity properties' instead of uniform KEM.",
+      "createdAt": "2025-03-07T17:07:46Z",
+      "updatedAt": "2025-03-17T03:00:33Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "@jellevos can you send a PR with the phrasing you'd like to see?",
+          "createdAt": "2025-03-17T03:00:32Z",
+          "updatedAt": "2025-03-17T03:00:32Z"
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "id": "I_kwDOOCmp3s6tUoaM",
+      "title": "My feedback on edits to sections 4 and 5 from Sunday 3/9",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/6",
+      "state": "CLOSED",
+      "author": "stanislawjarecki",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "copying here the comments I sent in an email sent Sunday 3/9\n(these are comments to sections 4 and 5)\n\n*****************\n\nlines 215 and 217:  We don't need ciphertexts to be indistinguishable\nfrom random strings, we only need public keys to have this property,\nand anonymity doesn't follow from IND-CCA.  Here's my proposal for\nlines 212-217:\n\n**\nA binary uniform KEM supports the same functions as defined above for\na KEM, and it must also be IND-CCA secure, but it must also achieve\ntwo additional security properties.  Namely, in addition to IND-CCA\nsecurity, a binary uniform KEM requires that:\n1. Public keys are indistinguishable from random strings of bytes (of\nthe same length); and\n2. Ciphertexts are anonymous in the presence of chosen ciphertext\nattack (ANO-CCA).\n**\n\nlines 219-220, I propose the following edits:\n\n**\nThese additional properties are crucial for the security of QUAKE. In\nother words, one MUST NOT use a KEM that has no uniform public keys\nand no anonymous ciphertexts in place of a uniform KEM.\n**\n\nline 517 (QUAKE.Respond):  prk_s_pad computation should be aligned\nwith QUAKE.Init, i.e. it should be:\nprk_s_pad = KDF.Extract(PRS, DST || \"QUAKE\" || fullsid || T)\n\nline 521:  input r is missing, and also should be aligned with\nQUAKE.Init, i.e. it should be:\nprk_T_pad = KDF.Extract(PRS, DST || \"QUAKE\" || fullsid || r)\n\nlines 530 and 571 (computation of h in QUAKE.Respond and h_expected in\nQUAKE.Finish):\nfor consistency with how you compute variable \"key\" in QUAKE, you\nshould compute variables h and h_expected, in lines 520 and 571, like\nthis:\nh = KDF.Expand(prk_sk, DST || \"confirm\", Nkey)\nh_expected = KDF.Expand(prk_sk, DST || \"confirm\", Nkey)\n\n[Discussion: right now you prepend the DST domain separation tag into\nthe \"key\" computation, but not the \"h\" computation.  I was arguing\nthat you can skip this DST moniker in all KDF.Expand's because you\nhave them in KDF.Extract's but it's OK to keep them too:  I think you\nwant to keep them as inputs to both KDF.Extract and KDF.Expand calls,\nwhich is fine, so just to make the format consistent add the same\nDST-prefix to the \"domain separator\" input \"confirm\" in KDF.Expand\nthat computes the \"h\" variable]\n\nlines 721 and 724 (key1A computation):  because value key1A is used as\na key in PRS2 computation, and for consistency with names of other\nlabels, I suggest changing label \"prs\" to \"prskey\"\n\nlines 730-731 and 771-772 (PRS2 computation):\nI know I'm changing my own previous edit recommendation, but to make\nthese calls consistent with how you compute everything else (e.g.\nserver_key and client_key), I suggest changing the current lines:\nPRS2_prk = KDF.Extract(PRS, DST || \"PRS2\" || fullsid || msg1 || msg2 || key1A)\nPRS2 = KDF.Expand(PRS2_prk, Nkey)\nas follows:\nPRS2_prk = KDF.Extract(PRS, DST || \"CPaceQUAKE\" || fullsid || msg1 ||\nmsg2 || key1A)\nPRS2 = KDF.Expand(PRS2_prk, DST || \"PRS2\", Nkey)\n",
+      "createdAt": "2025-03-10T16:47:11Z",
+      "updatedAt": "2025-03-17T14:20:59Z",
+      "closedAt": "2025-03-17T14:20:59Z",
+      "comments": [
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "Addressed in #15 ",
+          "createdAt": "2025-03-17T03:01:54Z",
+          "updatedAt": "2025-03-17T03:01:54Z"
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "id": "I_kwDOOCmp3s6tVYtk",
+      "title": "comments to Section 6",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/7",
+      "state": "CLOSED",
+      "author": "stanislawjarecki",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [
+        "stanislawjarecki"
+      ],
+      "labels": [],
+      "body": "section 6:\nIn the first paragraph, maybe it would be useful to add a\ndisambiguation that in this section we use \"regular\" KEM, i.e. not\nBUKEM?  Perhaps a note to that effect in brackets?\n\nsection 6.1 and 6.2:\nChange \"U\" to \"userID\" (or any other name for this) in the inputs to\nGenVerifiers and GenVerifierMaterial:  The \"U\" moniker is used in all\nprotocols in section 5, i.e. CPace, QUAKE, and CPaceQUAKE, as a\n\"client\" identifier, i.e. identifier of a machine on which user\nhappens to run the authentication code.  This could be, for example,\nan end-point of a TLS session, and could be implemented via a binder\nto the TLS session.  By contrast, in 6.1, the \"U\" moniker is a *user*\nidentifier, i.e. it is a long-term string which the server uses to\nidentify some user account.  This identifier is long-term and is\nindependent of the machine on which the user runs the authentication.\nSo it is a logically different value and should not be confused with\nthe machine identifiers \"U\" and \"S\".    Now, in practice \"S\" might be\na long-term identifier, for example it could be the DNS name of the\nserver, the same string which is used to identify the server in their\nPKI certificate, so the moniker \"S\" in CPace, QUAKE, or CPaceQUAKE\ncould be a long-term identifier like the DNS name.  But there is no\nstable counterpart for this on the user side, so \"U\" in CPace, QUAKE,\nor CPaceQUAKE could be a short-term string.\n\nI would also propose that userID is not an optional parameter in\nGenVerifier, but S can be left as optional:  In all applications there\nis some identifier the server associates with an account that stores\nthe \"password file\", i.e. tuple (salt, v, pk).  This account\nidentifier will in most applications be known to both user and server,\nso I would think that userID is not optional.  But I guess it could be\nleft as optional too:  If someone wants to omit this identifier in\nGenVerifiers then their password file could be e.g. used by an\nattacker to attack other users who potentially share the same\npassword, but that's an option some implementer might want to make,\ne.g. to allow for user account names to change without having to\nregenerate password files (salt,v,pk) on the server.\n\nI would also add a note, e.g. in the first paragraph of 6.1.1, that\n\"S\" must be a long-term identifier, and perhaps add a note that that\nif identifier \"S\" is used as an input and it changes (e.g. it is a DNS\nname and that name changes) then the password verifier generated using\nthat \"S\" string would have to be regenerated.\n\nBy contrast, in the Password Confirmation protocol, i.e. section 6.2,\nthe client should have input just U as it is now (together with seed\nderived using GenVerifiers).  This is because 6.2 specifies an on-line\nprotocol, which just like all the other protocols have these sid|U|S\nsession/party1/party2 identifiers as inputs.  What should change is\nhow the client generates the \"seed\" input to the Password\nConfirmation, but that's outside section 6.2.\n\nHere's a list of other related edits:\n- in the first paragraph of section 6.1.1, change \"To make verifiers\nunique between different clients with the same password or servers\nthat they interact with, we employ a salt and optional client and\nserver identifiers.\" to \"To make verifiers unique between different\nusers with the same password or servers that they interact with, we\nemploy a salt, a user account identifier, and an optional server\nidentifier.\" [I don't know how many of these input fields you want to\nleave as optional.]\n- in algorithms GenVerifierMaterial and GenVerifiers in section 6.1.1:\n change \"U\" to \"userID\" (including in the \"Inputs:\" specification)\n- in the graph picture at the very end of section 6, in the first\nline:  add \"userID\" to the Client's inputs\n- in the same graph picture, in the 2nd line:  add \"userID,S\" to the\ninputs to GenVerifierMaterial, unless you want to leave userID and/or\nS because you want to treat them as optional inputs here?  (see\nrelated issue in 6.1.2 below)\n\n\nsection 6.1.1, GenVerifiers:\nAdd KEM to the Parameters (you are using KEM.DeriveKeyPair here)\n\nsection 6.1.2: Registration:\nIn the \"high-level\" graph picture you state Client's inputs as \"PRS,\nsalt\", and these inputs should be extended by \"userID, S\", unless you\nwant to treat these as optional and leave them out for that reason?\n\nsection 6.2, graph picture just before section 6.2.1:\nin the first line:  replace \"PRS\" with \"seed\" in the Client's inputs\n\nsection 6.2,\nIn the first paragraph of section 6.2, when you say that variable\n\"seed\" is \"derived from the password using a key stretching function\",\nshould we add more specifically that it is derived using the\nGenVerifierMaterial function?\n\nsections 6.2.1 and 6.2.2:\nwhy do you have a third argument \"nil\" to KDF.Extract that derives\nprk_k_h1 and prk_k_h2 in PC-Challenge and PC-Response?\nIn all prior uses of the KDF.Extract you had only two arguments, the\n\"key related material\" and the \"context material\", although there\ncould be effective keys in the context material as well, like r and T\nin Feistel hashes in the QUAKE, and there can be context-related\nmaterials in the first arguments as well.  For the sake of consistency\nI would eliminate these \", nil\" additional arguments in these two\nKDF.Extract instances (in both PC-Challenge and PC-Response).\n\nsection 6.2.2:\nin the PC-Response, you don't handle the possibility of the Decaps\nerror, and this is a CCA encryption so it can throw an error in\ndecryption.  I think you should handle it like you did in\nQUAKE.Finish, i.e. use the \"try [...] catch [...]\" construct, e.g. I\nsuppose you would do this by replacing line:\nk = KEM.Decaps(sk, c)\nwith two lines like this:\ntry k = KEM.Decaps(sk, c)\ncatch DecapsError: raise AuthenticationError\n(?)\n\nsection 6.2.3:\nI think you have an inconsistency in naming the client's message in\nthe inputs to PC-Verify:  You specify these inputs as \"context,\nresponse\" in the \"Inputs: [...]\" part, but in the \"def PC-Verify\" line\nthe inputs are \"context, server_confirm_target\".\n",
+      "createdAt": "2025-03-10T18:14:52Z",
+      "updatedAt": "2025-04-15T17:16:01Z",
+      "closedAt": "2025-04-15T17:16:01Z",
+      "comments": [
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "From @stanislawjarecki: These \"comments on Section 6\" have *two independent parts*, and the\nsecond part should be less controversial, so in the interest of time\nplease go over the second part first:\n\n1)  The first half of these comments is all about adding a new\n\"userID\" field in section 6, and in particular replacing \"U\" with\n\"userID\" in the inputs to GenVerifiers and GenVerifierMaterial.\n2)  The second half, starting from \"section 6.1.1, GenVerifiers:\" is a\nlist of other edits which are about other issues (except \"section\n6.1.2: Registration:\" which is still about adding the userID field)\n\nThe first part I believe is also important, but I also understand if\nit's not a slam-dunk, and if it is controversial then I don't want\nthat to obscure the fact that there are other independent edits in the\nsecond half of this post...\n",
+          "createdAt": "2025-03-17T03:08:00Z",
+          "updatedAt": "2025-03-17T03:08:00Z"
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "id": "I_kwDOOCmp3s6tVjTJ",
+      "title": "Client use of verifier",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/8",
+      "state": "CLOSED",
+      "author": "yannick-sierra",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "\"In the asymmetric PAKE setting, the client first registers a password verifier with the server. A verifier is a value that is derived from the password and which the client will later use to demonstrate knowledge of the password.\"\n\nIn an asymmetric PAKE, the verifier is not expected to be usable to authenticate as the client. Should the second sentence say:\n\"which the server will later use to verify the client knowledge of the password\"? ",
+      "createdAt": "2025-03-10T18:34:40Z",
+      "updatedAt": "2025-03-17T14:20:58Z",
+      "closedAt": "2025-03-17T14:20:58Z",
+      "comments": [
+        {
+          "author": "stanislawjarecki",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Good point:  Yannick's edit makes it clearer. ",
+          "createdAt": "2025-03-11T01:45:26Z",
+          "updatedAt": "2025-03-11T01:45:26Z"
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "id": "I_kwDOOCmp3s6tVlfE",
+      "title": "Does random() need to be deterministic?",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/9",
+      "state": "CLOSED",
+      "author": "yannick-sierra",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "> The function random(n) generates a cryptographically secure pseudorandom byte string of length n bytes.\n\nWhy pseudorandom (ie deterministic)? I would expect a \"Cryptographically Secure Random Number Generator\" or something along this line. Otherwise, we should define it as a PRF?",
+      "createdAt": "2025-03-10T18:38:46Z",
+      "updatedAt": "2025-03-17T02:45:08Z",
+      "closedAt": "2025-03-17T02:45:06Z",
+      "comments": [
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "It's a good point, but \"psuedorandom\" is the usual way these this function is described (see e.g. RFC9180), so I think we should leave this as-is.",
+          "createdAt": "2025-03-17T02:45:06Z",
+          "updatedAt": "2025-03-17T02:45:06Z"
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "id": "I_kwDOOCmp3s6tVo1I",
+      "title": "KEM section",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/10",
+      "state": "OPEN",
+      "author": "yannick-sierra",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "> where seed SHOULD have Nseed bytes.\n\nNseed is a notation, I am not sure how to read the \"should\".\nDid we mean to set a minimum side for Nseed that should be meet \"where seed SHOULD have Nseed>128bytes\" ?\nOtherwise maybe say \"where seed byte length is called \"Nseed\"? \n",
+      "createdAt": "2025-03-10T18:45:18Z",
+      "updatedAt": "2025-03-17T21:19:40Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "stanislawjarecki",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I agree, shouldn't the line in \"DeriveKeyPair(seed)\" algorithm in section 4.1 say instead that:\n\"seed MUST have Nseed bytes\"\n?",
+          "createdAt": "2025-03-11T01:44:07Z",
+          "updatedAt": "2025-03-11T01:44:07Z"
+        },
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "The intent here is to say that the seed should have at least `Nseed` bytes. We use SHOULD to match RFC9180 terminology on the amount of entropy provided in seeds. See [this](https://datatracker.ietf.org/doc/html/rfc9180#name-derivekeypair) for the specific language.",
+          "createdAt": "2025-03-17T02:48:30Z",
+          "updatedAt": "2025-03-17T02:48:30Z"
+        },
+        {
+          "author": "yannick-sierra",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Is `seed` considered like a buffer? What does it mean for seed to have byte size not being \"Nseed\"?\n\nI am looking at the following statement later in the doc and trying to make sense of it when \"seed\" has a byte size which is not Nseed.\n`seed = random(BUKEM.Nseed)`\n\nIf |seed| < Nseed, is this an implicit truncation which could impact the security? \n\n\n\n\n\n\n\n\n\n",
+          "createdAt": "2025-03-17T19:30:18Z",
+          "updatedAt": "2025-03-17T19:30:32Z"
+        },
+        {
+          "author": "yannick-sierra",
+          "authorAssociation": "COLLABORATOR",
+          "body": "not an issue blocking the first draft, I am trying to understand the feedback above. ",
+          "createdAt": "2025-03-17T19:31:29Z",
+          "updatedAt": "2025-03-17T19:32:06Z"
+        },
+        {
+          "author": "stanislawjarecki",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I had a related comment in part (III) of the comments I just posted and emailed.  The comment is that there seems to be two parameters Nseed, related to two KEMs, i.e. BUKEM and KEM.  The current draft uses one constant mame for both but in BUKEM key generation (used in OQUAKE) it renders it as BUKEM.Nseed, but in KEM key generation (used in CPaceOQUAKE+) it doesn't link it to the underlying KEM.  ",
+          "createdAt": "2025-03-17T19:44:45Z",
+          "updatedAt": "2025-03-17T19:44:45Z"
+        },
+        {
+          "author": "stanislawjarecki",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I'm copying that point from my comments below (together with a related point about constant Nsecret):\n-----------\n\n*)  In section 5.2 (OQUAKE), you disambiguate the Nseed constant as\nthe BUKEM one, and you refer to it as \"BUKEM.Nseed\" in OQUAKE.Init in\nthe line that computes seed = random(BUKEM.Nseed).  You also list\nBUKEM in the Parameters of OQUAKE.Init.  But in section 6.1\n(CPaceOQUAKE+, Registering Clients), in GenVerifierMaterial you use\n\"Nseed\" to refer to the KEM constant (not BUKEM), and you don't\ninclude KEM in the Parameters of GenVerifierMateriaI.  I think this is\nunderspecified, and you should:\n- Include KEM in Parameters of GenVerifierMaterial\n- replace \"Nseed\" with \"KEM.Nseed\" in *two* lines in GenVerifierMaterial\n\nRelated edit:  In \"The RECOMMENDED parameters\" paragraph in section 7\n(CPaceOQUAKE+ Configurations), you say that Nseed = 32, but its not\nclear if that's KEM.Nseed, which should be X-Wing.Nseed, or its\nBUKEM.Nseed, which should be ML-BUKEM758.Nseed.  Maybe they are both\n32 bytes, but I think that in this list of recommended parameters the\nNseed should be broken into two parameters:\nKEM.Nseed = 32(?)\nBUKEM.Nseed = 32(?)\nand then this will agree with the two Nseed uses, one as BUKEM.Nseed\nin OQUAKE.Init code and the other as KEM.Nseed in GenVerifierMaterial.\n\n*)  Somewhat related:  In your recommended parameters you do not\nspecify what you expect Nsecret to be, which is the length of the\nshared secret key in KEM or BUKEM.  (On the other hand, you can skip\nparameter Nsk in section 4.1: I think this parameter is not used\nanywhere.)",
+          "createdAt": "2025-03-17T19:46:39Z",
+          "updatedAt": "2025-03-17T19:46:39Z"
+        },
+        {
+          "author": "stanislawjarecki",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Also, I just checked that X-Wing specifies the KeyGen input as 32 byte string.\n\nHowever, I don't see a specification of ML-KEM KeyGen which takes an outside seed.  Our draft refers to Kemeleon draft for BUKEM, i.e. https://datatracker.ietf.org/doc/html/draft-veitch-kemeleon-00, but in that draft the only specification of KeyGen I see is a reference to NIST.FIPS.203 which specifies ML-KEM, and there KeyGen doesn't take outside seed *and* its internal seed is *64* bytes, see https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.pdf, page 35.\n\nJudging by this we should specify KEM.Nseed (= X-Wing Nseed) as 32 and BUKEM.Nseed (= ML-KEM Nseed) as 64.\n\n[Bur let me know if the IETF description of ML-KEM specifies KeyGen interfaces differently and specify the seed length differently!]",
+          "createdAt": "2025-03-17T21:19:38Z",
+          "updatedAt": "2025-03-17T21:19:38Z"
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "id": "I_kwDOOCmp3s6tVzuH",
+      "title": "Reference to ML-KEM FIPS draft -> ML-KEM standard",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/11",
+      "state": "CLOSED",
+      "author": "yannick-sierra",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "The current document has a reference to the ML-KEM draft `{{FIPS203-Draft}}` and should refer to the standard one instead.",
+      "createdAt": "2025-03-10T19:05:00Z",
+      "updatedAt": "2025-03-17T14:20:58Z",
+      "closedAt": "2025-03-17T14:20:58Z",
+      "comments": [
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "Addressed as part of #15.",
+          "createdAt": "2025-03-17T02:51:35Z",
+          "updatedAt": "2025-03-17T02:51:35Z"
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "id": "I_kwDOOCmp3s6tWT33",
+      "title": "Replace Argon with Scrypt",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/12",
+      "state": "CLOSED",
+      "author": "yannick-sierra",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "We need to use Scrypt, not Argon.\nScrypt is more widely available that Argon, and its uses SPAKE2+ under the hood which is relevant when NIST functions are needed.\n\nPC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}\n\n\nScrypt: https://datatracker.ietf.org/doc/html/rfc7914.html",
+      "createdAt": "2025-03-10T20:09:08Z",
+      "updatedAt": "2025-04-15T17:15:30Z",
+      "closedAt": "2025-04-15T17:15:28Z",
+      "comments": [
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "Argon is the preferred MHF function for CFRG specifications. We can add a configuration that uses Scrypt if needed, though. I'll leave this open to track that.",
+          "createdAt": "2025-03-17T02:57:31Z",
+          "updatedAt": "2025-03-17T02:57:31Z"
+        },
+        {
+          "author": "yannick-sierra",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Adding Scrypt as a different configuration is fine but feels necessary. That can be in the next draft version. ",
+          "createdAt": "2025-03-17T17:36:28Z",
+          "updatedAt": "2025-03-17T17:36:28Z"
+        },
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "Fixed [directly on main](https://github.com/chris-wood/draft-pqpake/commit/4a3aec1cd6bf815fe6a07afc0369e7ad2d5ae496).",
+          "createdAt": "2025-04-15T17:15:28Z",
+          "updatedAt": "2025-04-15T17:15:28Z"
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "id": "I_kwDOOCmp3s6tWYEz",
+      "title": "Reduce number of acronyms: ex DST -> Domain",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/13",
+      "state": "CLOSED",
+      "author": "yannick-sierra",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Acronyms are a necessity for brevity but also make the read of a technical document more difficult.\nShort plain english words like \"Seed\" are easier and I think DST could be replaced by \"DomainString\" or \"Domain\" for example.\nThere may be other ones too. ",
+      "createdAt": "2025-03-10T20:17:01Z",
+      "updatedAt": "2025-03-17T02:54:23Z",
+      "closedAt": "2025-03-17T02:54:22Z",
+      "comments": [
+        {
+          "author": "stanislawjarecki",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I would push back on this because \"DST\" is used in many lines of code (there are currently 49 places in code where this acronym is used), so replacing it with longer string will make all these lines longer.\n\nAlso, as far as I can see each such code where DST is used includes this line in the \"Parameters\" section, which reminds the reader what this acronym stands for:\n- DST, domain separation tag, a byte string",
+          "createdAt": "2025-03-11T01:39:52Z",
+          "updatedAt": "2025-03-11T01:39:52Z"
+        },
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "In general I agree with the sentiment, but for DST in particular I think we should keep it as-is since it's used in the code and every reference is defined in the function that uses it (as Stas says). If there are other acronyms we can or should simplify, let's file issues to do it. ",
+          "createdAt": "2025-03-17T02:54:22Z",
+          "updatedAt": "2025-03-17T02:54:22Z"
+        }
+      ]
+    },
+    {
+      "number": 14,
+      "id": "I_kwDOOCmp3s6taIco",
+      "title": "comments on citations",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/14",
+      "state": "CLOSED",
+      "author": "stanislawjarecki",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "some comments to citations:\n\n1)  We currently have two citations for [CPACE] and [CPace]:  They are the same and should be merged.\n\n2)  We currently cite Beguinet, H., Chevalier, C., Pointcheval, D., Ricosset, T., and M. Rossi, \"GeT a CAKE [...]\" paper for [QUAKE], but this is not correct because the [BCPRR'23] paper had a very similar protocol, but it was using an ideal cipher to password-encrypt the KEM public key, while QUAKE uses 2-Feistel.  I think that the primary citation for the QUAKE protocol should be our NoIC paper, i.e.\n\n[ABJ25] \nAfonso Arriaga, Manuel Barbosa, and Stanislaw Jarecki, \"NoIC: PAKE from KEM without Ideal Ciphers\", Cryptology ePrint Archive, Paper 2025/231, February 2025, <https://eprint.iacr.org/2025/231>.\n\nIn terms of edits, here is what I would propose:\n*) remove citation to [QUAKE] and add citation to [ABJ25]\n*) don't cite anyone in the 2nd line of section 5 (currently it cites [QUAKE])\n*) instead, change the first line of section 5.1 to mention [ABJ25], e.g.:\n\"QUAKE is a PAKE built from a BUKEM and KDF, using a 2-rounds of Feistel network to password-encrypt the BUKEM public key. The QUAKE protocol is based on the \"NoIC\" protocol analyzed in [ABJ25].\"\n\n(The [ABJ25] protocol is based on a chain of prior works, including the CAKE paper, and several others.  Also [JRX24] analyze a different variant of this protocol, but it is not a variant which we are proposing in this IETF draft.  I understand that in IETF draft you don't typically cite the whole lines of work, and give just one reference, and if someone is interested they can find the related prior work in this reference?  In that case citing [ABJ25] is enough.)\n\n3) In CPaceQUAKE section we should mention the Hesse-Rosenberg and the Lyu-Liu papers: \n\n[HR24]\nJulia Hesse and Michael Rosenberg, \"PAKE Combiners and Efficient Post-Quantum Instantiations\", Cryptology ePrint Archive, Paper 2024/1621, October 2024, <https://eprint.iacr.org/2024/1621>.\n\n[LL24]\nYou Lyu and Shengli Liu, \"Hybrid Password Authentication Key Exchange in the UC Framework\", Cryptology ePrint Archive, Paper 2024/1630, October 2024, <https://eprint.iacr.org/2024/1630>.\n\nAnd somewhere among the 5 introductory paragraphs of Section 5.3 (On Composition of CPace and QUAKE) we should add a small paragraph with something like this:\n\"The CPaceQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by [HR24].  A very close variant of this protocol was also analyzed in [LL24].\"\n\n4) In CPaceQUAKE+ section we should mention the Lyu, Liu, Han paper, and Yanqi's PhD thesis as closely related protocols:\n\n[LLH24]\nYou Lyu, Shengli Liu, and Shuai Han, \"Efficient Asymmetric PAKE Compiler from KEM and AE\", Cryptology ePrint Archive, Paper 2024/1400, September 2024, <https://eprint.iacr.org/2024/1400>.\n\n[Gu24,\nYanqi Gu, \"New Paradigms For Efficient Password Authentication Protocols\", PhD Thesis, University of California, Irvine, June 2024, <https://www.escholarship.org/uc/item/7qm0220s>.\n\nAfter the introductory paragraph of section 6, just before section 6.1, we should add a small paragraph with something like this:\n\"The CPaceQUAKE+ protocol can be seen as a close variant (and a specific instance) of the `augmented PAKE' construction presented in [LLH24] and in [Gu24].\"\n ",
+      "createdAt": "2025-03-11T06:35:16Z",
+      "updatedAt": "2025-03-17T14:20:58Z",
+      "closedAt": "2025-03-17T14:20:58Z",
+      "comments": []
+    },
+    {
+      "number": 16,
+      "id": "I_kwDOOCmp3s6uaWQG",
+      "title": "simple editorial comments (added March 17 at noon)",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/16",
+      "state": "CLOSED",
+      "author": "stanislawjarecki",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "(I)  more important and simple edits:\n\n*) In CPace.Finish you have a line which now reads:\nK = G.scalar_mult_vfy(yb, Ya)\nbut it should be:\nK = G.scalar_mult_vfy(ya, Yb)\n\n*) CPace.Finish inputs are defined as (PRS, ya, Yb, sid) but when you\ncall it in CPaceOQUAKE.InitiatorFinish, you call it on inputs\n(ctx1,msg2,sid,U,S).\nHere ctx1 = ya, and msg2 = Yb, but:\n-  \"U,S\" inputs are not needed,\n-  the PRS input is missing.\nPRS is actually not used in CPace.Finish, but I assume you listed PRS\nin CPace.Finish inputs because CPace specification does it?  (Can you\ncheck?)\nIf CPace.Finish inputs stay as (PRS,ya,Yb,sid) then the line that\ncalls CPace.Finish in CPaceOQUAKE.InitiatorFinish should be:\nkey1 = CPace.Finish(PRS, ctx1, msg2, sid)\n\n*) OQUAKE.Respond inputs are defined as (PRS, init_msg, sid, U, S),\nbut then CPaceOQUAKE.InitiatorFinish you call OQUAKE.Respond on inputs\n(PRS2, extended_sid, msg3, Nkey, U, S).  I think this line should be:\nkey2, msg4 = OQUAKE.Respond(PRS2, msg3, extended_sid, U, S)\n\n*) CPaceOQUAKE.InitiatorFinish inputs are defined as (PRS, (ctx1, s1),\n(msg2, msg3, s2), sid, U, S), but in the first three lines you decode\ns1,msg2,msg3 from resp_msg.  Also, s2 is the first item in resp_msg,\nnot the last item.  I think these inputs should be defined as\ndef InitiatorFinish(PRS, (ctx1, s1), resp_msg, sid, U, S).\n[this would be consistent with the way you define inputs to CPaceOQUAKE.Respond\n\nAlso, I think the decoding of resp_msg in InitiatorFinish is\nunderspecified:  Right now you don't say where msg2 ends, so len(msg2)\nis not well defined in the line that decodes msg3.\n\n*)  On related note, in the arrow-drawing picture showing CPaceOQUAKE\nflows just before 5.3.1, you write that messages are \"msg1, s1\" and\n\"msg2, msg3, s2\" but in the implementation they are \"s1, msg1\" and\n\"s2, msg2, msg3\".  Likewise the ordering of these should be like the\nlatter in the inputs to CPaceOQUAKE.Respond and\nCPaceOQUAKE.InitiatorFinish\n\n*) in the references, the [SPAKE2PLUS] reference renders \"*** BROKEN\nREFERENCE ***\" for me.\n\n*)  Perhaps I don't understand the notation for substring references\nyou use, but I want to confirm this.  Currently when you parse strings\ninto fragments, which I think happens in these 4 cases:\nresp_msg in OQUAKE.Finish,\ninit_msg in CPaceOQUAKE.Respond,\nresp_msg in CPaceOQUAKE.InitiatorFinish,\nverifier_seed in GenVerifierMaterial\nyour reference ranges intersect.\nSpecifically, your references look like this:\nresp_msg[0..Npk] and resp_msg[Npk..]\ninit_msg[0..32] and init_msg[32..]\nresp_msg: [similar as above]\nverifier_seed[0:Nverifier] and verifier_seed[Nverifier:Nverifier + Nseed]\n\nDoes this use a notation where S[i..j] refers to a substring of S\nwhich starts at position i and ends at position (j-1)?  For example,\nif S=\"abcde\" then S[0,1]=\"a\", S[0,3]=\"abc\", and S[3,5]=\"de\"?  If so,\nthen the above references are fine, but I want to make sure because\nI'm used to a notation where S[i..j] refers to a substring of S which\nends at position j and not (j-1), in which case S[0,1]=\"ab\",\nS[0,3]=\"abcd\", and S[3,5] is undefined because |S|=5.\n\n*) In the graph showing flows of CPaceOQUAKE+ at the end of section 7:\nCPaceOQUAKE.InitiatorFinish inputs in this picture are listed as\n(v,ctx1,msg2,32,sid,U,S), which is correct except for the \"32\" value,\ni.e. it should be (v,ctx1,msg2,32,sid,U,S).\n\n\n---------------------\n(II) less important, but most should be quick:\n\n*) Section 5, first paragraph:  in the last sentence you call this\nprotocol \"QUAKE\" rather than \"OQUAKE\".\n\n*) section 6.2, 2nd paragraph, \"derived from the the\nGenVerifierMaterial function\" -> \"derived from the GenVerifierMaterial\nfunction\"\n\n*)  In references, some of the <[https://eprint.iacr.org/[...]](https://eprint.iacr.org/%5B...%5D)> links\ngo to pdf's and some to the abstracts.  I would uniformize them and\nmake them all link to the abstracts, e.g.\n<https://eprint.iacr.org/2025/1630>, because the eprint abstract pages\nlink to the pdf's.'\n\n*)  this is nitpicking but for some Extract(....) outputs you use\nconvention prk_[name] and for some you use [name]_prk.  In the order\nof occurrence we have:\nprk_T_pad\nprk_s_pad\nprk_sk\nextended_sid_prk\nPRS2_prk\nsessionkey_prk\nprk_k_h1\nprk_k_h2\n(so it seems that the three [name]_prk variables are all in CPaceOQUAKE)\n\n*) in the conceptual picture at the beginning of section 5.3, under\nparagraph starting with \"This is outlined in the diagram below\", which\nshows conceptually the sequential PAKE combiner, I think it would be\nclearer if you added some lines to this picture, and did this:\n1)  make the \"OQUAKE protocol\" box clearly output just one value, denoted SK2,\n2)  use downward arrows on both sides of the \"OQUAKE protocol\" box, to\nshow that this SK2 is inserted into the H(...,SK2) expressions which\noutputs the final \"Session key\" on both sides.",
+      "createdAt": "2025-03-17T19:23:39Z",
+      "updatedAt": "2025-04-15T17:02:34Z",
+      "closedAt": "2025-04-15T17:02:34Z",
+      "comments": []
+    },
+    {
+      "number": 17,
+      "id": "I_kwDOOCmp3s6uaXan",
+      "title": "Continued edits",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/17",
+      "state": "CLOSED",
+      "author": "stanislawjarecki",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "(III) important but maybe less immediate:\n\n*)  In section 5.2 (OQUAKE), you disambiguate the Nseed constant as\nthe BUKEM one, and you refer to it as \"BUKEM.Nseed\" in OQUAKE.Init in\nthe line that computes seed = random(BUKEM.Nseed).  You also list\nBUKEM in the Parameters of OQUAKE.Init.  But in section 6.1\n(CPaceOQUAKE+, Registering Clients), in GenVerifierMaterial you use\n\"Nseed\" to refer to the KEM constant (not BUKEM), and you don't\ninclude KEM in the Parameters of GenVerifierMateriaI.  I think this is\nunderspecified, and you should:\n- Include KEM in Parameters of GenVerifierMaterial\n- replace \"Nseed\" with \"KEM.Nseed\" in *two* lines in GenVerifierMaterial\n\nRelated edit:  In \"The RECOMMENDED parameters\" paragraph in section 7\n(CPaceOQUAKE+ Configurations), you say that Nseed = 32, but its not\nclear if that's KEM.Nseed, which should be X-Wing.Nseed, or its\nBUKEM.Nseed, which should be ML-BUKEM758.Nseed.  Maybe they are both\n32 bytes, but I think that in this list of recommended parameters the\nNseed should be broken into two parameters:\nKEM.Nseed = 32(?)\nBUKEM.Nseed = 32(?)\nand then this will agree with the two Nseed uses, one as BUKEM.Nseed\nin OQUAKE.Init code and the other as KEM.Nseed in GenVerifierMaterial.\n\n*)  Somewhat related:  In your recommended parameters you do not\nspecify what you expect Nsecret to be, which is the length of the\nshared secret key in KEM or BUKEM.  (On the other hand, you can skip\nparameter Nsk in section 4.1: I think this parameter is not used\nanywhere.)\n\n*)  The two usages of KDF.Extract in PC-Challenge and PC-Response\n(section 6.2), are different then other KDF.Extract uses.\n\nIn OQUAKE and CPaceOQUAKE we use KDF.Extract on inputs (seed, IKM)\nwhere seed = PRS or seed = s1|s2, but the latter case is special\nbecause there are no secrets in derivation of extended_sid so we just\nneed that the KDF.Extract+Expand function is CRH on (s1|s2).\n\nHowever, in PC-Challenge and PC-Response we make seed = confirm_input\nor confirm_input || k, and IKM = DST || [hname].  In other words, we\nput very long byte strings into seed, and short and public strings\ninto IKM.  KDF.Extract(seed,IKM) = HMAC-Hash(seed,IKM), i.e. seed is\nsupposed to be a \"salt\", and IKM is the long string containing keying\nmaterial.\n\nI would remove SK from confirm_input string and put only SK into the\nseed, i.e. I would do this:\n\nconfirm_input = encode_sid(sid, U, S) || enc_c || transcript\nprk_k_h1 = KDF.Extract(SK, DST || \"h1\" || confirm_input)\nprk_k_h2 = KDF.Extract(SK, DST || \"h2\" || confirm_input || k)\n",
+      "createdAt": "2025-03-17T19:26:07Z",
+      "updatedAt": "2025-04-15T17:02:50Z",
+      "closedAt": "2025-04-15T17:02:50Z",
+      "comments": []
+    },
+    {
+      "number": 18,
+      "id": "I_kwDOOCmp3s6ubZ3r",
+      "title": "quick edit: wrong reference for BUKEM in Section 7 (configurations)",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/18",
+      "state": "CLOSED",
+      "author": "stanislawjarecki",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "In \"The RECOMMENDED configuration is below\" list we have a line for BUKEM which is:\n\nBUKEM: ML-BUKEM768 [Section 4.1](https://chris-wood.github.io/draft-pqpake/draft-vos-cfrg-pqpake.html#deps-kem) \n\nbut that's the KEM section, not BUKEM, so this reference should be changed from deps-kem to deps-bukem",
+      "createdAt": "2025-03-17T21:25:18Z",
+      "updatedAt": "2025-04-15T17:05:22Z",
+      "closedAt": "2025-04-15T17:05:21Z",
+      "comments": [
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "Fixed [directly on main](https://github.com/chris-wood/draft-pqpake/commit/c79dac4cb92c8134adb45cfca0e36ad3d7b44519).",
+          "createdAt": "2025-04-15T17:05:21Z",
+          "updatedAt": "2025-04-15T17:05:21Z"
+        }
+      ]
+    },
+    {
+      "number": 19,
+      "id": "I_kwDOOCmp3s6u4Yrk",
+      "title": "Clarify CPace and OQUAKE picture",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/19",
+      "state": "OPEN",
+      "author": "chris-wood",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "*) in the conceptual picture at the beginning of section 5.3, under\nparagraph starting with \"This is outlined in the diagram below\", which\nshows conceptually the sequential PAKE combiner, I think it would be\nclearer if you added some lines to this picture, and did this:\n1)  make the \"OQUAKE protocol\" box clearly output just one value, denoted SK2,\n2)  use downward arrows on both sides of the \"OQUAKE protocol\" box, to\nshow that this SK2 is inserted into the H(...,SK2) expressions which\noutputs the final \"Session key\" on both sides.",
+      "createdAt": "2025-03-20T04:34:47Z",
+      "updatedAt": "2025-03-20T04:34:47Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 21,
+      "id": "I_kwDOOCmp3s6vp1W1",
+      "title": "Enumerate timing attacks",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/21",
+      "state": "OPEN",
+      "author": "chris-wood",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "- Given password encryption and ability to measure the peer's time to derive a KEM key, one can approximate the password used for deriving the encryption\n- Kemeleon (non-constant-time)",
+      "createdAt": "2025-03-25T15:38:51Z",
+      "updatedAt": "2025-03-25T15:38:51Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 22,
+      "id": "I_kwDOOCmp3s6whnvR",
+      "title": "Clarify identity roles",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/22",
+      "state": "CLOSED",
+      "author": "chris-wood",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "- If user ID changes, then verifier needs to be renamed\n- If server ID changes, then all verifiers need to be redone\n- Only use IDs in aPAKE, since that ties password files to individual accounts\n- Optional in PAKE for UC formalism, but not required; see bare PAKE\n",
+      "createdAt": "2025-03-31T21:20:03Z",
+      "updatedAt": "2025-04-14T12:48:00Z",
+      "closedAt": "2025-04-14T12:47:59Z",
+      "comments": [
+        {
+          "author": "chris-wood",
+          "authorAssociation": "OWNER",
+          "body": "Fixed in #23 ",
+          "createdAt": "2025-04-14T12:47:59Z",
+          "updatedAt": "2025-04-14T12:47:59Z"
+        }
+      ]
+    },
+    {
+      "number": 24,
+      "id": "I_kwDOOCmp3s6yOItw",
+      "title": "few more fixes",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/24",
+      "state": "OPEN",
+      "author": "stanislawjarecki",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "*)  in section 7, \"CPaceOQUAKE+ Configurations\", in the \"RECOMMENDED configuration\" list, the bullet for BUKEM (6th bullet in the list) has a reference to section 4.1, but it should be 4.2.\n\n*) GenVerifierMaterial takes inputs (PRS, salt, U, S), but in the graph drawing at the end of section 6, there is a line \"(v, seed) = GenVerifierMaterial(PRS,salt)\", so it's missing inputs U,S\n\n*) In section 6.1.2, \"Registration\", I think you should make Server store (salt,v,pk,U,S), not just (salt,v,pk), because this would make it clear that U,S are not values which can change afterwards.\n\n*) In conceptual drawing of the challenge-response protocol in section 6.2, just before 6.2.1, I would group (SK,tx) values which are output by CPaceOQUAKE together, i.e. I would re-order the inputs from:\nClient: SK,seed,tx,sid,U,S      Server: SK,salt,pk,tx,sid,U,S\nto \nClient: SK,tx,seed,sid,U,S      Server: SK,tx,salt,pk,sid,U,S\n\n*)  Transfer of salt from S to U seems a little underspecified in the CPaceOQUAKE+ protocol.  You do say that \"Note here that if the client does not know the salt, the server must send it, which it can do in plain text.\"  However, the protocol drawing just below this sentence starts from the following inputs:\nClient: PRS,salt,U,S,sid       Server: v,pk,U,S,sid \nI think it would be clearer if the protocol started from these inputs:\nClient: PRS,sid,U,S       Server: salt,v,pk,sid,U,S \n[we use order \"sid,U,S\" everywhere else]\nand then have S transfer salt to U in a separate arrow before protocol starts?   ",
+      "createdAt": "2025-04-12T01:22:17Z",
+      "updatedAt": "2025-04-12T01:22:17Z",
+      "closedAt": null,
+      "comments": []
+    }
+  ],
+  "pulls": [
+    {
+      "number": 2,
+      "id": "PR_kwDOOCmp3s6NoS2d",
+      "title": "Adddress Stas' feedback",
+      "url": "https://github.com/chris-wood/draft-pqpake/pull/2",
+      "state": "MERGED",
+      "author": "chris-wood",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Closes #1 ",
+      "createdAt": "2025-03-06T12:03:29Z",
+      "updatedAt": "2025-03-09T17:42:57Z",
+      "baseRepository": "chris-wood/draft-pqpake",
+      "baseRefName": "main",
+      "baseRefOid": "9084a5f0634100ed95d83ddc2ed664890169a4ed",
+      "headRepository": "chris-wood/draft-pqpake",
+      "headRefName": "caw/stas-feedback",
+      "headRefOid": "ec13f54796709896cf542de9427ae8ad9e4f5075",
+      "closedAt": "2025-03-09T17:42:57Z",
+      "mergedAt": "2025-03-09T17:42:57Z",
+      "mergedBy": "stanislawjarecki",
+      "mergeCommit": {
+        "oid": "e37b0f1e700f732ffa23ad5ef6026bc4c2baf64e"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 15,
+      "id": "PR_kwDOOCmp3s6O2KIm",
+      "title": "More edits",
+      "url": "https://github.com/chris-wood/draft-pqpake/pull/15",
+      "state": "MERGED",
+      "author": "chris-wood",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Partially addresses #7 \r\nCloses #14\r\nCloses #11\r\nCloses #8 \r\nCloses #6\r\nCloses #4 \r\n",
+      "createdAt": "2025-03-17T02:51:11Z",
+      "updatedAt": "2025-03-17T14:20:57Z",
+      "baseRepository": "chris-wood/draft-pqpake",
+      "baseRefName": "main",
+      "baseRefOid": "e37b0f1e700f732ffa23ad5ef6026bc4c2baf64e",
+      "headRepository": "chris-wood/draft-pqpake",
+      "headRefName": "caw/more-edits",
+      "headRefOid": "d60654093b86f0d2f1b5fc9f6474b62232677562",
+      "closedAt": "2025-03-17T14:20:57Z",
+      "mergedAt": "2025-03-17T14:20:57Z",
+      "mergedBy": "stanislawjarecki",
+      "mergeCommit": {
+        "oid": "edd44bfbbe16e4e49cd1ffc1eebf3b573f84f81a"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 20,
+      "id": "PR_kwDOOCmp3s6P3fT1",
+      "title": "Finish Stas edits",
+      "url": "https://github.com/chris-wood/draft-pqpake/pull/20",
+      "state": "MERGED",
+      "author": "chris-wood",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "",
+      "createdAt": "2025-03-24T13:00:28Z",
+      "updatedAt": "2025-04-11T22:26:30Z",
+      "baseRepository": "chris-wood/draft-pqpake",
+      "baseRefName": "main",
+      "baseRefOid": "edd44bfbbe16e4e49cd1ffc1eebf3b573f84f81a",
+      "headRepository": "chris-wood/draft-pqpake",
+      "headRefName": "caw/more-edits-2",
+      "headRefOid": "a452267d41c516792a106ca26f02892a7d0a5b4b",
+      "closedAt": "2025-04-11T22:26:30Z",
+      "mergedAt": "2025-04-11T22:26:30Z",
+      "mergedBy": "stanislawjarecki",
+      "mergeCommit": {
+        "oid": "290034354f1d6106b673b24ea96b2db64d03087f"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 23,
+      "id": "PR_kwDOOCmp3s6RqEXl",
+      "title": "Identity discussion",
+      "url": "https://github.com/chris-wood/draft-pqpake/pull/23",
+      "state": "MERGED",
+      "author": "chris-wood",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Closes #22 ",
+      "createdAt": "2025-04-07T15:54:15Z",
+      "updatedAt": "2025-04-11T22:26:42Z",
+      "baseRepository": "chris-wood/draft-pqpake",
+      "baseRefName": "caw/more-edits-2",
+      "baseRefOid": "a452267d41c516792a106ca26f02892a7d0a5b4b",
+      "headRepository": "chris-wood/draft-pqpake",
+      "headRefName": "caw/identities",
+      "headRefOid": "0d2d0e85334c2778814a299f7662f427ae28684c",
+      "closedAt": "2025-04-11T22:26:42Z",
+      "mergedAt": "2025-04-11T22:26:42Z",
+      "mergedBy": "stanislawjarecki",
+      "mergeCommit": {
+        "oid": "8cfc1fcb8b50fe4498d9ecc4bfa7188d163eed99"
+      },
+      "comments": [],
+      "reviews": []
+    }
+  ]
+}
