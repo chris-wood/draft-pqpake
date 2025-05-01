@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2025-04-17T00:16:27.496355+00:00",
+  "timestamp": "2025-05-01T00:18:56.608438+00:00",
   "repo": "chris-wood/draft-pqpake",
   "labels": [
     {
@@ -528,6 +528,22 @@
       "body": "*)  in section 7, \"CPaceOQUAKE+ Configurations\", in the \"RECOMMENDED configuration\" list, the bullet for BUKEM (6th bullet in the list) has a reference to section 4.1, but it should be 4.2.\n\n*) GenVerifierMaterial takes inputs (PRS, salt, U, S), but in the graph drawing at the end of section 6, there is a line \"(v, seed) = GenVerifierMaterial(PRS,salt)\", so it's missing inputs U,S\n\n*) In section 6.1.2, \"Registration\", I think you should make Server store (salt,v,pk,U,S), not just (salt,v,pk), because this would make it clear that U,S are not values which can change afterwards.\n\n*) In conceptual drawing of the challenge-response protocol in section 6.2, just before 6.2.1, I would group (SK,tx) values which are output by CPaceOQUAKE together, i.e. I would re-order the inputs from:\nClient: SK,seed,tx,sid,U,S      Server: SK,salt,pk,tx,sid,U,S\nto \nClient: SK,tx,seed,sid,U,S      Server: SK,tx,salt,pk,sid,U,S\n\n*)  Transfer of salt from S to U seems a little underspecified in the CPaceOQUAKE+ protocol.  You do say that \"Note here that if the client does not know the salt, the server must send it, which it can do in plain text.\"  However, the protocol drawing just below this sentence starts from the following inputs:\nClient: PRS,salt,U,S,sid       Server: v,pk,U,S,sid \nI think it would be clearer if the protocol started from these inputs:\nClient: PRS,sid,U,S       Server: salt,v,pk,sid,U,S \n[we use order \"sid,U,S\" everywhere else]\nand then have S transfer salt to U in a separate arrow before protocol starts?   ",
       "createdAt": "2025-04-12T01:22:17Z",
       "updatedAt": "2025-04-12T01:22:17Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 25,
+      "id": "I_kwDOOCmp3s60xFza",
+      "title": "Review exceptional cases and protocol behavior",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/25",
+      "state": "OPEN",
+      "author": "chris-wood",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Exceptional cases might be, e.g., checking for identity elements for CPace elements exchanged over the wire. We should make sure that the behavior which leads to exceptional cases is covered well by tests.",
+      "createdAt": "2025-04-30T23:17:31Z",
+      "updatedAt": "2025-04-30T23:17:31Z",
       "closedAt": null,
       "comments": []
     }
