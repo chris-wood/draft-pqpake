@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2025-05-01T00:18:56.608438+00:00",
+  "timestamp": "2025-06-12T00:17:26.492112+00:00",
   "repo": "chris-wood/draft-pqpake",
   "labels": [
     {
@@ -544,6 +544,22 @@
       "body": "Exceptional cases might be, e.g., checking for identity elements for CPace elements exchanged over the wire. We should make sure that the behavior which leads to exceptional cases is covered well by tests.",
       "createdAt": "2025-04-30T23:17:31Z",
       "updatedAt": "2025-04-30T23:17:31Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 26,
+      "id": "I_kwDOOCmp3s662OtT",
+      "title": "key derivation in OQUAKE:  change needed in CFRG draft",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/26",
+      "state": "OPEN",
+      "author": "stanislawjarecki",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "I just noticed that in our CFRG draft, [https://datatracker.ietf.org/doc/draft-vos-cfrg-pqpake/], we made a mistake in the key derivation for OQUAKE.  Its done in OQUAKE.Respond and OQUAKE.Finish, sections 5.2.2 and 5.2.3, and the mistake is in the current line:\n\nprk_sk = KDF.Extract(PRS, DST || \"OQUAKE\" || fullsid || k)\n\nwhich should instead read as follows:\n\nprk_sk = KDF.Extract(PRS, DST || \"OQUAKE\" || fullsid || (s,T) || pk || ct || k)\n\n[alternatively, instead of \"(s,T)\" we write \"s || T\"] \n\nThe \"prk_sk\" value is an input to KDF.Expand which generates (key,h), i.e. respectively the final output session key and the key confirmation value, and these are derived in NoIC via an RO hash on inputs (fullsid, pw, apk, pk, ct, k), and here apk=(s,T).  In the prior version of the writeup it was almost as in NoIC except value \"pk\" was omitted, but the CFRG version is as if this hash only took (fullsid, pw, k), and that wouldn't bind to the transcript (apk,ct), and adding \"pk\" to these inputs simplifies the NoIC proof (and since there doesn't seem to be any extra cost involved in adding \"pk\" to the inputs we should do it just so we can invoke the security proof for NoIC as a black-box).\n\nI'm putting these changes in the writeup, but we should make them in the CFRG draft.",
+      "createdAt": "2025-06-10T20:33:29Z",
+      "updatedAt": "2025-06-10T20:33:29Z",
       "closedAt": null,
       "comments": []
     }
