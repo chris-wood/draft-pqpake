@@ -230,7 +230,7 @@ specified in {{crypto-deps}}.
 The protocols in this document have four primary dependencies:
 
 - Key Encapsulation Mechanism (KEM); {{deps-kem}}
-- Binary Uniform Key Encapsulation Mechanism (BUKEM); {{deps-bukem}}
+- Binary Key Encapsulation Mechanism with specific uniformity properties (binary UPK-ANO-KEM, or BUA-KEM); {{deps-BUA-KEM}}
 - Key Derivation Function (KDF); {{deps-symmetric}}
 - Key Stretching Function (KSF); {{deps-ksf}}
 
@@ -260,28 +260,29 @@ derivation from a seed. It consists of the following syntax.
 
 This specification uses X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}.
 
-## Binary Uniform KEM {#deps-bukem}
+## Binary UPK-ANO-KEM {#deps-BUA-KEM}
 
-A binary uniform KEM supports the same functions as defined above for
+A binary UPK-ANO-KEM supports the same functions as defined above for
 a KEM, and it must also be IND-CCA secure, but it must also achieve
 two additional security properties. Namely, in addition to IND-CCA
-security, a binary uniform KEM requires that:
+security, a binary UPK-ANO-KEM requires that:
 
 1. Public keys are indistinguishable from random strings of bytes (of
-the same length); and
+the same length), i.e. uniform public keys (UPK); and
 
 2. Ciphertexts are anonymous in the presence of chosen ciphertext
-attack (ANO-CCA).
+attack (ANO-CCA), i.e. anonymous ciphertexts (ANO).
 
 These additional properties are crucial for the security of OQUAKE. In
 other words, one MUST NOT use a KEM that has no uniform public keys
-and no anonymous ciphertexts in place of a uniform KEM.
+and/or no anonymous ciphertexts in place of a UPK-ANO-KEM.
 
-This specification uses a variant of ML-KEM768 {{FIPS203}}, denoted ML-BUKEM768.
+In the remainder of this specification, we abbreviate binary UPK-ANO-KEM to BUA-KEM.
+This specification uses a variant of ML-KEM768 {{FIPS203}}, which we therefore denote by ML-BUA-KEM768.
 This is instantiated with "KemeleonNR - ML-KEM768" {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
 require uniform enoding for public keys. Future specifications can replace use of
-Kemeleon with a binary uniform KEM that is more efficient if one becomes available.
+Kemeleon with a binary UPK-ANO-KEM that is more efficient if one becomes available.
 
 
 ## Key Derivation Function {#deps-symmetric}
@@ -309,8 +310,8 @@ needs to satisfy collision resistance. The output is a string of L bytes.
 # CPaceOQUAKE Protocol {#CPaceOQUAKE}
 
 The hybrid, symmetric PAKE protocol, denoted CPaceOQUAKE consists of CPace {{CPACE}}
-combined with OQUAKE {{ABJ25}}. OQUAKE is a PAKE built from a BUKEM and KDF, using a
-2-rounds of Feistel network to password-encrypt the BUKEM public key.
+combined with OQUAKE {{ABJ25}}. OQUAKE is a PAKE built from a BUA-KEM and KDF, using a
+2-rounds of Feistel network to password-encrypt the BUA-KEM public key.
 The OQUAKE protocol is based on the "NoIC" protocol analyzed in {{ABJ25}}.
 
 The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by
@@ -464,7 +465,7 @@ def Finish(ya, Yb, sid):
 
 ## OQUAKE Specification {#quake}
 
-OQUAKE is a PAKE built on a BUKEM and KDF.  If the BUKEM provides security against quantum-enabled attacks,
+OQUAKE is a PAKE built on a BUA-KEM and KDF.  If the BUA-KEM provides security against quantum-enabled attacks,
 then so does OQUAKE. It consists of three messages sent between initiator and responder, produced by
 the functions Init, Respond, and Finish, described below. Both parties take as input a password-related
 string PRS, an optional session identifier sid, and an optional client identifier U and server
@@ -503,13 +504,13 @@ Output:
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
-- BUKEM, a BUKEM instance
+- BUA-KEM, a BUA-KEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
 def Init(PRS, sid, U, S):
-  seed = random(BUKEM.Nseed)
-  (pk, sk) = BUKEM.DeriveKeyPair(seed)
+  seed = random(BUA-KEM.Nseed)
+  (pk, sk) = BUA-KEM.DeriveKeyPair(seed)
 
   r = random(3 * Nsec)
 
@@ -543,7 +544,7 @@ Output:
 - fullsid, a byte string
 
 Parameters:
-- BUKEM, a BUKEM instance
+- BUA-KEM, a BUA-KEM instance
 - KDF, a KDF instance
 
 def encode_sid(sid, U, U):
@@ -574,7 +575,7 @@ Output:
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
-- BUKEM, a BUKEM instance
+- BUA-KEM, a BUA-KEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
@@ -590,7 +591,7 @@ def Respond(PRS, init_msg, sid, U, S):
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
   pk = XOR(T, T_pad)
 
-  (ct, k) = BUKEM.Encaps(pk)
+  (ct, k) = BUA-KEM.Encaps(pk)
 
   prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || k)
   key = KDF.Expand(prk_sk, DST || "sk", Nkey)
@@ -620,7 +621,7 @@ Output:
 - ss, output shared secret, a byte string of 32 bytes
 
 Parameters:
-- BUKEM, a BUKEM instance
+- BUA-KEM, a BUA-KEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
@@ -632,7 +633,7 @@ def Finish(context, resp_msg):
   ct, h = resp_msg[0..Npk], resp_msg[Npk..]
 
   try:
-    k = BUKEM.Decaps(sk, ct)
+    k = BUA-KEM.Decaps(sk, ct)
     prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || k)
     key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
@@ -653,8 +654,8 @@ a worst-of-both worlds PAKE, this sequential composition realizes a
 best-of-both worlds PAKE. In other words, CPaceOQUAKE remains as secure
 as the strongest PAKE, resisting attacks that break the classical CPace
 (e.g. by a quantum-capable attacker) or attacks that break the
-quantum-resistant OQUAKE (e.g. by a flaw in the BUKEM). This assumes that
-OQUAKE is instantiated with a quantum-resistant BUKEM.
+quantum-resistant OQUAKE (e.g. by a flaw in the BUA-KEM). This assumes that
+OQUAKE is instantiated with a quantum-resistant BUA-KEM.
 
 To be precise, CPaceOQUAKE first runs CPace using password-related string PRS,
 establishing a session key SK1 with the associated transcript tr1. It
@@ -1278,7 +1279,7 @@ The RECOMMENDED configuration is below.
 - KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
-- BUKEM: ML-BUKEM768 {{deps-bukem}}, where Nseed = 64, Nct = 1514, and Npk = 1172.
+- BUA-KEM: ML-BUA-KEM768 {{deps-BUA-KEM}}, where Nseed = 64, Nct = 1514, and Npk = 1172.
 - PAKE-KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672" (a randomly generated 32-byte string)
@@ -1302,7 +1303,7 @@ For instance, one possible additional configuration is as follows.
 - KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Scrypt(N = 32768, r = 8, p = 1) {{!SCRYPT=RFC7914}}
-- BUKEM: ML-BUKEM768 {{deps-bukem}}, where Nseed = 64, Nct = 1514, and Npk = 1172.
+- BUA-KEM: ML-BUA-KEM768 {{deps-BUA-KEM}}, where Nseed = 64, Nct = 1514, and Npk = 1172.
 - PAKE-KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "b840fa4d4b4caec9e25d13d8c016cfe93e7468d54e936490bd0b0a3ffca1a01b" (a randomly generated 32-byte string)
@@ -1465,22 +1466,22 @@ CPace's session key, to be 32, so one must set H.bmax_in_bytes = 32.
 ## Parameters for OQUAKE
 We have the following requirements:
 
-- BUKEM ind vs classical <= -qq - classical hardness
-- BUKEM ind vs quantum <= -qq - quantum hardness
-- BUKEM public key uniformity vs classical <= -qq - classical hardness
-- BUKEM public key uniformity vs quantum <= -qq - quantum hardness
-- BUKEM ciphertext uniformity vs classical <= -qq - classical hardness
-- BUKEM ciphertext uniformity vs quantum <= -qq - quantum hardness
-- BUKEM key * 8 >= qq + classical hardness
+- BUA-KEM ind vs classical <= -qq - classical hardness
+- BUA-KEM ind vs quantum <= -qq - quantum hardness
+- BUA-KEM public key uniformity vs classical <= -qq - classical hardness
+- BUA-KEM public key uniformity vs quantum <= -qq - quantum hardness
+- BUA-KEM ciphertext uniformity vs classical <= -qq - classical hardness
+- BUA-KEM ciphertext uniformity vs quantum <= -qq - quantum hardness
+- BUA-KEM key * 8 >= qq + classical hardness
 - KEM failure <= -qq - classical hardness
 
-For, ML-BUKEM it is as hard or harder to break public key and ciphertext uniformity as it is to break indistinguishability, so we discuss all three properties at once.
+For, ML-BUA-KEM it is as hard or harder to break public key and ciphertext uniformity as it is to break indistinguishability, so we discuss all three properties at once.
 
-For ML-BUKEM768, the resistance to classical attacks is approximately `181 - qq` bits of security. So for qq = 64, classical hardness is approximately 117 bits of security. The resistance to quantum attacks is approximately `164 - qq` bits of security. So for qq = 64, quantum hardness is approximately 100 bits of security.
+For ML-BUA-KEM768, the resistance to classical attacks is approximately `181 - qq` bits of security. So for qq = 64, classical hardness is approximately 117 bits of security. The resistance to quantum attacks is approximately `164 - qq` bits of security. So for qq = 64, quantum hardness is approximately 100 bits of security.
 
-For ML-BUKEM1024, this would come out to `253 - 64 = 189` bits of security for classical attacks and `230 - 64 = 166` bits of security for quantum attacks.
+For ML-BUA-KEM1024, this would come out to `253 - 64 = 189` bits of security for classical attacks and `230 - 64 = 166` bits of security for quantum attacks.
 
-The ML-BUKEM key is 32 bytes, so this satisfies the requirements.
+The ML-BUA-KEM key is 32 bytes, so this satisfies the requirements.
 We ignore the KEM failure following the same reasoning as above.
 
 
