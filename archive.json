@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2025-06-12T00:17:26.492112+00:00",
+  "timestamp": "2025-06-22T00:19:36.513942+00:00",
   "repo": "chris-wood/draft-pqpake",
   "labels": [
     {
@@ -118,7 +118,7 @@
       "labels": [],
       "body": "I think we should change the wording of Section 4.2. The KEM that we need (as pointed out by Stanislaw) does not require ciphertext uniformity; only ciphertext anonymity. If we want to explicitly mention this, then maybe we can call it 'Binary KEM with uniformity properties' instead of uniform KEM.",
       "createdAt": "2025-03-07T17:07:46Z",
-      "updatedAt": "2025-03-17T03:00:33Z",
+      "updatedAt": "2025-06-20T14:29:00Z",
       "closedAt": null,
       "comments": [
         {
@@ -127,6 +127,13 @@
           "body": "@jellevos can you send a PR with the phrasing you'd like to see?",
           "createdAt": "2025-03-17T03:00:32Z",
           "updatedAt": "2025-03-17T03:00:32Z"
+        },
+        {
+          "author": "jellevos",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@chris-wood see #28!",
+          "createdAt": "2025-06-20T14:29:00Z",
+          "updatedAt": "2025-06-20T14:29:00Z"
         }
       ]
     },
@@ -559,7 +566,31 @@
       "labels": [],
       "body": "I just noticed that in our CFRG draft, [https://datatracker.ietf.org/doc/draft-vos-cfrg-pqpake/], we made a mistake in the key derivation for OQUAKE.  Its done in OQUAKE.Respond and OQUAKE.Finish, sections 5.2.2 and 5.2.3, and the mistake is in the current line:\n\nprk_sk = KDF.Extract(PRS, DST || \"OQUAKE\" || fullsid || k)\n\nwhich should instead read as follows:\n\nprk_sk = KDF.Extract(PRS, DST || \"OQUAKE\" || fullsid || (s,T) || pk || ct || k)\n\n[alternatively, instead of \"(s,T)\" we write \"s || T\"] \n\nThe \"prk_sk\" value is an input to KDF.Expand which generates (key,h), i.e. respectively the final output session key and the key confirmation value, and these are derived in NoIC via an RO hash on inputs (fullsid, pw, apk, pk, ct, k), and here apk=(s,T).  In the prior version of the writeup it was almost as in NoIC except value \"pk\" was omitted, but the CFRG version is as if this hash only took (fullsid, pw, k), and that wouldn't bind to the transcript (apk,ct), and adding \"pk\" to these inputs simplifies the NoIC proof (and since there doesn't seem to be any extra cost involved in adding \"pk\" to the inputs we should do it just so we can invoke the security proof for NoIC as a black-box).\n\nI'm putting these changes in the writeup, but we should make them in the CFRG draft.",
       "createdAt": "2025-06-10T20:33:29Z",
-      "updatedAt": "2025-06-10T20:33:29Z",
+      "updatedAt": "2025-06-20T13:59:31Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "jellevos",
+          "authorAssociation": "COLLABORATOR",
+          "body": "This was also independently found and communicated by Dan Harkins. Just giving credit where credit is due!",
+          "createdAt": "2025-06-20T13:59:31Z",
+          "updatedAt": "2025-06-20T13:59:31Z"
+        }
+      ]
+    },
+    {
+      "number": 27,
+      "id": "I_kwDOOCmp3s68jnwl",
+      "title": "Fixing the number of bytes of a ciphertext",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/27",
+      "state": "OPEN",
+      "author": "jellevos",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "As pointed out by Dan Harkins in private communications, the currrent version of the spec says that `Nct` is 1514, but this is exactly the number you would get after applying Kemeleon, which is wrong. The correct number should be 1088.\n\nNext to that, in the `Finish` function, we should use the constant `Nct` instead of `Npk`.\n",
+      "createdAt": "2025-06-20T14:02:20Z",
+      "updatedAt": "2025-06-20T14:02:20Z",
       "closedAt": null,
       "comments": []
     }
@@ -674,6 +705,32 @@
       "mergeCommit": {
         "oid": "8cfc1fcb8b50fe4498d9ecc4bfa7188d163eed99"
       },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 28,
+      "id": "PR_kwDOOCmp3s6bbfBu",
+      "title": "Change BUKEM to BUA-KEM and change text accordingly",
+      "url": "https://github.com/chris-wood/draft-pqpake/pull/28",
+      "state": "OPEN",
+      "author": "jellevos",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Suggestion to address issue #5.\r\n\r\nI made the following changes:\r\n- Binary uniform KEM -> Binary KEM with uniformity properties\r\n- BUKEM -> Binary UPK-ANO-KEM / BUA-KEM\r\n- ML-BUKEM768 -> ML-BUA-KEM\r\n\r\nAnd some minor other changes to the text where we previously introduced BUKEM.",
+      "createdAt": "2025-06-20T14:28:07Z",
+      "updatedAt": "2025-06-20T14:28:08Z",
+      "baseRepository": "chris-wood/draft-pqpake",
+      "baseRefName": "main",
+      "baseRefOid": "864345353d41da2baaa2e1061ddf60a4b02a58f9",
+      "headRepository": "chris-wood/draft-pqpake",
+      "headRefName": "jvos/issue-5-bukem",
+      "headRefOid": "a619cc2e4cc06398a4649a80a5bda5f1d9659bac",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
       "comments": [],
       "reviews": []
     }
