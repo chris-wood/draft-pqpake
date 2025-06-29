@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2025-06-22T00:19:36.513942+00:00",
+  "timestamp": "2025-06-29T00:20:14.474032+00:00",
   "repo": "chris-wood/draft-pqpake",
   "labels": [
     {
@@ -591,6 +591,22 @@
       "body": "As pointed out by Dan Harkins in private communications, the currrent version of the spec says that `Nct` is 1514, but this is exactly the number you would get after applying Kemeleon, which is wrong. The correct number should be 1088.\n\nNext to that, in the `Finish` function, we should use the constant `Nct` instead of `Npk`.\n",
       "createdAt": "2025-06-20T14:02:20Z",
       "updatedAt": "2025-06-20T14:02:20Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 29,
+      "id": "I_kwDOOCmp3s69yMm3",
+      "title": "Fix Jelle's email address",
+      "url": "https://github.com/chris-wood/draft-pqpake/issues/29",
+      "state": "OPEN",
+      "author": "chris-wood",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "",
+      "createdAt": "2025-06-27T20:43:32Z",
+      "updatedAt": "2025-06-27T20:43:32Z",
       "closedAt": null,
       "comments": []
     }
