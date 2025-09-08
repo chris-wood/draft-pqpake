@@ -17,21 +17,21 @@ transformation from the hybrid symmetric PAKE protocol called CPaceOQUAKE
 that is also described in this document. This document recommends
 configurations for CPaceOQUAKE+. 
     " name="description">
-<meta content="xml2rfc 3.28.1" name="generator">
+<meta content="xml2rfc 3.30.1" name="generator">
 <meta content="draft-vos-cfrg-pqpake-latest" name="ietf.draft">
 <!-- Generator version information:
-  xml2rfc 3.28.1
-    Python 3.12.9
+  xml2rfc 3.30.1
+    Python 3.12.11
     ConfigArgParse 1.7
     google-i18n-address 3.1.1
     intervaltree 3.1.0
     Jinja2 3.1.6
-    lxml 5.3.0
-    platformdirs 4.3.7
+    lxml 5.3.1
+    platformdirs 4.4.0
     pycountry 24.6.1
     PyYAML 6.0.2
-    requests 2.32.3
-    setuptools 70.3.0
+    requests 2.32.5
+    setuptools 80.9.0
     wcwidth 0.2.13
 -->
 <link href="draft-vos-cfrg-pqpake.xml" rel="alternate" type="application/rfc+xml">
@@ -1051,11 +1051,11 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">Hybrid PQ-PAKE</td>
-<td class="right">April 2025</td>
+<td class="right">September 2025</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 17 October 2025</td>
+<td class="center">Expires 12 March 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1068,12 +1068,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2025-04-15" class="published">15 April 2025</time>
+<time datetime="2025-09-08" class="published">8 September 2025</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2025-10-17">17 October 2025</time></dd>
+<dd class="expires"><time datetime="2026-03-12">12 March 2026</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1135,7 +1135,7 @@ configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 17 October 2025.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 12 March 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1182,7 +1182,7 @@ configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶
                 <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-key-encapsulation-mechanism" class="internal xref">Key Encapsulation Mechanism</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
-                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-binary-uniform-kem" class="internal xref">Binary Uniform KEM</a></p>
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-binary-upk-ano-kem" class="internal xref">Binary UPK-ANO-KEM</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
                 <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-key-derivation-function" class="internal xref">Key Derivation Function</a></p>
@@ -1521,7 +1521,7 @@ specified in <a href="#crypto-deps" class="auto internal xref">Section 4</a>.<a 
           <p id="section-4-2.1.1">Key Encapsulation Mechanism (KEM); <a href="#deps-kem" class="auto internal xref">Section 4.1</a><a href="#section-4-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-2.2">
-          <p id="section-4-2.2.1">Binary Uniform Key Encapsulation Mechanism (BUKEM); <a href="#deps-bukem" class="auto internal xref">Section 4.2</a><a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-4-2.2.1">Binary Key Encapsulation Mechanism with specific uniformity properties (binary UPK-ANO-KEM, or BUA-KEM); <a href="#deps-BUA-KEM" class="auto internal xref">Section 4.2</a><a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-2.3">
           <p id="section-4-2.3.1">Key Derivation Function (KDF); <a href="#deps-symmetric" class="auto internal xref">Section 4.3</a><a href="#section-4-2.3.1" class="pilcrow">¶</a></p>
@@ -1571,33 +1571,34 @@ its encapsulated representation <code>ct</code>. This function can raise a
 <p id="section-4.1-3">This specification uses X-Wing <span>[<a href="#XWING" class="cite xref">XWING</a>]</span>.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="deps-bukem">
+<div id="deps-BUA-KEM">
 <section id="section-4.2">
-        <h3 id="name-binary-uniform-kem">
-<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-binary-uniform-kem" class="section-name selfRef">Binary Uniform KEM</a>
+        <h3 id="name-binary-upk-ano-kem">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-binary-upk-ano-kem" class="section-name selfRef">Binary UPK-ANO-KEM</a>
         </h3>
-<p id="section-4.2-1">A binary uniform KEM supports the same functions as defined above for
+<p id="section-4.2-1">A binary UPK-ANO-KEM supports the same functions as defined above for
 a KEM, and it must also be IND-CCA secure, but it must also achieve
 two additional security properties. Namely, in addition to IND-CCA
-security, a binary uniform KEM requires that:<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+security, a binary UPK-ANO-KEM requires that:<a href="#section-4.2-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-4.2-2">
 <li id="section-4.2-2.1">
             <p id="section-4.2-2.1.1">Public keys are indistinguishable from random strings of bytes (of
-the same length); and<a href="#section-4.2-2.1.1" class="pilcrow">¶</a></p>
+the same length), i.e. uniform public keys (UPK); and<a href="#section-4.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.2-2.2">
             <p id="section-4.2-2.2.1">Ciphertexts are anonymous in the presence of chosen ciphertext
-attack (ANO-CCA).<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
+attack (ANO-CCA), i.e. anonymous ciphertexts (ANO).<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 <p id="section-4.2-3">These additional properties are crucial for the security of OQUAKE. In
 other words, one <span class="bcp14">MUST NOT</span> use a KEM that has no uniform public keys
-and no anonymous ciphertexts in place of a uniform KEM.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
-<p id="section-4.2-4">This specification uses a variant of ML-KEM768 <span>[<a href="#FIPS203" class="cite xref">FIPS203</a>]</span>, denoted ML-BUKEM768.
+and/or no anonymous ciphertexts in place of a UPK-ANO-KEM.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+<p id="section-4.2-4">In the remainder of this specification, we abbreviate binary UPK-ANO-KEM to BUA-KEM.
+This specification uses a variant of ML-KEM768 <span>[<a href="#FIPS203" class="cite xref">FIPS203</a>]</span>, which we therefore denote by ML-BUA-KEM768.
 This is instantiated with "KemeleonNR - ML-KEM768" <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
 require uniform enoding for public keys. Future specifications can replace use of
-Kemeleon with a binary uniform KEM that is more efficient if one becomes available.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+Kemeleon with a binary UPK-ANO-KEM that is more efficient if one becomes available.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deps-symmetric">
@@ -1647,8 +1648,8 @@ needs to satisfy collision resistance. The output is a string of L bytes.<a href
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-cpaceoquake-protocol" class="section-name selfRef">CPaceOQUAKE Protocol</a>
       </h2>
 <p id="section-5-1">The hybrid, symmetric PAKE protocol, denoted CPaceOQUAKE consists of CPace <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span>
-combined with OQUAKE <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>. OQUAKE is a PAKE built from a BUKEM and KDF, using a
-2-rounds of Feistel network to password-encrypt the BUKEM public key.
+combined with OQUAKE <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>. OQUAKE is a PAKE built from a BUA-KEM and KDF, using a
+2-rounds of Feistel network to password-encrypt the BUA-KEM public key.
 The OQUAKE protocol is based on the "NoIC" protocol analyzed in <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by
 <span>[<a href="#HR24" class="cite xref">HR24</a>]</span>. A very close variant of this protocol was also analyzed in <span>[<a href="#LL24" class="cite xref">LL24</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
@@ -1844,7 +1845,7 @@ def Finish(ya, Yb, sid):
         <h3 id="name-oquake-specification">
 <a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-oquake-specification" class="section-name selfRef">OQUAKE Specification</a>
         </h3>
-<p id="section-5.2-1">OQUAKE is a PAKE built on a BUKEM and KDF.  If the BUKEM provides security against quantum-enabled attacks,
+<p id="section-5.2-1">OQUAKE is a PAKE built on a BUA-KEM and KDF.  If the BUA-KEM provides security against quantum-enabled attacks,
 then so does OQUAKE. It consists of three messages sent between initiator and responder, produced by
 the functions Init, Respond, and Finish, described below. Both parties take as input a password-related
 string PRS, an optional session identifier sid, and an optional client identifier U and server
@@ -1892,13 +1893,13 @@ Output:
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
-- BUKEM, a BUKEM instance
+- BUA-KEM, a BUA-KEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
 def Init(PRS, sid, U, S):
-  seed = random(BUKEM.Nseed)
-  (pk, sk) = BUKEM.DeriveKeyPair(seed)
+  seed = random(BUA-KEM.Nseed)
+  (pk, sk) = BUA-KEM.DeriveKeyPair(seed)
 
   r = random(3 * Nsec)
 
@@ -1932,7 +1933,7 @@ Output:
 - fullsid, a byte string
 
 Parameters:
-- BUKEM, a BUKEM instance
+- BUA-KEM, a BUA-KEM instance
 - KDF, a KDF instance
 
 def encode_sid(sid, U, U):
@@ -1968,7 +1969,7 @@ Output:
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
-- BUKEM, a BUKEM instance
+- BUA-KEM, a BUA-KEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
@@ -1984,7 +1985,7 @@ def Respond(PRS, init_msg, sid, U, S):
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
   pk = XOR(T, T_pad)
 
-  (ct, k) = BUKEM.Encaps(pk)
+  (ct, k) = BUA-KEM.Encaps(pk)
 
   prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || k)
   key = KDF.Expand(prk_sk, DST || "sk", Nkey)
@@ -2019,7 +2020,7 @@ Output:
 - ss, output shared secret, a byte string of 32 bytes
 
 Parameters:
-- BUKEM, a BUKEM instance
+- BUA-KEM, a BUA-KEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
@@ -2031,7 +2032,7 @@ def Finish(context, resp_msg):
   ct, h = resp_msg[0..Npk], resp_msg[Npk..]
 
   try:
-    k = BUKEM.Decaps(sk, ct)
+    k = BUA-KEM.Decaps(sk, ct)
     prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || k)
     key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
@@ -2059,8 +2060,8 @@ a worst-of-both worlds PAKE, this sequential composition realizes a
 best-of-both worlds PAKE. In other words, CPaceOQUAKE remains as secure
 as the strongest PAKE, resisting attacks that break the classical CPace
 (e.g. by a quantum-capable attacker) or attacks that break the
-quantum-resistant OQUAKE (e.g. by a flaw in the BUKEM). This assumes that
-OQUAKE is instantiated with a quantum-resistant BUKEM.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+quantum-resistant OQUAKE (e.g. by a flaw in the BUA-KEM). This assumes that
+OQUAKE is instantiated with a quantum-resistant BUA-KEM.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
 <p id="section-5.3-2">To be precise, CPaceOQUAKE first runs CPace using password-related string PRS,
 establishing a session key SK1 with the associated transcript tr1. It
 then initiates OQUAKE using the password-related string <code>H(fullsid, PRS, tr1, SK1)</code>;
@@ -3024,7 +3025,7 @@ and the CPaceOQUAKE protocol, respectively.<a href="#section-7-1" class="pilcrow
 <p id="section-7-2">The <span class="bcp14">RECOMMENDED</span> configuration is below.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-3.1">
-          <p id="section-7-3.1.1">CPace-Group: CPACE-RISTR255-SHA512 <span><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-13#section-4" class="relref">Section 4</a> of [<a href="#CPACE" class="cite xref">CPACE</a>]</span><a href="#section-7-3.1.1" class="pilcrow">¶</a></p>
+          <p id="section-7-3.1.1">CPace-Group: CPACE-RISTR255-SHA512 <span><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-14#section-4" class="relref">Section 4</a> of [<a href="#CPACE" class="cite xref">CPACE</a>]</span><a href="#section-7-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.2">
           <p id="section-7-3.2.1">CPace-Hash: SHA-512<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
@@ -3039,7 +3040,7 @@ and the CPaceOQUAKE protocol, respectively.<a href="#section-7-1" class="pilcrow
           <p id="section-7-3.5.1">PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) <span>[<a href="#ARGON2" class="cite xref">ARGON2</a>]</span><a href="#section-7-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.6">
-          <p id="section-7-3.6.1">BUKEM: ML-BUKEM768 <a href="#deps-bukem" class="auto internal xref">Section 4.2</a>, where Nseed = 64, Nct = 1514, and Npk = 1172.<a href="#section-7-3.6.1" class="pilcrow">¶</a></p>
+          <p id="section-7-3.6.1">BUA-KEM: ML-BUA-KEM768 <a href="#deps-BUA-KEM" class="auto internal xref">Section 4.2</a>, where Nseed = 64, Nct = 1514, and Npk = 1172.<a href="#section-7-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-3.7">
           <p id="section-7-3.7.1">PAKE-KDF: HKDF-SHA-256<a href="#section-7-3.7.1" class="pilcrow">¶</a></p>
@@ -3078,7 +3079,7 @@ and the CPaceOQUAKE protocol, respectively.<a href="#section-7-1" class="pilcrow
 <p id="section-7-8">For instance, one possible additional configuration is as follows.<a href="#section-7-8" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-9.1">
-          <p id="section-7-9.1.1">CPace-Group: CPACE-P256<em>XMD:SHA-256_SSWU_NU</em>-SHA256 <span><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-13#section-4" class="relref">Section 4</a> of [<a href="#CPACE" class="cite xref">CPACE</a>]</span><a href="#section-7-9.1.1" class="pilcrow">¶</a></p>
+          <p id="section-7-9.1.1">CPace-Group: CPACE-P256<em>XMD:SHA-256_SSWU_NU</em>-SHA256 <span><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-14#section-4" class="relref">Section 4</a> of [<a href="#CPACE" class="cite xref">CPACE</a>]</span><a href="#section-7-9.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-9.2">
           <p id="section-7-9.2.1">CPace-Hash: SHA-256<a href="#section-7-9.2.1" class="pilcrow">¶</a></p>
@@ -3093,7 +3094,7 @@ and the CPaceOQUAKE protocol, respectively.<a href="#section-7-1" class="pilcrow
           <p id="section-7-9.5.1">PC-KSF: Scrypt(N = 32768, r = 8, p = 1) <span>[<a href="#SCRYPT" class="cite xref">SCRYPT</a>]</span><a href="#section-7-9.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-9.6">
-          <p id="section-7-9.6.1">BUKEM: ML-BUKEM768 <a href="#deps-bukem" class="auto internal xref">Section 4.2</a>, where Nseed = 64, Nct = 1514, and Npk = 1172.<a href="#section-7-9.6.1" class="pilcrow">¶</a></p>
+          <p id="section-7-9.6.1">BUA-KEM: ML-BUA-KEM768 <a href="#deps-BUA-KEM" class="auto internal xref">Section 4.2</a>, where Nseed = 64, Nct = 1514, and Npk = 1172.<a href="#section-7-9.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-9.7">
           <p id="section-7-9.7.1">PAKE-KDF: HKDF-SHA-256<a href="#section-7-9.7.1" class="pilcrow">¶</a></p>
@@ -3241,7 +3242,7 @@ when instantiating these protocols.<a href="#section-9.1.2-4" class="pilcrow">¶
 <dd class="break"></dd>
 <dt id="CPACE">[CPACE]</dt>
         <dd>
-<span class="refAuthor">Abdalla, M.</span>, <span class="refAuthor">Haase, B.</span>, and <span class="refAuthor">J. Hesse</span>, <span class="refTitle">"CPace, a balanced composable PAKE"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-cpace-13</span>, <time datetime="2024-10-14" class="refDate">14 October 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-13">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-13</a>&gt;</span>. </dd>
+<span class="refAuthor">Abdalla, M.</span>, <span class="refAuthor">Haase, B.</span>, and <span class="refAuthor">J. Hesse</span>, <span class="refTitle">"CPace, a balanced composable PAKE"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-cpace-14</span>, <time datetime="2025-04-16" class="refDate">16 April 2025</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-14">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-14</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="FIPS202">[FIPS202]</dt>
         <dd>
@@ -3273,7 +3274,7 @@ when instantiating these protocols.<a href="#section-9.1.2-4" class="pilcrow">¶
 <dd class="break"></dd>
 <dt id="XWING">[XWING]</dt>
       <dd>
-<span class="refAuthor">Connolly, D.</span>, <span class="refAuthor">Schwabe, P.</span>, and <span class="refAuthor">B. Westerbaan</span>, <span class="refTitle">"X-Wing: general-purpose hybrid post-quantum KEM"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-connolly-cfrg-xwing-kem-06</span>, <time datetime="2024-10-21" class="refDate">21 October 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-connolly-cfrg-xwing-kem-06">https://datatracker.ietf.org/doc/html/draft-connolly-cfrg-xwing-kem-06</a>&gt;</span>. </dd>
+<span class="refAuthor">Connolly, D.</span>, <span class="refAuthor">Schwabe, P.</span>, and <span class="refAuthor">B. Westerbaan</span>, <span class="refTitle">"X-Wing: general-purpose hybrid post-quantum KEM"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-connolly-cfrg-xwing-kem-09</span>, <time datetime="2025-09-01" class="refDate">1 September 2025</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-connolly-cfrg-xwing-kem-09">https://datatracker.ietf.org/doc/html/draft-connolly-cfrg-xwing-kem-09</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -3425,34 +3426,34 @@ CPace's session key, to be 32, so one must set H.bmax_in_bytes = 32.<a href="#ap
 <p id="appendix-A.4-1">We have the following requirements:<a href="#appendix-A.4-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A.4-2.1">
-            <p id="appendix-A.4-2.1.1">BUKEM ind vs classical &lt;= -qq - classical hardness<a href="#appendix-A.4-2.1.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.4-2.1.1">BUA-KEM ind vs classical &lt;= -qq - classical hardness<a href="#appendix-A.4-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.4-2.2">
-            <p id="appendix-A.4-2.2.1">BUKEM ind vs quantum &lt;= -qq - quantum hardness<a href="#appendix-A.4-2.2.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.4-2.2.1">BUA-KEM ind vs quantum &lt;= -qq - quantum hardness<a href="#appendix-A.4-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.4-2.3">
-            <p id="appendix-A.4-2.3.1">BUKEM public key uniformity vs classical &lt;= -qq - classical hardness<a href="#appendix-A.4-2.3.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.4-2.3.1">BUA-KEM public key uniformity vs classical &lt;= -qq - classical hardness<a href="#appendix-A.4-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.4-2.4">
-            <p id="appendix-A.4-2.4.1">BUKEM public key uniformity vs quantum &lt;= -qq - quantum hardness<a href="#appendix-A.4-2.4.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.4-2.4.1">BUA-KEM public key uniformity vs quantum &lt;= -qq - quantum hardness<a href="#appendix-A.4-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.4-2.5">
-            <p id="appendix-A.4-2.5.1">BUKEM ciphertext uniformity vs classical &lt;= -qq - classical hardness<a href="#appendix-A.4-2.5.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.4-2.5.1">BUA-KEM ciphertext uniformity vs classical &lt;= -qq - classical hardness<a href="#appendix-A.4-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.4-2.6">
-            <p id="appendix-A.4-2.6.1">BUKEM ciphertext uniformity vs quantum &lt;= -qq - quantum hardness<a href="#appendix-A.4-2.6.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.4-2.6.1">BUA-KEM ciphertext uniformity vs quantum &lt;= -qq - quantum hardness<a href="#appendix-A.4-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.4-2.7">
-            <p id="appendix-A.4-2.7.1">BUKEM key * 8 &gt;= qq + classical hardness<a href="#appendix-A.4-2.7.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.4-2.7.1">BUA-KEM key * 8 &gt;= qq + classical hardness<a href="#appendix-A.4-2.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.4-2.8">
             <p id="appendix-A.4-2.8.1">KEM failure &lt;= -qq - classical hardness<a href="#appendix-A.4-2.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="appendix-A.4-3">For, ML-BUKEM it is as hard or harder to break public key and ciphertext uniformity as it is to break indistinguishability, so we discuss all three properties at once.<a href="#appendix-A.4-3" class="pilcrow">¶</a></p>
-<p id="appendix-A.4-4">For ML-BUKEM768, the resistance to classical attacks is approximately <code>181 - qq</code> bits of security. So for qq = 64, classical hardness is approximately 117 bits of security. The resistance to quantum attacks is approximately <code>164 - qq</code> bits of security. So for qq = 64, quantum hardness is approximately 100 bits of security.<a href="#appendix-A.4-4" class="pilcrow">¶</a></p>
-<p id="appendix-A.4-5">For ML-BUKEM1024, this would come out to <code>253 - 64 = 189</code> bits of security for classical attacks and <code>230 - 64 = 166</code> bits of security for quantum attacks.<a href="#appendix-A.4-5" class="pilcrow">¶</a></p>
-<p id="appendix-A.4-6">The ML-BUKEM key is 32 bytes, so this satisfies the requirements.
+<p id="appendix-A.4-3">For, ML-BUA-KEM it is as hard or harder to break public key and ciphertext uniformity as it is to break indistinguishability, so we discuss all three properties at once.<a href="#appendix-A.4-3" class="pilcrow">¶</a></p>
+<p id="appendix-A.4-4">For ML-BUA-KEM768, the resistance to classical attacks is approximately <code>181 - qq</code> bits of security. So for qq = 64, classical hardness is approximately 117 bits of security. The resistance to quantum attacks is approximately <code>164 - qq</code> bits of security. So for qq = 64, quantum hardness is approximately 100 bits of security.<a href="#appendix-A.4-4" class="pilcrow">¶</a></p>
+<p id="appendix-A.4-5">For ML-BUA-KEM1024, this would come out to <code>253 - 64 = 189</code> bits of security for classical attacks and <code>230 - 64 = 166</code> bits of security for quantum attacks.<a href="#appendix-A.4-5" class="pilcrow">¶</a></p>
+<p id="appendix-A.4-6">The ML-BUA-KEM key is 32 bytes, so this satisfies the requirements.
 We ignore the KEM failure following the same reasoning as above.<a href="#appendix-A.4-6" class="pilcrow">¶</a></p>
 </section>
 </div>
