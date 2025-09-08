@@ -20,7 +20,7 @@ author:
  -
     ins: J. Vos
     name: Jelle Vos
-    email: jvos@apple.com
+    email: jelle_v_vos@apple.com
  -
     ins: S. Jarecki
     name: Stanislaw Jarecki
