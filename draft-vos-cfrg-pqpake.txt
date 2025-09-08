@@ -1737,7 +1737,7 @@ A.4.  Parameters for OQUAKE
 Authors' Addresses
 
    Jelle Vos
-   Email: jvos@apple.com
+   Email: jelle_v_vos@apple.com
 
 
    Stanislaw Jarecki
