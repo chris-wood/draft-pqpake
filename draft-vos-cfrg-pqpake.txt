@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                                          
 Intended status: Informational                                S. Jarecki
-Expires: 12 March 2026                  University of California, Irvine
+Expires: 25 April 2026                  University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                        8 September 2025
+                                                         22 October 2025
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 March 2026.
+   This Internet-Draft will expire on 25 April 2026.
 
 Copyright Notice
 
@@ -700,7 +700,7 @@ def Init(PRS, sid, U, S):
 
    def Finish(context, resp_msg):
      (PRS, sk, s, T, fullsid) = context
-     ct, h = resp_msg[0..Npk], resp_msg[Npk..]
+     ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
      try:
        k = BUA-KEM.Decaps(sk, ct)
@@ -1351,7 +1351,7 @@ Session <--)--------------------------+              +----(--> Session
    *  PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v
       = 0x13, K = nil, X = nil, y = 2) [ARGON2]
 
-   *  BUA-KEM: ML-BUA-KEM768 Section 4.2, where Nseed = 64, Nct = 1514,
+   *  BUA-KEM: ML-BUA-KEM768 Section 4.2, where Nseed = 64, Nct = 1088,
       and Npk = 1172.
 
    *  PAKE-KDF: HKDF-SHA-256
@@ -1395,7 +1395,7 @@ Session <--)--------------------------+              +----(--> Session
 
    *  PC-KSF: Scrypt(N = 32768, r = 8, p = 1) [SCRYPT]
 
-   *  BUA-KEM: ML-BUA-KEM768 Section 4.2, where Nseed = 64, Nct = 1514,
+   *  BUA-KEM: ML-BUA-KEM768 Section 4.2, where Nseed = 64, Nct = 1088,
       and Npk = 1172.
 
    *  PAKE-KDF: HKDF-SHA-256
@@ -1526,9 +1526,9 @@ Session <--)--------------------------+              +----(--> Session
 
    [CPACE]    Abdalla, M., Haase, B., and J. Hesse, "CPace, a balanced
               composable PAKE", Work in Progress, Internet-Draft, draft-
-              irtf-cfrg-cpace-14, 16 April 2025,
+              irtf-cfrg-cpace-15, 17 October 2025,
               <https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-
-              cpace-14>.
+              cpace-15>.
 
    [FIPS202]  National Institute of Standards and Technology (NIST),
               "SHA-3 Standard: Permutation-Based Hash and Extendable-
