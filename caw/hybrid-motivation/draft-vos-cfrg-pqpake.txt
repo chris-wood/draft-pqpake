@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                                          
 Intended status: Informational                                S. Jarecki
-Expires: 7 May 2026                     University of California, Irvine
+Expires: 8 May 2026                     University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                         3 November 2025
+                                                         4 November 2025
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2026.
+   This Internet-Draft will expire on 8 May 2026.
 
 Copyright Notice
 
@@ -1436,17 +1436,20 @@ Session <--)--------------------------+              +----(--> Session
    CPaceOQUAKE and CPaceOQUAKE+ are hybrid PAKE protocols, meaning that
    the overall protocol remains secure so long as either the classical
    assumptions underlying CPace, i.e., the gap Diffie-Hellman
-   assumption, or the post-quantum assumptions, i.e., ML-LWE used by
+   assumption, or the post-quantum assumptions, i.e., D-MLWE used by
    OQUAKE, hold.  This protects against vulnerabilities in either the
    classical or post-quantum components.
 
    Moreover, OQUAKE does not unconditionally hide the password.  If the
    underlying security assumptions were to break, then the password
-   would be revealed to the attacker.  For OQUAKE, this would allow the
-   attacker to perform offline dictionary attacks on the password.  In
-   contrast, they hybrid variants do not have this property, since
-   breaking OQUAKE only reveals intermediate secrets for a specific
-   protocol instance and not the input password.
+   would be revealed to the attacker.  The reason for this is that an
+   attacker that can break the D-MLWE assumption can distinguish actual
+   ML-KEM public keys and ciphertexts from random bitstrings.  For
+   OQUAKE, this would allow the attacker to perform offline dictionary
+   attacks on the password.  In contrast, the hybrid variants do not
+   suffer from the same weakness, since performing the same offline
+   password guessing attack against OQUAKE in the hybrid variant would
+   require an attacker to guess the key produced by CPace.
 
    The benefits of this hybrid protection come at the cost of protocol
    and round complexity.  From a protocol perspective, beyond two
