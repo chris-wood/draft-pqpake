@@ -528,7 +528,7 @@ def Init(PRS, sid, U, S):
 
   init_msg = s || T
 
-  return Context(PRS, sk, s, T, fullsid), init_msg
+  return Context(PRS, sk, pk, s, T, fullsid), init_msg
 ~~~
 
 The encode_sid function is defined below.
@@ -593,7 +593,7 @@ def Respond(PRS, init_msg, sid, U, S):
 
   (ct, k) = BUA-KEM.Encaps(pk)
 
-  prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || k)
+  prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
   key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
@@ -614,7 +614,7 @@ is as follows.
 OQUAKE.Finish
 
 Input:
-- context, opaque state for the initiator to store TODO
+- context, opaque state for the initiator to store
 - resp_msg, encoded protocol message, a byte string
 
 Output:
@@ -629,12 +629,13 @@ Exceptions:
 - AuthenticationError, raised when the key confirmation fails
 
 def Finish(context, resp_msg):
-  (PRS, sk, s, T, fullsid) = context
+  (PRS, sk, pk, s, T, fullsid) = context
   ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
   try:
     k = BUA-KEM.Decaps(sk, ct)
-    prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || k)
+    prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
+
     key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
     h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
