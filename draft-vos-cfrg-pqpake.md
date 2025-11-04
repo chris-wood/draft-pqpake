@@ -1331,6 +1331,49 @@ implementation might run out of memory.
 This section discusses security considerations for the protocols specified in
 this document.
 
+## Hybrid Design
+
+CPaceOQUAKE and CPaceOQUAKE+ are hybrid PAKE protocols, meaning that the overall
+protocol remains secure so long as either the classical assumptions underlying
+CPace, i.e., the gap Diffie-Hellman assumption, or the post-quantum assumptions,
+i.e., D-MLWE used by OQUAKE, hold. This protects against vulnerabilities in
+either the classical or post-quantum components.
+
+Moreover, OQUAKE does not unconditionally hide the password. If the underlying
+security assumptions were to break, then the password would be revealed to the
+attacker. The reason for this is that an attacker that can break the D-MLWE
+assumption can distinguish actual ML-KEM public keys and ciphertexts from
+random bitstrings. For OQUAKE, this would allow the attacker to perform offline
+dictionary attacks on the password. In contrast, the hybrid variants do not
+suffer from the same weakness, since performing the same offline password
+guessing attack against OQUAKE in the hybrid variant would require an attacker
+to guess the key produced by CPace.
+
+The benefits of this hybrid protection come at the cost of protocol and round
+complexity. From a protocol perspective, beyond two independent PAKEs treated
+nearly as black boxes, additional protocol logic is needed to combine the PAKEs
+together and produce a shared secret based on both PAKEs. From a round
+perspective, the hybrid PAKE introduces another round trip, complicating integration
+into higher-level protocols like TLS. Specifically, integrating CPaceOQUAKE+ into
+TLS would require the following five messages:
+
+* Client -> Server: ClientHello carrying msg1
+* Server -> Client: ServerHello carrying msg2
+* Client -> Server: ClientPAKEMessage carrying msg3 (this is a new message, but sent in an existing round)
+* Server -> Client: Finished
+* Client -> Server: Finished
+
+Compared to the basic TLS handshake, which has three messages:
+
+* Client -> Server: ClientHello
+* Server -> Client: ServerHello...Finished
+* Client -> Server: Finished
+
+Finally, the hybrid protocol is comparatively new and has not yet received significant
+peer review (compared to the non-hybrid PAKEs). However, the backing analysis has
+been independently analyzed by at least three different groups, improving overall confidence
+in the design.
+
 ## Identities {#identities}
 
 Client and server identities are essential to authenticated key exchange protocols,
