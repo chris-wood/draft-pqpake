@@ -1050,11 +1050,11 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">Hybrid PQ-PAKE</td>
-<td class="right">October 2025</td>
+<td class="right">November 2025</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 25 April 2026</td>
+<td class="center">Expires 8 May 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1067,12 +1067,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2025-10-22" class="published">22 October 2025</time>
+<time datetime="2025-11-04" class="published">4 November 2025</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-04-25">25 April 2026</time></dd>
+<dd class="expires"><time datetime="2026-05-08">8 May 2026</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1134,7 +1134,7 @@ configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 April 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 8 May 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1284,13 +1284,16 @@ configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶
             <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
-                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-identities" class="internal xref">Identities</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1.2.1">
-                    <p id="section-toc.1-1.9.2.1.2.1.1"><a href="#section-9.1.1" class="auto internal xref">9.1.1</a>.  <a href="#name-symmetric-pake-identities" class="internal xref">Symmetric PAKE identities</a></p>
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-hybrid-design" class="internal xref">Hybrid Design</a></p>
 </li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1.2.2">
-                    <p id="section-toc.1-1.9.2.1.2.2.1"><a href="#section-9.1.2" class="auto internal xref">9.1.2</a>.  <a href="#name-asymmetric-pake-identities" class="internal xref">Asymmetric PAKE identities</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-identities" class="internal xref">Identities</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2.2.1">
+                    <p id="section-toc.1-1.9.2.2.2.1.1"><a href="#section-9.2.1" class="auto internal xref">9.2.1</a>.  <a href="#name-symmetric-pake-identities" class="internal xref">Symmetric PAKE identities</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2.2.2">
+                    <p id="section-toc.1-1.9.2.2.2.2.1"><a href="#section-9.2.2" class="auto internal xref">9.2.2</a>.  <a href="#name-asymmetric-pake-identities" class="internal xref">Asymmetric PAKE identities</a></p>
 </li>
                 </ul>
 </li>
@@ -1703,7 +1706,7 @@ the password before running OQUAKE between the server and client. We
 explain the composition in more detail in <a href="#cpacequake-composition" class="auto internal xref">Section 5.3</a>.<a href="#section-5-5" class="pilcrow">¶</a></p>
 <p id="section-5-6">As describes in <a href="#cpace" class="auto internal xref">Section 5.1</a> and <a href="#quake" class="auto internal xref">Section 5.2</a>, both CPace and OQUAKE take
 as input optional client and server identifiers, denoted U and S,
-respectively. See <a href="#identities" class="auto internal xref">Section 9.1</a> for more discussion about these
+respectively. See <a href="#identities" class="auto internal xref">Section 9.2</a> for more discussion about these
 identities and how they are chosen in practice.<a href="#section-5-6" class="pilcrow">¶</a></p>
 <div id="cpace">
 <section id="section-5.1">
@@ -3137,20 +3140,81 @@ implementation might run out of memory.<a href="#section-8-4" class="pilcrow">¶
       </h2>
 <p id="section-9-1">This section discusses security considerations for the protocols specified in
 this document.<a href="#section-9-1" class="pilcrow">¶</a></p>
-<div id="identities">
+<div id="hybrid-design">
 <section id="section-9.1">
-        <h3 id="name-identities">
-<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-identities" class="section-name selfRef">Identities</a>
+        <h3 id="name-hybrid-design">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-hybrid-design" class="section-name selfRef">Hybrid Design</a>
         </h3>
-<p id="section-9.1-1">Client and server identities are essential to authenticated key exchange protocols,
+<p id="section-9.1-1">CPaceOQUAKE and CPaceOQUAKE+ are hybrid PAKE protocols, meaning that the overall
+protocol remains secure so long as either the classical assumptions underlying
+CPace, i.e., the gap Diffie-Hellman assumption, or the post-quantum assumptions,
+i.e., D-MLWE used by OQUAKE, hold. This protects against vulnerabilities in
+either the classical or post-quantum components.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1-2">Moreover, OQUAKE does not unconditionally hide the password. If the underlying
+security assumptions were to break, then the password would be revealed to the
+attacker. The reason for this is that an attacker that can break the D-MLWE
+assumption can distinguish actual ML-KEM public keys and ciphertexts from
+random bitstrings. For OQUAKE, this would allow the attacker to perform offline
+dictionary attacks on the password. In contrast, the hybrid variants do not
+suffer from the same weakness, since performing the same offline password
+guessing attack against OQUAKE in the hybrid variant would require an attacker
+to guess the key produced by CPace.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+<p id="section-9.1-3">The benefits of this hybrid protection come at the cost of protocol and round
+complexity. From a protocol perspective, beyond two independent PAKEs treated
+nearly as black boxes, additional protocol logic is needed to combine the PAKEs
+together and produce a shared secret based on both PAKEs. From a round
+perspective, the hybrid PAKE introduces another round trip, complicating integration
+into higher-level protocols like TLS. Specifically, integrating CPaceOQUAKE+ into
+TLS would require the following five messages:<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.1-4.1">
+            <p id="section-9.1-4.1.1">Client -&gt; Server: ClientHello carrying msg1<a href="#section-9.1-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-4.2">
+            <p id="section-9.1-4.2.1">Server -&gt; Client: ServerHello carrying msg2<a href="#section-9.1-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-4.3">
+            <p id="section-9.1-4.3.1">Client -&gt; Server: ClientPAKEMessage carrying msg3 (this is a new message, but sent in an existing round)<a href="#section-9.1-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-4.4">
+            <p id="section-9.1-4.4.1">Server -&gt; Client: Finished<a href="#section-9.1-4.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-4.5">
+            <p id="section-9.1-4.5.1">Client -&gt; Server: Finished<a href="#section-9.1-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-9.1-5">Compared to the basic TLS handshake, which has three messages:<a href="#section-9.1-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.1-6.1">
+            <p id="section-9.1-6.1.1">Client -&gt; Server: ClientHello<a href="#section-9.1-6.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-6.2">
+            <p id="section-9.1-6.2.1">Server -&gt; Client: ServerHello...Finished<a href="#section-9.1-6.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-6.3">
+            <p id="section-9.1-6.3.1">Client -&gt; Server: Finished<a href="#section-9.1-6.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-9.1-7">Finally, the hybrid protocol is comparatively new and has not yet received significant
+peer review (compared to the non-hybrid PAKEs). However, the backing analysis has
+been independently analyzed by at least three different groups, improving overall confidence
+in the design.<a href="#section-9.1-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="identities">
+<section id="section-9.2">
+        <h3 id="name-identities">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-identities" class="section-name selfRef">Identities</a>
+        </h3>
+<p id="section-9.2-1">Client and server identities are essential to authenticated key exchange protocols,
 and PAKEs are no exception. This section discusses the role and importance of
-identities in the PAKE protocols specified in this document.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+identities in the PAKE protocols specified in this document.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
 <div id="symmetric-identities">
-<section id="section-9.1.1">
+<section id="section-9.2.1">
           <h4 id="name-symmetric-pake-identities">
-<a href="#section-9.1.1" class="section-number selfRef">9.1.1. </a><a href="#name-symmetric-pake-identities" class="section-name selfRef">Symmetric PAKE identities</a>
+<a href="#section-9.2.1" class="section-number selfRef">9.2.1. </a><a href="#name-symmetric-pake-identities" class="section-name selfRef">Symmetric PAKE identities</a>
           </h4>
-<p id="section-9.1.1-1">PAKEs are often analyzed in the universal composability (UC) framework,
+<p id="section-9.2.1-1">PAKEs are often analyzed in the universal composability (UC) framework,
 which imposes several requirements on the protocols: (1) the existence
 of a globally-unique session identifer associated with each protocol invocation,
 and (2) unique party identifiers. Both are considered as inputs to PAKEs, along
@@ -3160,8 +3224,8 @@ globally unique session identifier requires a protocol to run before the PAKE.
 Moreover, assigning identifiers to parties -- especially in symmetric PAKE settings --
 is problematic as there are rarely pragmatic choices to be made for each party's
 identifier. IP addresses are not always unique, PKI or some other registry
-mechanism for assigning names may not exist, and so on.<a href="#section-9.1.1-1" class="pilcrow">¶</a></p>
-<p id="section-9.1.1-2">Intuitively, in symmetric settings, passwords are the only secret input to the
+mechanism for assigning names may not exist, and so on.<a href="#section-9.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.2.1-2">Intuitively, in symmetric settings, passwords are the only secret input to the
 PAKE protocol; party identities are assumed to be public. As such, an adversary
 is assumed to know these identifiers. Fortunately, there exists a UC
 model in which symmetric PAKEs such as CPace are proven secure
@@ -3172,44 +3236,44 @@ demonstrate that PAKEs are universally composable without relying on
 unique party or session identifiers. We believe that the current proof
 of security of OQUAKE in <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span> can be extended to show that NoIC,
 the basis of OQUAKE, realizes the Bare PAKE model as well, although
-we note that that this proof has not been published yet.<a href="#section-9.1.1-2" class="pilcrow">¶</a></p>
-<p id="section-9.1.1-3">As such, for the PAKEs in <a href="#CPaceOQUAKE" class="auto internal xref">Section 5</a>, both the party and session identifier
+we note that that this proof has not been published yet.<a href="#section-9.2.1-2" class="pilcrow">¶</a></p>
+<p id="section-9.2.1-3">As such, for the PAKEs in <a href="#CPaceOQUAKE" class="auto internal xref">Section 5</a>, both the party and session identifier
 are optional. Applications are free to choose values for these identifiers
-if applicable, but they are not required for security.<a href="#section-9.1.1-3" class="pilcrow">¶</a></p>
-<p id="section-9.1.1-4">[[OPEN ISSUE: adjust the requirements for the identities in OQUAKE on the basis on the bare PAKE analysis]]<a href="#section-9.1.1-4" class="pilcrow">¶</a></p>
+if applicable, but they are not required for security.<a href="#section-9.2.1-3" class="pilcrow">¶</a></p>
+<p id="section-9.2.1-4">[[OPEN ISSUE: adjust the requirements for the identities in OQUAKE on the basis on the bare PAKE analysis]]<a href="#section-9.2.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="asymmetric-identities">
-<section id="section-9.1.2">
+<section id="section-9.2.2">
           <h4 id="name-asymmetric-pake-identities">
-<a href="#section-9.1.2" class="section-number selfRef">9.1.2. </a><a href="#name-asymmetric-pake-identities" class="section-name selfRef">Asymmetric PAKE identities</a>
+<a href="#section-9.2.2" class="section-number selfRef">9.2.2. </a><a href="#name-asymmetric-pake-identities" class="section-name selfRef">Asymmetric PAKE identities</a>
           </h4>
-<p id="section-9.1.2-1">In contrast to the symmetric PAKE setting, party identities in the asymmetric
+<p id="section-9.2.2-1">In contrast to the symmetric PAKE setting, party identities in the asymmetric
 PAKE setting play a different role. The very nature of the asymmetric PAKE
 is that one server, with many different registered passwords, can authenticate
 many different clients. Consequently, when the protocol runs, the server
 needs some way to determine which password registration to use in the protocol.
 Beyond ensuring that the server is authenticating the correct client, the
-client's identity is what helps the server make this selection.<a href="#section-9.1.2-1" class="pilcrow">¶</a></p>
-<p id="section-9.1.2-2">However, the server identifier carries a similar burden. Indeed,
+client's identity is what helps the server make this selection.<a href="#section-9.2.2-1" class="pilcrow">¶</a></p>
+<p id="section-9.2.2-2">However, the server identifier carries a similar burden. Indeed,
 the server identifier is used to distinguish distinct server instances
 from each other so, for example, a client cannot mistakenly authenticate
 with server A when communicating with server B. This is especially
 important if the client re-uses their identifier across server instances,
 since a password registration for server A would then be valid for server B
-if the server identity were not incorporated into the protocol.<a href="#section-9.1.2-2" class="pilcrow">¶</a></p>
-<p id="section-9.1.2-3">Based on this, client and server identities are <span class="bcp14">RECOMMENDED</span> for the asymmetric
+if the server identity were not incorporated into the protocol.<a href="#section-9.2.2-2" class="pilcrow">¶</a></p>
+<p id="section-9.2.2-3">Based on this, client and server identities are <span class="bcp14">RECOMMENDED</span> for the asymmetric
 PAKEs specified in this document (in <a href="#CPaceOQUAKEplus" class="auto internal xref">Section 6</a>). Both
 client and server identities can be long-lived, e.g., a client identity
-could be an email address and a server identity could be a domain name.<a href="#section-9.1.2-3" class="pilcrow">¶</a></p>
-<p id="section-9.1.2-4">Practically, applications should be mindful of what happens when these
+could be an email address and a server identity could be a domain name.<a href="#section-9.2.2-3" class="pilcrow">¶</a></p>
+<p id="section-9.2.2-4">Practically, applications should be mindful of what happens when these
 identities change. Since they are both included in the password verifier
 (see <a href="#gen-verifiers" class="auto internal xref">Section 6.1.1</a>), changing either identifier will require the
 veirifer to be re-computed and the client to be re-registered. For a single
 client, this change is minimal, but for a single server, which can have
 many registered clients, this change can be expensive. Applications therefore
 ought to consider the longevitiy and uniqueness of their party identifiers
-when instantiating these protocols.<a href="#section-9.1.2-4" class="pilcrow">¶</a></p>
+when instantiating these protocols.<a href="#section-9.2.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
