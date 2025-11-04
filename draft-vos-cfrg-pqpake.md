@@ -1336,15 +1336,18 @@ this document.
 CPaceOQUAKE and CPaceOQUAKE+ are hybrid PAKE protocols, meaning that the overall
 protocol remains secure so long as either the classical assumptions underlying
 CPace, i.e., the gap Diffie-Hellman assumption, or the post-quantum assumptions,
-i.e., ML-LWE used by OQUAKE, hold. This protects against vulnerabilities in
+i.e., D-MLWE used by OQUAKE, hold. This protects against vulnerabilities in
 either the classical or post-quantum components.
 
 Moreover, OQUAKE does not unconditionally hide the password. If the underlying
 security assumptions were to break, then the password would be revealed to the
-attacker. For OQUAKE, this would allow the attacker to perform offline dictionary
-attacks on the password. In contrast, they hybrid variants do not have this property,
-since breaking OQUAKE only reveals intermediate secrets for a specific protocol
-instance and not the input password.
+attacker. The reason for this is that an attacker that can break the D-MLWE
+assumption can distinguish actual ML-KEM public keys and ciphertexts from
+random bitstrings. For OQUAKE, this would allow the attacker to perform offline
+dictionary attacks on the password. In contrast, the hybrid variants do not
+suffer from the same weakness, since performing the same offline password
+guessing attack against OQUAKE in the hybrid variant would require an attacker
+to guess the key produced by CPace.
 
 The benefits of this hybrid protection come at the cost of protocol and round
 complexity. From a protocol perspective, beyond two independent PAKEs treated
