@@ -1079,6 +1079,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="authors">
 <div class="author">
       <div class="author-name">J. Vos</div>
+<div class="org">Apple, Inc.</div>
 </div>
 <div class="author">
       <div class="author-name">S. Jarecki</div>
@@ -1195,6 +1196,17 @@ configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
             <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-ml-bua-skem-a-bua-skem-arou" class="internal xref">ML-BUA-sKEM: A BUA-sKEM around ML-KEM</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-splittable-ml-kem" class="internal xref">Splittable ML-KEM</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-ml-bua-skem-key-derivation" class="internal xref">ML-BUA-sKEM Key Derivation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-ml-bua-skem-encapsulation-d" class="internal xref">ML-BUA-sKEM Encapsulation &amp; Decapsulation</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
             <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-cpaceoquake-protocol" class="internal xref">CPaceOQUAKE Protocol</a></p>
@@ -1373,7 +1385,8 @@ viability of existing aPAKE protocols in practice diminishes in time.<a href="#s
 <p id="section-1-4">This document describes the CPaceOQUAKE+ protocol, an aPAKE that supports mutual
 authentication in a client-server setting secure against
 quantum-capable attackers. CPaceOQUAKE+ is the result of a KEM-based transformation
-from the hybrid symmetric PAKE protocol called CPaceOQUAKE.<a href="#section-1-4" class="pilcrow">¶</a></p>
+from the hybrid symmetric PAKE protocol called CPaceOQUAKE.
+The design securely composes multiple existing primitives <span>[<a href="#VJWYMS25" class="cite xref">VJWYMS25</a>]</span>.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">This document fully specifies CPaceOQUAKE+ and all dependencies necessary
 to implement it. <a href="#configurations" class="auto internal xref">Section 8</a> provides recommended configurations.<a href="#section-1-5" class="pilcrow">¶</a></p>
 </section>
@@ -1600,7 +1613,7 @@ attack (ANO-CCA), i.e. anonymous ciphertexts (ANO).<a href="#section-4.2-2.2.1" 
 <p id="section-4.2-3">These additional properties are crucial for the security of OQUAKE. In
 other words, one <span class="bcp14">MUST NOT</span> use a KEM that has no uniform public keys
 and/or no anonymous ciphertexts in place of a UPK-ANO-KEM.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
-<p id="section-4.2-4">In this specification, we also require a third property: the KEM must be splittable. A splittable KEM (sKEM) implements the <code>Split(pk) -&gt; (t, ⍴)</code> function and its inverse, which takes a public key and splits it into a part <code>⍴</code> that is indepdendent of the KEM's secret key and can therefore be made public, and a part <code>t</code> that does depend on the secret key. This property allows parties to perform variable-time operations on <code>⍴</code> without revealing information about the secret key.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+<p id="section-4.2-4">In this specification, we also require a third property: the KEM must be splittable. A splittable KEM (sKEM) implements the <code>Split(pk) -&gt; (t, ⍴)</code> function and its inverse, which takes a public key and splits it into a part <code>⍴</code> that is indepdendent of the KEM's secret key and can therefore be made public, and a part <code>t</code> that does depend on the secret key. This property allows parties to perform variable-time operations on <code>⍴</code> without revealing information about the secret key. We use N⍴ to denote the byte-length of ⍴ and Nt to denote the byte-length of t. We use <code>Combine(t, ⍴) -&gt; pk</code> to refer to the inverse operation of <code>Split</code>.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
 <p id="section-4.2-5">In the remainder of this specification, we abbreviate 'splittable binary UPK-ANO-KEM' as BUA-sKEM.
 This specification uses a variant of ML-KEM768 <span>[<a href="#FIPS203" class="cite xref">FIPS203</a>]</span>, which we therefore denote by ML-BUA-sKEM768. It is specified in <a href="#ML-BUA-sKEM" class="auto internal xref">Section 5</a>.
 This is instantiated with "KemeleonNR - ML-KEM768" <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>. Note that, while
@@ -1654,8 +1667,13 @@ needs to satisfy collision resistance. The output is a string of L bytes.<a href
       <h2 id="name-ml-bua-skem-a-bua-skem-arou">
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-ml-bua-skem-a-bua-skem-arou" class="section-name selfRef">ML-BUA-sKEM: A BUA-sKEM around ML-KEM</a>
       </h2>
-<p id="section-5-1">ML-KEM <span>[<a href="#FIPS203" class="cite xref">FIPS203</a>]</span> is already specified in a way that allows one to separate out the part of the public key that does not depend on the secret key; this feature is also used in Kemeleon <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>. The Split function is defined as follows for ML-KEM. The part of the public key that does not depend on the secret key represents the final 32 bytes.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-5-2">
+<div id="splittable-ml-kem">
+<section id="section-5.1">
+        <h3 id="name-splittable-ml-kem">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-splittable-ml-kem" class="section-name selfRef">Splittable ML-KEM</a>
+        </h3>
+<p id="section-5.1-1">ML-KEM <span>[<a href="#FIPS203" class="cite xref">FIPS203</a>]</span> is already specified in a way that allows one to separate out the part of the public key that does not depend on the secret key; this feature is also used in Kemeleon <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span>. The Split function is defined as follows for ML-KEM <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>. The part of the public key that does not depend on the secret key represents the final 32 bytes. For this reason, Nt = ML-KEM.Npk - 32 and N⍴ = 32.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5.1-2">
 <pre>
 ML-KEM.Split
 
@@ -1670,10 +1688,33 @@ def Split(pk):
   t = pk[0 : ML-KEM.Npk - 32]
   ⍴ = pk[ML-KEM.Npk - 32 : ML-KEM.Npk]
   return t, ⍴
-</pre><a href="#section-5-2" class="pilcrow">¶</a>
+</pre><a href="#section-5.1-2" class="pilcrow">¶</a>
 </div>
-<p id="section-5-3">The design of ML-BUA-sKEM is such that it does not change the internals of ML-KEM; it only uses the Split function. To ensure that the public key generated by ML-BUA-sKEM.DeriveKeyPair is binary and uniform, it uses Kemeleon <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span> to (re-)encode ML-KEM's public keys. In the PAKEs described in this specification, it is crucial that this happens in constant time. For this reason, ML-BUA-sKEM uses the non-rejection sampling variants of Kemeleon, as denoted by <code>VectorEncodeNR</code> and <code>VectorDecodeNR</code>. ML-BUA-sKEM is defined as follows.<a href="#section-5-3" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-5-4">
+<p id="section-5.1-3">For ML-KEM, the inverse of the split operation is concatenation.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5.1-4">
+<pre>
+ML-KEM.Combine
+
+Input:
+- t, part of the public key that depends on the secret key
+- ⍴, part of the public key that does NOT depend on the secret key
+
+Output:
+- pk, an ML-KEM public key, a byte string of ML-KEM.Npk bytes
+
+def Combine(t, ⍴):
+  return t || ⍴
+</pre><a href="#section-5.1-4" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="ml-bua-skem-key-derivation">
+<section id="section-5.2">
+        <h3 id="name-ml-bua-skem-key-derivation">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-ml-bua-skem-key-derivation" class="section-name selfRef">ML-BUA-sKEM Key Derivation</a>
+        </h3>
+<p id="section-5.2-1">The design of ML-BUA-sKEM is such that it does not change the internals of ML-KEM; it only uses the Split function. To ensure that the public key generated by ML-BUA-sKEM.DeriveKeyPair is binary and uniform, it uses Kemeleon <span>[<a href="#KEMELEON" class="cite xref">KEMELEON</a>]</span> to (re-)encode ML-KEM's public keys. In the PAKEs described in this specification, it is crucial that this happens in constant time. For this reason, ML-BUA-sKEM uses the non-rejection sampling variants of Kemeleon, as denoted by <code>VectorEncodeNR</code> and <code>VectorDecodeNR</code>. ML-BUA-sKEM is defined as follows.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5.2-2">
 <pre>
 ML-BUA-sKEM.DeriveKeyPair
 
@@ -1687,16 +1728,16 @@ Output:
 Parameter:
 - Kemeleon.sec_param, a security parameter that tunes the bias of the produced upk
 
-def KeyGen(seed):
-  (sk, pk) = ML-KEM.KeyGen(seed)
+def DeriveKeyPair(seed):
+  (sk, pk) = ML-KEM.DeriveKeyPair(seed)
   (t, ⍴) = ML-KEM.Split(pk)
   ut = VectorEncodeNR(t)
   upk = ut || ⍴
   return sk, upk
-</pre><a href="#section-5-4" class="pilcrow">¶</a>
+</pre><a href="#section-5.2-2" class="pilcrow">¶</a>
 </div>
-<p id="section-5-5">The uniform public keys produced by ML-BUA-sKEM are longer than those produced by ML-KEM. The final 32 bytes of the public key still represent the part that does not depend on the secret key.<a href="#section-5-5" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-5-6">
+<p id="section-5.2-3">The uniform public keys produced by ML-BUA-sKEM are longer than those produced by ML-KEM. The final 32 bytes of the public key still represent the part that does not depend on the secret key.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5.2-4">
 <pre>
 ML-BUA-sKEM.Split
 
@@ -1708,13 +1749,36 @@ Output:
 - ⍴, part of the uniform public key that does NOT depend on the secret key
 
 def Split(upk):
-  ut = upk[0 : ML-BUA-sKEM.Npk - 32]
-  ⍴ = upk[ML-BUA-sKEM.Npk - 32 : ML-BUA-sKEM.Npk]
+  ut = upk[0 : ML-BUA-sKEM.Nt]
+  ⍴ = upk[ML-BUA-sKEM.Nt : ML-BUA-sKEM.Npk]
   return ut, ⍴
-</pre><a href="#section-5-6" class="pilcrow">¶</a>
+</pre><a href="#section-5.2-4" class="pilcrow">¶</a>
 </div>
-<p id="section-5-7">ML-BUA-sKEM encapsulation undoes the uniform encoding performed during key derivation before calling ML-KEM.Encaps on the non-uniform public key.<a href="#section-5-7" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-5-8">
+<p id="section-5.2-5">For ML-BUA-sKEM, the inverse of the split operation is concatenation.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5.2-6">
+<pre>
+ML-BUA-sKEM.Combine
+
+Input:
+- ut, part of the uniform public key that depends on the secret key
+- ⍴, part of the uniform public key that does NOT depend on the secret key
+
+Output:
+- upk, an ML-BUA-sKEM public key, a byte string of ML-BUA-sKEM.Npk bytes
+
+def Combine(ut, ⍴):
+  return ut || ⍴
+</pre><a href="#section-5.2-6" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="ml-bua-skem-encapsulation-decapsulation">
+<section id="section-5.3">
+        <h3 id="name-ml-bua-skem-encapsulation-d">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-ml-bua-skem-encapsulation-d" class="section-name selfRef">ML-BUA-sKEM Encapsulation &amp; Decapsulation</a>
+        </h3>
+<p id="section-5.3-1">ML-BUA-sKEM encapsulation undoes the uniform encoding performed during key derivation before calling ML-KEM.Encaps on the non-uniform public key.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5.3-2">
 <pre>
 ML-BUA-sKEM.Encaps
 
@@ -1731,12 +1795,12 @@ Parameter:
 def Encaps(upk):
   (ut, ⍴) = ML-BUA-sKEM.Split(upk)
   t = VectorDecodeNR(ut)
-  pk = t || ⍴
+  pk = ML-KEM.Combine(t, ⍴)
   return ML-KEM.Encaps(pk)
-</pre><a href="#section-5-8" class="pilcrow">¶</a>
+</pre><a href="#section-5.3-2" class="pilcrow">¶</a>
 </div>
-<p id="section-5-9">The decapsulation procedure for ML-BUA-sKEM is exactly the same as for ML-KEM.<a href="#section-5-9" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-5-10">
+<p id="section-5.3-3">The decapsulation procedure for ML-BUA-sKEM is exactly the same as for ML-KEM.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5.3-4">
 <pre>
 ML-BUA-sKEM.Decaps
 
@@ -1749,7 +1813,9 @@ Output:
 
 def Decaps(ct, sk):
   return ML-KEM.Decaps(ct, sk)
-</pre><a href="#section-5-10" class="pilcrow">¶</a>
+</pre><a href="#section-5.3-4" class="pilcrow">¶</a>
+</div>
+</section>
 </div>
 </section>
 </div>
@@ -1982,6 +2048,7 @@ identifier S. Upon completion, both parties obtain matching session keys if thei
         </ul>
 <p id="section-6.2-6">These requirements originate from the security proof for OQUAKE. If these requirements are not met, the proof
 does not apply, but this does not mean that the protocol becomes vulnerable.<a href="#section-6.2-6" class="pilcrow">¶</a></p>
+<p id="section-6.2-7">The specification follows the design as presented in <span>[<a href="#VJWYMS25" class="cite xref">VJWYMS25</a>]</span>, with the splittable KEM technique described in <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>, which prevents timing attacks caused by rejection sampling in ML-KEM.<a href="#section-6.2-7" class="pilcrow">¶</a></p>
 <div id="initiation-1">
 <section id="section-6.2.1">
           <h4 id="name-initiation-2">
@@ -2011,22 +2078,23 @@ Parameters:
 def Init(PRS, sid, U, S):
   seed = random(BUA-sKEM.Nseed)
   (pk, sk) = BUA-sKEM.DeriveKeyPair(seed)
+  (ut, ⍴) = BUA-sKEM.Split(pk)
 
   r = random(3 * Nsec)
 
   fullsid = encode_sid(sid, U, S)
 
-  // T = XOR(pk, H(fullsid, PRS, r))
-  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
-  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
-  T = XOR(pk, T_pad)
+  // T = XOR(t, H(fullsid, PRS, ⍴, r))
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
+  T = XOR(ut, T_pad)
 
-  // s = XOR(r, H(fullsid, PRS, T))
-  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
+  // s = XOR(r, H(fullsid, PRS, ⍴, T))
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
-  init_msg = s || T
+  init_msg = s || T || ⍴
 
   return Context(PRS, sk, pk, s, T, fullsid), init_msg
 </pre><a href="#section-6.2.1-2" class="pilcrow">¶</a>
@@ -2047,7 +2115,7 @@ Parameters:
 - BUA-sKEM, a BUA-sKEM instance
 - KDF, a KDF instance
 
-def encode_sid(sid, U, U):
+def encode_sid(sid, U, S):
   fullsid =
     bytes_to_int(len(sid), 4) || sid ||
     bytes_to_int(len(U), 4) || U ||
@@ -2085,17 +2153,18 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def Respond(PRS, init_msg, sid, U, S):
-  (s, T) = init_msg[0..(3 * Nsec)], init_msg[(3 * Nsec)..]
+  (s, T, ⍴) = init_msg[0 : (3 * Nsec)], init_msg[(3 * Nsec) : (6 * Nsec)], init_msg[(6 * Nsec) : (6 * Nsec) + N⍴]
 
   fullsid = encode_sid(sid, U, S)
-  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
-  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
-  pk = XOR(T, T_pad)
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
+  ut = XOR(T, T_pad)
 
+  pk = BUA-sKEM.Combine(ut, ⍴)
   (ct, k) = BUA-sKEM.Encaps(pk)
 
   prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
@@ -3487,8 +3556,16 @@ when instantiating these protocols.<a href="#section-10.2.2-4" class="pilcrow">�
 <span class="refAuthor">Bourdrez, D.</span>, <span class="refAuthor">Krawczyk, H.</span>, <span class="refAuthor">Lewi, K.</span>, and <span class="refAuthor">C. A. Wood</span>, <span class="refTitle">"The OPAQUE Augmented PAKE Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-opaque-18</span>, <time datetime="2024-11-21" class="refDate">21 November 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-opaque-18">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-opaque-18</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="SPAKE2PLUS">[SPAKE2PLUS]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Taubert, T.</span> and <span class="refAuthor">C. A. Wood</span>, <span class="refTitle">"SPAKE2+, an Augmented Password-Authenticated Key Exchange (PAKE) Protocol"</span>, <span class="seriesInfo">RFC 9383</span>, <span class="seriesInfo">DOI 10.17487/RFC9383</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9383">https://www.rfc-editor.org/rfc/rfc9383</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="TEMPO">[TEMPO]</dt>
+        <dd>
+<span class="refAuthor">Arriaga, A.</span>, <span class="refAuthor">Barbosa, M.</span>, and <span class="refAuthor">S. Jarecki</span>, <span class="refTitle">"Tempo: ML-KEM to PAKE Compiler Resilient to Timing Attacks"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2025/1399">https://eprint.iacr.org/2025/1399</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="VJWYMS25">[VJWYMS25]</dt>
+      <dd>
+<span class="refAuthor">Vos, J.</span>, <span class="refAuthor">Jarecki, S.</span>, <span class="refAuthor">Wood, C. A.</span>, <span class="refAuthor">Yun, C.</span>, <span class="refAuthor">Myers, S.</span>, and <span class="refAuthor">Y. Sierra</span>, <span class="refTitle">"A Hybrid Asymmetric Password-Authenticated Key Exchange in the Random Oracle Model"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2025/1343">https://eprint.iacr.org/2025/1343</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -3639,6 +3716,7 @@ We ignore the KEM failure following the same reasoning as above.<a href="#append
       </h2>
 <address class="vcard">
         <div dir="auto" class="left"><span class="fn nameRole">Jelle Vos</span></div>
+<div dir="auto" class="left"><span class="org">Apple, Inc.</span></div>
 <div class="email">
 <span>Email:</span>
 <a href="mailto:jelle_v_vos@apple.com" class="email">jelle_v_vos@apple.com</a>

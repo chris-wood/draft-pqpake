@@ -3,7 +3,7 @@
 
 
 Network Working Group                                             J. Vos
-Internet-Draft                                                          
+Internet-Draft                                               Apple, Inc.
 Intended status: Informational                                S. Jarecki
 Expires: 31 August 2026                 University of California, Irvine
                                                               C. A. Wood
@@ -79,6 +79,9 @@ Table of Contents
      4.3.  Key Derivation Function
      4.4.  Key Stretching Function
    5.  ML-BUA-sKEM: A BUA-sKEM around ML-KEM
+     5.1.  Splittable ML-KEM
+     5.2.  ML-BUA-sKEM Key Derivation
+     5.3.  ML-BUA-sKEM Encapsulation & Decapsulation
    6.  CPaceOQUAKE Protocol
      6.1.  CPace Specification
        6.1.1.  Initiation
@@ -156,7 +159,8 @@ Table of Contents
    supports mutual authentication in a client-server setting secure
    against quantum-capable attackers.  CPaceOQUAKE+ is the result of a
    KEM-based transformation from the hybrid symmetric PAKE protocol
-   called CPaceOQUAKE.
+   called CPaceOQUAKE.  The design securely composes multiple existing
+   primitives [VJWYMS25].
 
    This document fully specifies CPaceOQUAKE+ and all dependencies
    necessary to implement it.  Section 8 provides recommended
@@ -340,6 +344,9 @@ Table of Contents
    therefore be made public, and a part t that does depend on the secret
    key.  This property allows parties to perform variable-time
    operations on ⍴ without revealing information about the secret key.
+   We use N⍴ to denote the byte-length of ⍴ and Nt to denote the byte-
+   length of t.  We use Combine(t, ⍴) -> pk to refer to the inverse
+   operation of Split.
 
    In the remainder of this specification, we abbreviate 'splittable
    binary UPK-ANO-KEM' as BUA-sKEM.  This specification uses a variant
@@ -380,12 +387,14 @@ Table of Contents
 
 5.  ML-BUA-sKEM: A BUA-sKEM around ML-KEM
 
+5.1.  Splittable ML-KEM
+
    ML-KEM [FIPS203] is already specified in a way that allows one to
    separate out the part of the public key that does not depend on the
    secret key; this feature is also used in Kemeleon [KEMELEON].  The
-   Split function is defined as follows for ML-KEM.  The part of the
-   public key that does not depend on the secret key represents the
-   final 32 bytes.
+   Split function is defined as follows for ML-KEM [TEMPO].  The part of
+   the public key that does not depend on the secret key represents the
+   final 32 bytes.  For this reason, Nt = ML-KEM.Npk - 32 and N⍴ = 32.
 
    ML-KEM.Split
 
@@ -400,6 +409,22 @@ Table of Contents
      t = pk[0 : ML-KEM.Npk - 32]
      ⍴ = pk[ML-KEM.Npk - 32 : ML-KEM.Npk]
      return t, ⍴
+
+   For ML-KEM, the inverse of the split operation is concatenation.
+
+   ML-KEM.Combine
+
+   Input:
+   - t, part of the public key that depends on the secret key
+   - ⍴, part of the public key that does NOT depend on the secret key
+
+   Output:
+   - pk, an ML-KEM public key, a byte string of ML-KEM.Npk bytes
+
+   def Combine(t, ⍴):
+     return t || ⍴
+
+5.2.  ML-BUA-sKEM Key Derivation
 
    The design of ML-BUA-sKEM is such that it does not change the
    internals of ML-KEM; it only uses the Split function.  To ensure that
@@ -423,8 +448,8 @@ Output:
 Parameter:
 - Kemeleon.sec_param, a security parameter that tunes the bias of the produced upk
 
-def KeyGen(seed):
-  (sk, pk) = ML-KEM.KeyGen(seed)
+def DeriveKeyPair(seed):
+  (sk, pk) = ML-KEM.DeriveKeyPair(seed)
   (t, ⍴) = ML-KEM.Split(pk)
   ut = VectorEncodeNR(t)
   upk = ut || ⍴
@@ -444,9 +469,25 @@ Output:
 - ⍴, part of the uniform public key that does NOT depend on the secret key
 
 def Split(upk):
-  ut = upk[0 : ML-BUA-sKEM.Npk - 32]
-  ⍴ = upk[ML-BUA-sKEM.Npk - 32 : ML-BUA-sKEM.Npk]
+  ut = upk[0 : ML-BUA-sKEM.Nt]
+  ⍴ = upk[ML-BUA-sKEM.Nt : ML-BUA-sKEM.Npk]
   return ut, ⍴
+
+   For ML-BUA-sKEM, the inverse of the split operation is concatenation.
+
+ML-BUA-sKEM.Combine
+
+Input:
+- ut, part of the uniform public key that depends on the secret key
+- ⍴, part of the uniform public key that does NOT depend on the secret key
+
+Output:
+- upk, an ML-BUA-sKEM public key, a byte string of ML-BUA-sKEM.Npk bytes
+
+def Combine(ut, ⍴):
+  return ut || ⍴
+
+5.3.  ML-BUA-sKEM Encapsulation & Decapsulation
 
    ML-BUA-sKEM encapsulation undoes the uniform encoding performed
    during key derivation before calling ML-KEM.Encaps on the non-uniform
@@ -467,7 +508,7 @@ Parameter:
 def Encaps(upk):
   (ut, ⍴) = ML-BUA-sKEM.Split(upk)
   t = VectorDecodeNR(ut)
-  pk = t || ⍴
+  pk = ML-KEM.Combine(t, ⍴)
   return ML-KEM.Encaps(pk)
 
    The decapsulation procedure for ML-BUA-sKEM is exactly the same as
@@ -677,6 +718,10 @@ def Init(PRS, sid, U, S):
    these requirements are not met, the proof does not apply, but this
    does not mean that the protocol becomes vulnerable.
 
+   The specification follows the design as presented in [VJWYMS25], with
+   the splittable KEM technique described in [TEMPO], which prevents
+   timing attacks caused by rejection sampling in ML-KEM.
+
 6.2.1.  Initiation
 
    Init takes as input the initiator's PRS, an optional session
@@ -704,22 +749,23 @@ Parameters:
 def Init(PRS, sid, U, S):
   seed = random(BUA-sKEM.Nseed)
   (pk, sk) = BUA-sKEM.DeriveKeyPair(seed)
+  (ut, ⍴) = BUA-sKEM.Split(pk)
 
   r = random(3 * Nsec)
 
   fullsid = encode_sid(sid, U, S)
 
-  // T = XOR(pk, H(fullsid, PRS, r))
-  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
-  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
-  T = XOR(pk, T_pad)
+  // T = XOR(t, H(fullsid, PRS, ⍴, r))
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
+  T = XOR(ut, T_pad)
 
-  // s = XOR(r, H(fullsid, PRS, T))
-  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
+  // s = XOR(r, H(fullsid, PRS, ⍴, T))
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
-  init_msg = s || T
+  init_msg = s || T || ⍴
 
   return Context(PRS, sk, pk, s, T, fullsid), init_msg
 
@@ -738,7 +784,7 @@ def Init(PRS, sid, U, S):
    - BUA-sKEM, a BUA-sKEM instance
    - KDF, a KDF instance
 
-   def encode_sid(sid, U, U):
+   def encode_sid(sid, U, S):
      fullsid =
        bytes_to_int(len(sid), 4) || sid ||
        bytes_to_int(len(U), 4) || U ||
@@ -771,17 +817,18 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def Respond(PRS, init_msg, sid, U, S):
-  (s, T) = init_msg[0..(3 * Nsec)], init_msg[(3 * Nsec)..]
+  (s, T, ⍴) = init_msg[0 : (3 * Nsec)], init_msg[(3 * Nsec) : (6 * Nsec)], init_msg[(6 * Nsec) : (6 * Nsec) + N⍴]
 
   fullsid = encode_sid(sid, U, S)
-  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
-  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
-  pk = XOR(T, T_pad)
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
+  ut = XOR(T, T_pad)
 
+  pk = BUA-sKEM.Combine(ut, ⍴)
   (ct, k) = BUA-sKEM.Encaps(pk)
 
   prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
@@ -1789,6 +1836,15 @@ Session <--)--------------------------+              +----(--> Session
               RFC 9383, DOI 10.17487/RFC9383, September 2023,
               <https://www.rfc-editor.org/rfc/rfc9383>.
 
+   [TEMPO]    Arriaga, A., Barbosa, M., and S. Jarecki, "Tempo: ML-KEM
+              to PAKE Compiler Resilient to Timing Attacks", n.d.,
+              <https://eprint.iacr.org/2025/1399>.
+
+   [VJWYMS25] Vos, J., Jarecki, S., Wood, C. A., Yun, C., Myers, S., and
+              Y. Sierra, "A Hybrid Asymmetric Password-Authenticated Key
+              Exchange in the Random Oracle Model", n.d.,
+              <https://eprint.iacr.org/2025/1343>.
+
 Appendix A.  Deriving parameters
 
    This section discusses how to generate parameters, given an upper
@@ -1914,6 +1970,7 @@ A.4.  Parameters for OQUAKE
 Authors' Addresses
 
    Jelle Vos
+   Apple, Inc.
    Email: jelle_v_vos@apple.com
 
 
