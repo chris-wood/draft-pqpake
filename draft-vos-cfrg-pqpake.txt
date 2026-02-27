@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                                          
 Intended status: Informational                                S. Jarecki
-Expires: 8 May 2026                     University of California, Irvine
+Expires: 31 August 2026                 University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                         4 November 2025
+                                                        27 February 2026
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -54,11 +54,11 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 May 2026.
+   This Internet-Draft will expire on 31 August 2026.
 
 Copyright Notice
 
-   Copyright (c) 2025 IETF Trust and the persons identified as the
+   Copyright (c) 2026 IETF Trust and the persons identified as the
    document authors.  All rights reserved.
 
    This document is subject to BCP 78 and the IETF Trust's Legal
@@ -603,7 +603,7 @@ def Init(PRS, sid, U, S):
 
   init_msg = s || T
 
-  return Context(PRS, sk, s, T, fullsid), init_msg
+  return Context(PRS, sk, pk, s, T, fullsid), init_msg
 
    The encode_sid function is defined below.
 
@@ -635,45 +635,45 @@ def Init(PRS, sid, U, S):
    message intended to be sent to the initiator.  Its implementation is
    as follows.
 
-   OQUAKE.Respond
+OQUAKE.Respond
 
-   Input:
-   - PRS, password-related string, a byte string
-   - init_msg, encoded protocol message, a byte string
-   - sid, session identifier, a byte string
-   - U and S, client and server identifiers
+Input:
+- PRS, password-related string, a byte string
+- init_msg, encoded protocol message, a byte string
+- sid, session identifier, a byte string
+- U and S, client and server identifiers
 
-   Output:
-   - ss, output shared secret, a byte string of 32 bytes
-   - resp_msg, encoded protocol message, a byte string
+Output:
+- ss, output shared secret, a byte string of 32 bytes
+- resp_msg, encoded protocol message, a byte string
 
-   Parameters:
-   - BUA-KEM, a BUA-KEM instance
-   - KDF, a KDF instance
-   - DST, domain separation tag, a byte string
+Parameters:
+- BUA-KEM, a BUA-KEM instance
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
-   def Respond(PRS, init_msg, sid, U, S):
-     (s, T) = init_msg[0..(3 * Nsec)], init_msg[(3 * Nsec)..]
+def Respond(PRS, init_msg, sid, U, S):
+  (s, T) = init_msg[0..(3 * Nsec)], init_msg[(3 * Nsec)..]
 
-     fullsid = encode_sid(sid, U, S)
-     prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
-     s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
-     r = XOR(s, s_pad)
+  fullsid = encode_sid(sid, U, S)
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
+  s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
+  r = XOR(s, s_pad)
 
-     prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
-     T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
-     pk = XOR(T, T_pad)
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
+  pk = XOR(T, T_pad)
 
-     (ct, k) = BUA-KEM.Encaps(pk)
+  (ct, k) = BUA-KEM.Encaps(pk)
 
-     prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || k)
-     key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+  prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
+  key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
-     h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
+  h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
 
-     resp_msg = ct || h
+  resp_msg = ct || h
 
-     return resp_msg, key
+  return resp_msg, key
 
 5.2.3.  Finish
 
@@ -682,39 +682,40 @@ def Init(PRS, sid, U, S):
    produces a symmetric key that is output to the initiator.  Its
    implementation is as follows.
 
-   OQUAKE.Finish
+OQUAKE.Finish
 
-   Input:
-   - context, opaque state for the initiator to store TODO
-   - resp_msg, encoded protocol message, a byte string
+Input:
+- context, opaque state for the initiator to store
+- resp_msg, encoded protocol message, a byte string
 
-   Output:
-   - ss, output shared secret, a byte string of 32 bytes
+Output:
+- ss, output shared secret, a byte string of 32 bytes
 
-   Parameters:
-   - BUA-KEM, a BUA-KEM instance
-   - KDF, a KDF instance
-   - DST, domain separation tag, a byte string
+Parameters:
+- BUA-KEM, a BUA-KEM instance
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
-   Exceptions:
-   - AuthenticationError, raised when the key confirmation fails
+Exceptions:
+- AuthenticationError, raised when the key confirmation fails
 
-   def Finish(context, resp_msg):
-     (PRS, sk, s, T, fullsid) = context
-     ct, h = resp_msg[0..Nct], resp_msg[Nct..]
+def Finish(context, resp_msg):
+  (PRS, sk, pk, s, T, fullsid) = context
+  ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
-     try:
-       k = BUA-KEM.Decaps(sk, ct)
-       prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || k)
-       key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+  try:
+    k = BUA-KEM.Decaps(sk, ct)
+    prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
 
-       h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
-       if h != h_expected:
-         return random(Nkey)
+    key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
-       return key
-     catch DecapsError:
-       return random(Nkey)
+    h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
+    if h != h_expected:
+      return random(Nkey)
+
+    return key
+  catch DecapsError:
+    return random(Nkey)
 
 5.3.  Composition of CPace & OQUAKE
 
@@ -1581,9 +1582,9 @@ Session <--)--------------------------+              +----(--> Session
 
    [CPACE]    Abdalla, M., Haase, B., and J. Hesse, "CPace, a balanced
               composable PAKE", Work in Progress, Internet-Draft, draft-
-              irtf-cfrg-cpace-15, 17 October 2025,
+              irtf-cfrg-cpace-18, 1 February 2026,
               <https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-
-              cpace-15>.
+              cpace-18>.
 
    [FIPS202]  National Institute of Standards and Technology (NIST),
               "SHA-3 Standard: Permutation-Based Hash and Extendable-
