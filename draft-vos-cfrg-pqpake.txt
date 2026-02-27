@@ -3,7 +3,7 @@
 
 
 Network Working Group                                             J. Vos
-Internet-Draft                                                          
+Internet-Draft                                               Apple, Inc.
 Intended status: Informational                                S. Jarecki
 Expires: 31 August 2026                 University of California, Irvine
                                                               C. A. Wood
@@ -1793,6 +1793,7 @@ A.4.  Parameters for OQUAKE
 Authors' Addresses
 
    Jelle Vos
+   Apple, Inc.
    Email: jelle_v_vos@apple.com
 
 
