@@ -75,43 +75,47 @@ Table of Contents
    3.  Overview
    4.  Cryptographic Dependencies
      4.1.  Key Encapsulation Mechanism
-     4.2.  Binary UPK-ANO-KEM
+     4.2.  Splittable binary UPK-ANO-KEM
      4.3.  Key Derivation Function
      4.4.  Key Stretching Function
-   5.  CPaceOQUAKE Protocol
-     5.1.  CPace Specification
-       5.1.1.  Initiation
-       5.1.2.  Response
-       5.1.3.  Finish
-     5.2.  OQUAKE Specification
-       5.2.1.  Initiation
-       5.2.2.  Response
-       5.2.3.  Finish
-     5.3.  Composition of CPace & OQUAKE
-       5.3.1.  Client Initiation
-       5.3.2.  Server Response
-       5.3.3.  Client Finish
-       5.3.4.  Server Finish
-   6.  CPaceOQUAKE+ Protocol
-     6.1.  Registering Clients
-       6.1.1.  Generating Verifiers
-       6.1.2.  Registration
-     6.2.  The Password Confirmation Stage
-       6.2.1.  Server Challenge
-       6.2.2.  Client Response
-       6.2.3.  Server Verify
-     6.3.  Composition of CPaceOQUAKE & Password Confirmation
-   7.  CPaceOQUAKE+ Configurations
-   8.  Implementation Considerations
-   9.  Security Considerations
-     9.1.  Hybrid Design
-     9.2.  Identities
-       9.2.1.  Symmetric PAKE identities
-       9.2.2.  Asymmetric PAKE identities
-   10. IANA Considerations
-   11. References
-     11.1.  Normative References
-     11.2.  Informative References
+   5.  ML-BUA-sKEM: A BUA-sKEM around ML-KEM
+     5.1.  Splittable ML-KEM
+     5.2.  ML-BUA-sKEM Key Derivation
+     5.3.  ML-BUA-sKEM Encapsulation & Decapsulation
+   6.  CPaceOQUAKE Protocol
+     6.1.  CPace Specification
+       6.1.1.  Initiation
+       6.1.2.  Response
+       6.1.3.  Finish
+     6.2.  OQUAKE Specification
+       6.2.1.  Initiation
+       6.2.2.  Response
+       6.2.3.  Finish
+     6.3.  Composition of CPace & OQUAKE
+       6.3.1.  Client Initiation
+       6.3.2.  Server Response
+       6.3.3.  Client Finish
+       6.3.4.  Server Finish
+   7.  CPaceOQUAKE+ Protocol
+     7.1.  Registering Clients
+       7.1.1.  Generating Verifiers
+       7.1.2.  Registration
+     7.2.  The Password Confirmation Stage
+       7.2.1.  Server Challenge
+       7.2.2.  Client Response
+       7.2.3.  Server Verify
+     7.3.  Composition of CPaceOQUAKE & Password Confirmation
+   8.  CPaceOQUAKE+ Configurations
+   9.  Implementation Considerations
+   10. Security Considerations
+     10.1.  Hybrid Design
+     10.2.  Identities
+       10.2.1.  Symmetric PAKE identities
+       10.2.2.  Asymmetric PAKE identities
+   11. IANA Considerations
+   12. References
+     12.1.  Normative References
+     12.2.  Informative References
    Appendix A.  Deriving parameters
      A.1.  Parameters for CPaceOQUAKE+
      A.2.  Parameters for CPaceOQUAKE
@@ -155,10 +159,11 @@ Table of Contents
    supports mutual authentication in a client-server setting secure
    against quantum-capable attackers.  CPaceOQUAKE+ is the result of a
    KEM-based transformation from the hybrid symmetric PAKE protocol
-   called CPaceOQUAKE.
+   called CPaceOQUAKE.  The design securely composes multiple existing
+   primitives [VJWYMS25].
 
    This document fully specifies CPaceOQUAKE+ and all dependencies
-   necessary to implement it.  Section 7 provides recommended
+   necessary to implement it.  Section 8 provides recommended
    configurations.
 
 2.  Conventions and Definitions
@@ -230,7 +235,7 @@ Table of Contents
    protocols: the existing CPace [CPACE] and a new post-quantum PAKE
    called OQUAKE.  To achieve the asymmetric property, the aPAKE also
    builds upon a password confirmation sub-protocol as specified in
-   Section 6.2.
+   Section 7.2.
 
    We refer to the fully composed aPAKE as CPaceOQUAKE+. An abstract
    overview of the composition of this protocol is shown in the figure
@@ -262,8 +267,8 @@ Table of Contents
    all PAKEs this way.
 
    The rest of this document specifies CPaceOQUAKE+ and its
-   dependencies.  Section 5 specifies the CPaceOQUAKE protocol, and
-   Section 6 specifies the CPaceOQUAKE+ protocol, incorporating the
+   dependencies.  Section 6 specifies the CPaceOQUAKE protocol, and
+   Section 7 specifies the CPaceOQUAKE+ protocol, incorporating the
    former protocol.  Each of these pieces build upon the cryptographic
    dependencies specified in Section 4.
 
@@ -273,14 +278,15 @@ Table of Contents
 
    *  Key Encapsulation Mechanism (KEM); Section 4.1
 
-   *  Binary Key Encapsulation Mechanism with specific uniformity
-      properties (binary UPK-ANO-KEM, or BUA-KEM); Section 4.2
+   *  Splittable Binary Key Encapsulation Mechanism with specific
+      uniformity properties (binary UPK-ANO-KEM, or BUA-sKEM);
+      Section 4.2
 
    *  Key Derivation Function (KDF); Section 4.3
 
    *  Key Stretching Function (KSF); Section 4.4
 
-   Section 7 specifies different combinations of each of these
+   Section 8 specifies different combinations of each of these
    dependencies that are suitable for implementation.
 
 4.1.  Key Encapsulation Mechanism
@@ -291,7 +297,7 @@ Table of Contents
    following syntax.
 
    *  DeriveKeyPair(seed): Deterministic algorithm to derive a key pair
-      (sk, pk) from the byte string seed, where seed SHOULD have Nseed
+      (sk, pk) from the byte string seed, where seed MUST have Nseed
       bytes.
 
    *  Encaps(pk): Randomized algorithm to generate an ephemeral, fixed-
@@ -300,10 +306,10 @@ Table of Contents
       of the secret key corresponding to pk.  This function can raise an
       EncapsError on encapsulation failure.
 
-   *  Decaps(ct, skR): Deterministic algorithm using the secret key sk
-      to recover the ephemeral symmetric key (the KEM shared secret)
-      from its encapsulated representation ct.  This function can raise
-      a DecapsError on decapsulation failure.
+   *  Decaps(ct, sk): Deterministic algorithm using the secret key sk to
+      recover the ephemeral symmetric key (the KEM shared secret) from
+      its encapsulated representation ct.  This function can raise a
+      DecapsError on decapsulation failure.
 
    *  Nseed: The length in bytes of the seed used to derive a key pair.
 
@@ -314,7 +320,7 @@ Table of Contents
 
    This specification uses X-Wing [XWING].
 
-4.2.  Binary UPK-ANO-KEM
+4.2.  Splittable binary UPK-ANO-KEM
 
    A binary UPK-ANO-KEM supports the same functions as defined above for
    a KEM, and it must also be IND-CCA secure, but it must also achieve
@@ -331,14 +337,26 @@ Table of Contents
    In other words, one MUST NOT use a KEM that has no uniform public
    keys and/or no anonymous ciphertexts in place of a UPK-ANO-KEM.
 
-   In the remainder of this specification, we abbreviate binary UPK-ANO-
-   KEM to BUA-KEM.  This specification uses a variant of ML-KEM768
-   [FIPS203], which we therefore denote by ML-BUA-KEM768.  This is
-   instantiated with "KemeleonNR - ML-KEM768" [KEMELEON].  Note that,
-   while Kemeleon provides uniform encoding for KEM ciphertexts and
-   public keys, we only require uniform enoding for public keys.  Future
-   specifications can replace use of Kemeleon with a binary UPK-ANO-KEM
-   that is more efficient if one becomes available.
+   In this specification, we also require a third property: the KEM must
+   be splittable.  A splittable KEM (sKEM) implements the Split(pk) ->
+   (t, ⍴) function and its inverse, which takes a public key and splits
+   it into a part ⍴ that is indepdendent of the KEM's secret key and can
+   therefore be made public, and a part t that does depend on the secret
+   key.  This property allows parties to perform variable-time
+   operations on ⍴ without revealing information about the secret key.
+   We use N⍴ to denote the byte-length of ⍴ and Nt to denote the byte-
+   length of t.  We use Combine(t, ⍴) -> pk to refer to the inverse
+   operation of Split.
+
+   In the remainder of this specification, we abbreviate 'splittable
+   binary UPK-ANO-KEM' as BUA-sKEM.  This specification uses a variant
+   of ML-KEM1024 [FIPS203], which we therefore denote by ML-BUA-
+   sKEM1024.  It is specified in Section 5.  This is instantiated with
+   "KemeleonNR - ML-KEM1024" [KEMELEON].  Note that, while Kemeleon
+   provides uniform encoding for KEM ciphertexts and public keys, we
+   only require uniform enoding for public keys.  Future specifications
+   can replace ML-BUA-sKEM1024 with another splittable binary UPK-ANO-
+   KEM that is more efficient if one becomes available.
 
 4.3.  Key Derivation Function
 
@@ -367,12 +385,153 @@ Table of Contents
       dictionary attacks.  This function also needs to satisfy collision
       resistance.  The output is a string of L bytes.
 
-5.  CPaceOQUAKE Protocol
+5.  ML-BUA-sKEM: A BUA-sKEM around ML-KEM
+
+5.1.  Splittable ML-KEM
+
+   ML-KEM [FIPS203] is already specified in a way that allows one to
+   separate out the part of the public key that does not depend on the
+   secret key; this feature is also used in Kemeleon [KEMELEON].  The
+   Split function is defined as follows for ML-KEM [TEMPO].  The part of
+   the public key that does not depend on the secret key represents the
+   final 32 bytes.  For this reason, Nt = ML-KEM.Npk - 32 and N⍴ = 32.
+
+   ML-KEM.Split
+
+   Input:
+   - pk, an ML-KEM public key, a byte string of ML-KEM.Npk bytes
+
+   Output:
+   - t, part of the public key that depends on the secret key
+   - ⍴, part of the public key that does NOT depend on the secret key
+
+   def Split(pk):
+     t = pk[0 : ML-KEM.Npk - 32]
+     ⍴ = pk[ML-KEM.Npk - 32 : ML-KEM.Npk]
+     return t, ⍴
+
+   For ML-KEM, the inverse of the split operation is concatenation.
+
+   ML-KEM.Combine
+
+   Input:
+   - t, part of the public key that depends on the secret key
+   - ⍴, part of the public key that does NOT depend on the secret key
+
+   Output:
+   - pk, an ML-KEM public key, a byte string of ML-KEM.Npk bytes
+
+   def Combine(t, ⍴):
+     return t || ⍴
+
+5.2.  ML-BUA-sKEM Key Derivation
+
+   The design of ML-BUA-sKEM is such that it does not change the
+   internals of ML-KEM; it only uses the Split function.  To ensure that
+   the public key generated by ML-BUA-sKEM.DeriveKeyPair is binary and
+   uniform, it uses Kemeleon [KEMELEON] to (re-)encode ML-KEM's public
+   keys.  In the PAKEs described in this specification, it is crucial
+   that this happens in constant time.  For this reason, ML-BUA-sKEM
+   uses the non-rejection sampling variants of Kemeleon, as denoted by
+   VectorEncodeNR and VectorDecodeNR.  ML-BUA-sKEM is defined as
+   follows.
+
+ML-BUA-sKEM.DeriveKeyPair
+
+Input:
+- seed, a random byte string of ML-BUA-sKEM.Nseed bytes
+
+Output:
+- sk, a secret decapsulation key, a byte string
+- upk, a uniform public key for encapsulation, a byte string
+
+Parameter:
+- Kemeleon.sec_param, a security parameter that tunes the bias of the produced upk
+
+def DeriveKeyPair(seed):
+  (sk, pk) = ML-KEM.DeriveKeyPair(seed)
+  (t, ⍴) = ML-KEM.Split(pk)
+  ut = VectorEncodeNR(t)
+  upk = ut || ⍴
+  return sk, upk
+
+   The uniform public keys produced by ML-BUA-sKEM are longer than those
+   produced by ML-KEM.  The final 32 bytes of the public key still
+   represent the part that does not depend on the secret key.
+
+ML-BUA-sKEM.Split
+
+Input:
+- upk, an ML-BUA-sKEM public key, a byte string of ML-BUA-sKEM.Npk bytes
+
+Output:
+- ut, part of the uniform public key that depends on the secret key
+- ⍴, part of the uniform public key that does NOT depend on the secret key
+
+def Split(upk):
+  ut = upk[0 : ML-BUA-sKEM.Nt]
+  ⍴ = upk[ML-BUA-sKEM.Nt : ML-BUA-sKEM.Npk]
+  return ut, ⍴
+
+   For ML-BUA-sKEM, the inverse of the split operation is concatenation.
+
+ML-BUA-sKEM.Combine
+
+Input:
+- ut, part of the uniform public key that depends on the secret key
+- ⍴, part of the uniform public key that does NOT depend on the secret key
+
+Output:
+- upk, an ML-BUA-sKEM public key, a byte string of ML-BUA-sKEM.Npk bytes
+
+def Combine(ut, ⍴):
+  return ut || ⍴
+
+5.3.  ML-BUA-sKEM Encapsulation & Decapsulation
+
+   ML-BUA-sKEM encapsulation undoes the uniform encoding performed
+   during key derivation before calling ML-KEM.Encaps on the non-uniform
+   public key.
+
+ML-BUA-sKEM.Encaps
+
+Input:
+- upk, an ML-BUA-sKEM public key
+
+Output:
+- k, a symmetric shared secret, a byte string
+- ct, an anonymous ciphertext encapsulating k, a byte string
+
+Parameter:
+- Kemeleon.sec_param, a security parameter that tunes the bias of the consumed upk
+
+def Encaps(upk):
+  (ut, ⍴) = ML-BUA-sKEM.Split(upk)
+  t = VectorDecodeNR(ut)
+  pk = ML-KEM.Combine(t, ⍴)
+  return ML-KEM.Encaps(pk)
+
+   The decapsulation procedure for ML-BUA-sKEM is exactly the same as
+   for ML-KEM.
+
+   ML-BUA-sKEM.Decaps
+
+   Input:
+   - ct, an anonymous ciphertext encapsulating k, a byte string
+   - sk, a secret decapsulation key, a byte string
+
+   Output:
+   - k, a symmetric shared secret, a byte string
+
+   def Decaps(ct, sk):
+     return ML-KEM.Decaps(ct, sk)
+
+6.  CPaceOQUAKE Protocol
 
    The hybrid, symmetric PAKE protocol, denoted CPaceOQUAKE consists of
    CPace [CPACE] combined with OQUAKE [ABJ25].  OQUAKE is a PAKE built
-   from a BUA-KEM and KDF, using a 2-rounds of Feistel network to
-   password-encrypt the BUA-KEM public key.  The OQUAKE protocol is
+   from a BUA-sKEM and KDF, using a 2-rounds of Feistel network to
+   password-encrypt the BUA-sKEM public key.  The OQUAKE protocol is
    based on the "NoIC" protocol analyzed in [ABJ25].
 
    The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner'
@@ -400,14 +559,14 @@ Table of Contents
    CPaceOQUAKE composes CPace and OQUAKE by first running CPace between
    client and server, and then incorporating the CPace session key into
    the password before running OQUAKE between the server and client.  We
-   explain the composition in more detail in Section 5.3.
+   explain the composition in more detail in Section 6.3.
 
-   As describes in Section 5.1 and Section 5.2, both CPace and OQUAKE
+   As describes in Section 6.1 and Section 6.2, both CPace and OQUAKE
    take as input optional client and server identifiers, denoted U and
-   S, respectively.  See Section 9.2 for more discussion about these
+   S, respectively.  See Section 10.2 for more discussion about these
    identities and how they are chosen in practice.
 
-5.1.  CPace Specification
+6.1.  CPace Specification
 
    CPace is a classical elliptic curve-based PAKE [CPACE].  This section
    wraps the CPace specification in a consistent interface.  We use an
@@ -427,7 +586,7 @@ Table of Contents
    identifiers match.  Otherwise, they obtain random keys.  In
    exceptional cases, the protocol aborts.
 
-5.1.1.  Initiation
+6.1.1.  Initiation
 
    The initiator starts the protocol using its password-related string
    PRS.  Additionally, it may bind the session to an existing shared
@@ -456,7 +615,7 @@ def Init(PRS, sid, U, S):
   Ya = G.scalar_mult(ya, g)
   return ya, Ya
 
-5.1.2.  Response
+6.1.2.  Response
 
    The responder performs the same actions as the initiator.  Since it
    already received the initiator's message, it can immediately finish
@@ -496,7 +655,7 @@ def Init(PRS, sid, U, S):
 
    The functions lv_cat and transcript are defined in [CPACE].
 
-5.1.3.  Finish
+6.1.3.  Finish
 
    The initiator finishes the protocol by combining the discrete
    logarithm ya generated by CPace.Init and the message Yb received from
@@ -527,18 +686,18 @@ def Init(PRS, sid, U, S):
 
     return ISK
 
-5.2.  OQUAKE Specification
+6.2.  OQUAKE Specification
 
-   OQUAKE is a PAKE built on a BUA-KEM and KDF.  If the BUA-KEM provides
-   security against quantum-enabled attacks, then so does OQUAKE.  It
-   consists of three messages sent between initiator and responder,
-   produced by the functions Init, Respond, and Finish, described below.
-   Both parties take as input a password-related string PRS, an optional
-   session identifier sid, and an optional client identifier U and
-   server identifier S.  Upon completion, both parties obtain matching
-   session keys if their PRS, sid, key length (specified by N), and
-   client and server identifiers match.  Otherwise, they obtain random
-   session keys.
+   OQUAKE is a PAKE built on a BUA-sKEM and KDF.  If the BUA-sKEM
+   provides security against quantum-enabled attacks, then so does
+   OQUAKE.  It consists of three messages sent between initiator and
+   responder, produced by the functions Init, Respond, and Finish,
+   described below.  Both parties take as input a password-related
+   string PRS, an optional session identifier sid, and an optional
+   client identifier U and server identifier S.  Upon completion, both
+   parties obtain matching session keys if their PRS, sid, key length
+   (specified by N), and client and server identifiers match.
+   Otherwise, they obtain random session keys.
 
    The shared session identifier has the following requirements.  If a
    client and server identifier are provided:
@@ -559,7 +718,11 @@ def Init(PRS, sid, U, S):
    these requirements are not met, the proof does not apply, but this
    does not mean that the protocol becomes vulnerable.
 
-5.2.1.  Initiation
+   The specification follows the design as presented in [VJWYMS25], with
+   the splittable KEM technique described in [TEMPO], which prevents
+   timing attacks caused by rejection sampling in ML-KEM.
+
+6.2.1.  Initiation
 
    Init takes as input the initiator's PRS, an optional session
    identifier sid, and optional client and server identifiers U and S.
@@ -579,29 +742,30 @@ Output:
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
-- BUA-KEM, a BUA-KEM instance
+- BUA-sKEM, a BUA-sKEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
 def Init(PRS, sid, U, S):
-  seed = random(BUA-KEM.Nseed)
-  (pk, sk) = BUA-KEM.DeriveKeyPair(seed)
+  seed = random(BUA-sKEM.Nseed)
+  (pk, sk) = BUA-sKEM.DeriveKeyPair(seed)
+  (ut, ⍴) = BUA-sKEM.Split(pk)
 
   r = random(3 * Nsec)
 
   fullsid = encode_sid(sid, U, S)
 
-  // T = XOR(pk, H(fullsid, PRS, r))
-  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
-  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
-  T = XOR(pk, T_pad)
+  // T = XOR(t, H(fullsid, PRS, ⍴, r))
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
+  T = XOR(ut, T_pad)
 
-  // s = XOR(r, H(fullsid, PRS, T))
-  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
+  // s = XOR(r, H(fullsid, PRS, ⍴, T))
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
-  init_msg = s || T
+  init_msg = s || T || ⍴
 
   return Context(PRS, sk, pk, s, T, fullsid), init_msg
 
@@ -617,17 +781,17 @@ def Init(PRS, sid, U, S):
    - fullsid, a byte string
 
    Parameters:
-   - BUA-KEM, a BUA-KEM instance
+   - BUA-sKEM, a BUA-sKEM instance
    - KDF, a KDF instance
 
-   def encode_sid(sid, U, U):
+   def encode_sid(sid, U, S):
      fullsid =
        bytes_to_int(len(sid), 4) || sid ||
        bytes_to_int(len(U), 4) || U ||
        bytes_to_int(len(S), 4) || S
      return fullsid
 
-5.2.2.  Response
+6.2.2.  Response
 
    Respond takes as input the PRS, the initiator's protocol message, an
    optional session identifier, and optional client and server
@@ -648,23 +812,24 @@ Output:
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
-- BUA-KEM, a BUA-KEM instance
+- BUA-sKEM, a BUA-sKEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
 def Respond(PRS, init_msg, sid, U, S):
-  (s, T) = init_msg[0..(3 * Nsec)], init_msg[(3 * Nsec)..]
+  (s, T, ⍴) = init_msg[0 : (3 * Nsec)], init_msg[(3 * Nsec) : (6 * Nsec)], init_msg[(6 * Nsec) : (6 * Nsec) + N⍴]
 
   fullsid = encode_sid(sid, U, S)
-  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
-  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
-  pk = XOR(T, T_pad)
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
+  ut = XOR(T, T_pad)
 
-  (ct, k) = BUA-KEM.Encaps(pk)
+  pk = BUA-sKEM.Combine(ut, ⍴)
+  (ct, k) = BUA-sKEM.Encaps(pk)
 
   prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
   key = KDF.Expand(prk_sk, DST || "sk", Nkey)
@@ -675,7 +840,7 @@ def Respond(PRS, init_msg, sid, U, S):
 
   return resp_msg, key
 
-5.2.3.  Finish
+6.2.3.  Finish
 
    Finish takes as input the initiator-created context that is output
    from Init as well as the responder's reply message resp_msg.  It
@@ -692,7 +857,7 @@ Output:
 - ss, output shared secret, a byte string of 32 bytes
 
 Parameters:
-- BUA-KEM, a BUA-KEM instance
+- BUA-sKEM, a BUA-sKEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
@@ -704,7 +869,7 @@ def Finish(context, resp_msg):
   ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
   try:
-    k = BUA-KEM.Decaps(sk, ct)
+    k = BUA-sKEM.Decaps(sk, ct)
     prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
 
     key = KDF.Expand(prk_sk, DST || "sk", Nkey)
@@ -717,17 +882,17 @@ def Finish(context, resp_msg):
   catch DecapsError:
     return random(Nkey)
 
-5.3.  Composition of CPace & OQUAKE
+6.3.  Composition of CPace & OQUAKE
 
-   CPaceOQUAKE is a sequential composition of CPace (see Section 5.1)
-   and OQUAKE (see Section 5.2).  Whereas running CPace and OQUAKE in
+   CPaceOQUAKE is a sequential composition of CPace (see Section 6.1)
+   and OQUAKE (see Section 6.2).  Whereas running CPace and OQUAKE in
    parallel realizes a worst-of-both worlds PAKE, this sequential
    composition realizes a best-of-both worlds PAKE.  In other words,
    CPaceOQUAKE remains as secure as the strongest PAKE, resisting
    attacks that break the classical CPace (e.g. by a quantum-capable
    attacker) or attacks that break the quantum-resistant OQUAKE (e.g. by
-   a flaw in the BUA-KEM).  This assumes that OQUAKE is instantiated
-   with a quantum-resistant BUA-KEM.
+   a flaw in the BUA-sKEM).  This assumes that OQUAKE is instantiated
+   with a quantum-resistant BUA-sKEM.
 
    The reason a parallel combiner does not achieve best-of-both-worlds
    security is that it requires both constituent PAKEs to be
@@ -827,7 +992,7 @@ Session <---)-H(fullsid, tr1, tr2, SK1, SK2)--+ protocol +---H(fullsid, tr1, tr2
            -----------------------------------------
         output client_key              output server_key
 
-5.3.1.  Client Initiation
+6.3.1.  Client Initiation
 
    The client initiates a CPace exchange with the server using input
    PRS, an optional session identifier sid, and optional client and
@@ -856,7 +1021,7 @@ def Init(PRS, sid, U, S):
 
   return (ctx1, s1), init_msg
 
-5.3.2.  Server Response
+6.3.2.  Server Response
 
    The server processes the client message using its input PRS, an
    optional session identifier sid, and optional client and server
@@ -910,7 +1075,7 @@ def Respond(PRS, init_msg, sid, U, S):
 
   return Context(fullsid, PRS, msg1, msg2, msg3, key1B, ctx2), resp_msg
 
-5.3.3.  Client Finish
+6.3.3.  Client Finish
 
    The client finishes the protocol by processing the server response.
    The client obtains a shared secret and a final message intended for
@@ -962,7 +1127,7 @@ def InitiatorFinish(PRS, (ctx1, s1), resp_msg, sid, U, S):
 
   return client_key, msg4
 
-5.3.4.  Server Finish
+6.3.4.  Server Finish
 
    The server finishes the protocol by finising OQUAKE using the
    client's response, outputting a shared secret of N bytes.  It should
@@ -991,7 +1156,7 @@ def ResponderFinish(ctx, msg4):
 
   return server_key
 
-6.  CPaceOQUAKE+ Protocol
+7.  CPaceOQUAKE+ Protocol
 
    CPaceOQUAKE+ is the 5 message aPAKE resulting from applying a KEM-
    based PAKE-to-aPAKE transformation to CPaceOQUAKE.  At a high level,
@@ -1008,12 +1173,12 @@ def ResponderFinish(ctx, msg4):
    specific instance) of the `augmented PAKE' construction presented in
    [LLH24] and in [Gu24].
 
-6.1.  Registering Clients
+7.1.  Registering Clients
 
    This subsection specifies functions for generating the verifiers and
    a protocol for registering clients.
 
-6.1.1.  Generating Verifiers
+7.1.1.  Generating Verifiers
 
    Verifiers are random-looking value derived from password-related
    strings from which it is computionally impractical to derive the
@@ -1069,7 +1234,7 @@ def GenVerifierMaterial(PRS, salt, U, S):
 
    The server MUST store pk; it MUST NOT store seed.
 
-6.1.2.  Registration
+7.1.2.  Registration
 
    The registration phase consists of one message sent from the client
    to the server.  This message contains the verifier, a public key, and
@@ -1099,7 +1264,7 @@ def GenVerifierMaterial(PRS, salt, U, S):
                |                           |
           ---------------------------------------
 
-6.2.  The Password Confirmation Stage
+7.2.  The Password Confirmation Stage
 
    In the password confirmation (PC) stage, the client proves knowledge
    of its password without revealing it.  It uses the registered
@@ -1108,7 +1273,7 @@ def GenVerifierMaterial(PRS, salt, U, S):
    confidential but unauthenticated channel.  In other words, this
    password confirmation stage cannot be used by itself.  This PC stage
    is parameterized by a KEM, KDF, KSF, and is additionally bound to the
-   preceding protocol via an agreed-upon transcript (tx); see Section 7
+   preceding protocol via an agreed-upon transcript (tx); see Section 8
    for specific parameter configurations.
 
    The password confirmation is a two-round challenge-response flow
@@ -1139,7 +1304,7 @@ def GenVerifierMaterial(PRS, salt, U, S):
          ---------------------------------------
     output client_key            output server_key
 
-6.2.1.  Server Challenge
+7.2.1.  Server Challenge
 
    To construct the challenge, the server encapsulates to the client's
    public key.  From the resulting shared secret, it then derives
@@ -1189,7 +1354,7 @@ def PC-Challenge(SK, transcript, pk, sid, U, S):
 
   return Context(server_confirm, server_key), challenge
 
-6.2.2.  Client Response
+7.2.2.  Client Response
 
    Upon receipt of the challenge, the client recovers the KEM ciphertext
    by decrypting the one-time pad ciphertext included in the challenge,
@@ -1255,7 +1420,7 @@ def PC-Response(SK, transcript, seed, challenge, sid, U, S):
   catch DecapsError:
     raise AuthenticationError
 
-6.2.3.  Server Verify
+7.2.3.  Server Verify
 
    Upon receipt of the response, the server validates that the password
    confirmation value matches its own value.  If the value does not
@@ -1282,7 +1447,7 @@ def PC-Verify(context, server_confirm_target):
     raise AuthenticationError
   return server_key
 
-6.3.  Composition of CPaceOQUAKE & Password Confirmation
+7.3.  Composition of CPaceOQUAKE & Password Confirmation
 
    The composition of CPaceOQUAKE and the password confirmation stage is
    strictly sequential.  First, the parties run CPaceOQUAKE using the
@@ -1362,7 +1527,7 @@ Session <--)--------------------------+              +----(--> Session
             ----------------------------------------
         output client_key                 output server_key
 
-7.  CPaceOQUAKE+ Configurations
+8.  CPaceOQUAKE+ Configurations
 
    CPaceOQUAKE+ is instantiated by selecting a configuration of a group
    and hash function for the CPace protocol, a KEM, KDF, KSF, for
@@ -1386,8 +1551,8 @@ Session <--)--------------------------+              +----(--> Session
    *  PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v
       = 0x13, K = nil, X = nil, y = 2) [ARGON2]
 
-   *  BUA-KEM: ML-BUA-KEM768 Section 4.2, where Nseed = 64, Nct = 1088,
-      and Npk = 1172.
+   *  BUA-sKEM: ML-BUA-sKEM1024 Section 4.2, where Kemeleon.sec_param =
+      256, Nseed = 64, Npk = 1594, and Nct = 1568.
 
    *  PAKE-KDF: HKDF-SHA-256
 
@@ -1430,8 +1595,8 @@ Session <--)--------------------------+              +----(--> Session
 
    *  PC-KSF: Scrypt(N = 32768, r = 8, p = 1) [SCRYPT]
 
-   *  BUA-KEM: ML-BUA-KEM768 Section 4.2, where Nseed = 64, Nct = 1088,
-      and Npk = 1172.
+   *  BUA-sKEM: ML-BUA-sKEM1024 Section 4.2, where Kemeleon.sec_param =
+      256, Nseed = 64, Npk = 1594, and Nct = 1568.
 
    *  PAKE-KDF: HKDF-SHA-256
 
@@ -1441,7 +1606,7 @@ Session <--)--------------------------+              +----(--> Session
       "b840fa4d4b4caec9e25d13d8c016cfe93e7468d54e936490bd0b0a3ffca1a01b"
       (a randomly generated 32-byte string)
 
-8.  Implementation Considerations
+9.  Implementation Considerations
 
    Some functions included in this specification are fallible (as noted
    by their ability to raise exceptions).  The explicit errors generated
@@ -1449,7 +1614,7 @@ Session <--)--------------------------+              +----(--> Session
    each error, are as follows:
 
    *  AuthenticationError: The PC protocol fails password confirmation
-      checks at the client or server; Section 6.2
+      checks at the client or server; Section 7.2
 
    Beyond these explicit errors, CPaceOQUAKE+ implementations can
    produce implicit errors.  For example, if protocol messages sent
@@ -1460,12 +1625,12 @@ Session <--)--------------------------+              +----(--> Session
    They are not an exhaustive list of all the errors an implementation
    might emit.  For example, an implementation might run out of memory.
 
-9.  Security Considerations
+10.  Security Considerations
 
    This section discusses security considerations for the protocols
    specified in this document.
 
-9.1.  Hybrid Design
+10.1.  Hybrid Design
 
    CPaceOQUAKE and CPaceOQUAKE+ are hybrid PAKE protocols, meaning that
    the overall protocol remains secure so long as either the classical
@@ -1481,7 +1646,7 @@ Session <--)--------------------------+              +----(--> Session
    ML-KEM public keys and ciphertexts from random bitstrings.  For
    OQUAKE, this would allow the attacker to perform offline dictionary
    attacks on the password.  This is also the reason a parallel combiner
-   cannot provide the desired hybrid security (see Section 5.3): if one
+   cannot provide the desired hybrid security (see Section 6.3): if one
    PAKE is not unconditionally password hiding, breaking its underlying
    assumption can yield the password, and learning the password is
    sufficient to also break the other PAKE.  In contrast, the sequential
@@ -1527,14 +1692,14 @@ Session <--)--------------------------+              +----(--> Session
    least three different groups, improving overall confidence in the
    design.
 
-9.2.  Identities
+10.2.  Identities
 
    Client and server identities are essential to authenticated key
    exchange protocols, and PAKEs are no exception.  This section
    discusses the role and importance of identities in the PAKE protocols
    specified in this document.
 
-9.2.1.  Symmetric PAKE identities
+10.2.1.  Symmetric PAKE identities
 
    PAKEs are often analyzed in the universal composability (UC)
    framework, which imposes several requirements on the protocols: (1)
@@ -1563,7 +1728,7 @@ Session <--)--------------------------+              +----(--> Session
    basis of OQUAKE, realizes the Bare PAKE model as well, although we
    note that that this proof has not been published yet.
 
-   As such, for the PAKEs in Section 5, both the party and session
+   As such, for the PAKEs in Section 6, both the party and session
    identifier are optional.  Applications are free to choose values for
    these identifiers if applicable, but they are not required for
    security.
@@ -1571,7 +1736,7 @@ Session <--)--------------------------+              +----(--> Session
    [[OPEN ISSUE: adjust the requirements for the identities in OQUAKE on
    the basis on the bare PAKE analysis]]
 
-9.2.2.  Asymmetric PAKE identities
+10.2.2.  Asymmetric PAKE identities
 
    In contrast to the symmetric PAKE setting, party identities in the
    asymmetric PAKE setting play a different role.  The very nature of
@@ -1592,14 +1757,14 @@ Session <--)--------------------------+              +----(--> Session
    incorporated into the protocol.
 
    Based on this, client and server identities are RECOMMENDED for the
-   asymmetric PAKEs specified in this document (in Section 6).  Both
+   asymmetric PAKEs specified in this document (in Section 7).  Both
    client and server identities can be long-lived, e.g., a client
    identity could be an email address and a server identity could be a
    domain name.
 
    Practically, applications should be mindful of what happens when
    these identities change.  Since they are both included in the
-   password verifier (see Section 6.1.1), changing either identifier
+   password verifier (see Section 7.1.1), changing either identifier
    will require the veirifer to be re-computed and the client to be re-
    registered.  For a single client, this change is minimal, but for a
    single server, which can have many registered clients, this change
@@ -1607,13 +1772,13 @@ Session <--)--------------------------+              +----(--> Session
    longevitiy and uniqueness of their party identifiers when
    instantiating these protocols.
 
-10.  IANA Considerations
+11.  IANA Considerations
 
    This document has no IANA actions.
 
-11.  References
+12.  References
 
-11.1.  Normative References
+12.1.  Normative References
 
    [ARGON2]   Biryukov, A., Dinu, D., Khovratovich, D., and S.
               Josefsson, "Argon2 Memory-Hard Function for Password
@@ -1668,7 +1833,7 @@ Session <--)--------------------------+              +----(--> Session
               10, 2 March 2026, <https://datatracker.ietf.org/doc/html/
               draft-connolly-cfrg-xwing-kem-10>.
 
-11.2.  Informative References
+12.2.  Informative References
 
    [ABJ25]    Arriaga, A., Barbosa, M., and S. Jarecki, "NoIC: PAKE from
               KEM without Ideal Ciphers", n.d.,
@@ -1711,6 +1876,15 @@ Session <--)--------------------------+              +----(--> Session
               RFC 9383, DOI 10.17487/RFC9383, September 2023,
               <https://www.rfc-editor.org/rfc/rfc9383>.
 
+   [TEMPO]    Arriaga, A., Barbosa, M., and S. Jarecki, "Tempo: ML-KEM
+              to PAKE Compiler Resilient to Timing Attacks", n.d.,
+              <https://eprint.iacr.org/2025/1399>.
+
+   [VJWYMS25] Vos, J., Jarecki, S., Wood, C. A., Yun, C., Myers, S., and
+              Y. Sierra, "A Hybrid Asymmetric Password-Authenticated Key
+              Exchange in the Random Oracle Model", n.d.,
+              <https://eprint.iacr.org/2025/1343>.
+
 Appendix A.  Deriving parameters
 
    This section discusses how to generate parameters, given an upper
@@ -1744,10 +1918,9 @@ A.1.  Parameters for CPaceOQUAKE+
    *  CPaceOQUAKE vs quantum <= quantum hardness
 
    For ML-KEM we have Nseed = 32.  For consistency, the spec uses
-   Nverifier = 32.  ML-KEM768's failure probability is 2^-165.2 and ML-
-   KEM1024's failure probability is 2^-175.2.  Both are slightly too
-   large, but we deem them acceptable: the chance that an adversary
-   encounters a failure is purely statistical and very small.
+   Nverifier = 32.  ML-KEM1024's failure probability is 2^-175.2.  This
+   is slightly too large, but we deem it acceptable: the chance that an
+   adversary encounters a failure is purely statistical and very small.
 
    The following subsection discusses the parameters and hardness of
    CPaceOQUAKE.
@@ -1795,39 +1968,38 @@ A.4.  Parameters for OQUAKE
 
    We have the following requirements:
 
-   *  BUA-KEM ind vs classical <= -qq - classical hardness
+   *  BUA-sKEM ind vs classical <= -qq - classical hardness
 
-   *  BUA-KEM ind vs quantum <= -qq - quantum hardness
+   *  BUA-sKEM ind vs quantum <= -qq - quantum hardness
 
-   *  BUA-KEM public key uniformity vs classical <= -qq - classical
+   *  BUA-sKEM public key uniformity vs classical <= -qq - classical
       hardness
 
-   *  BUA-KEM public key uniformity vs quantum <= -qq - quantum hardness
-
-   *  BUA-KEM ciphertext uniformity vs classical <= -qq - classical
+   *  BUA-sKEM public key uniformity vs quantum <= -qq - quantum
       hardness
 
-   *  BUA-KEM ciphertext uniformity vs quantum <= -qq - quantum hardness
+   *  BUA-sKEM ciphertext uniformity vs classical <= -qq - classical
+      hardness
 
-   *  BUA-KEM key * 8 >= qq + classical hardness
+   *  BUA-sKEM ciphertext uniformity vs quantum <= -qq - quantum
+      hardness
+
+   *  BUA-sKEM key * 8 >= qq + classical hardness
 
    *  KEM failure <= -qq - classical hardness
 
-   For, ML-BUA-KEM it is as hard or harder to break public key and
-   ciphertext uniformity as it is to break indistinguishability, so we
-   discuss all three properties at once.
+   For ML-BUA-sKEM, if we set Kemeleon.sec_param to 256, it is as hard
+   or harder to break public key and ciphertext uniformity as it is to
+   break indistinguishability, so we discuss all three properties at
+   once.
 
-   For ML-BUA-KEM768, the resistance to classical attacks is
-   approximately 181 - qq bits of security.  So for qq = 64, classical
-   hardness is approximately 117 bits of security.  The resistance to
-   quantum attacks is approximately 164 - qq bits of security.  So for
-   qq = 64, quantum hardness is approximately 100 bits of security.
+   For ML-BUA-sKEM1024, the resistance to classical attacks is
+   approximately 253 - qq bits of security.  So for qq = 64, classical
+   hardness is approximately 189 bits of security.  The resistance to
+   quantum attacks is approximately 230 - qq bits of security.  So for
+   qq = 64, quantum hardness is approximately 166 bits of security.
 
-   For ML-BUA-KEM1024, this would come out to 253 - 64 = 189 bits of
-   security for classical attacks and 230 - 64 = 166 bits of security
-   for quantum attacks.
-
-   The ML-BUA-KEM key is 32 bytes, so this satisfies the requirements.
+   The ML-BUA-sKEM key is 32 bytes, so this satisfies the requirements.
    We ignore the KEM failure following the same reasoning as above.
 
 Authors' Addresses
