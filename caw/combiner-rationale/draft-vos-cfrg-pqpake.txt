@@ -757,10 +757,10 @@ def Finish(context, resp_msg):
    the original PRS to the CPace session key.  Even if an attacker
    breaks D-MLWE and can distinguish OQUAKE public keys and ciphertexts,
    offline dictionary attacks against the original PRS are infeasible
-   because SK1 is computationally indistinguishable from a random value
-   (under the gap Diffie-Hellman assumption).  The sequential
-   composition is analyzed in [HR24] and a close variant is analyzed in
-   [LL24].
+   because the CPace-derived session key material is computationally
+   indistinguishable from a random value (under the gap Diffie-Hellman
+   assumption).  The sequential composition is analyzed in [HR24] and a
+   close variant is analyzed in [LL24].
 
    To be precise, CPaceOQUAKE first runs CPace using password-related
    string PRS, establishing a session key SK1 with the associated
