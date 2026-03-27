@@ -666,7 +666,7 @@ computational assumptions underlying the PAKE break. Intuitively, if one
 PAKE is not unconditionally password hiding, an attacker that breaks its
 computational assumptions can recover the password, and knowing the password
 is sufficient to then defeat the other PAKE as well. CPace is unconditionally
-password hiding: breaking the Diffie-Hellman assumption does not expose the
+password hiding: breaking the gap Diffie-Hellman assumption does not expose the
 password since the encoding of the password into a group element is
 information-theoretically hiding. OQUAKE, however, is not unconditionally
 password hiding: an attacker that can break the D-MLWE assumption can
