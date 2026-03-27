@@ -1377,8 +1377,7 @@ assumption can distinguish actual ML-KEM public keys and ciphertexts from
 random bitstrings. For OQUAKE, this would allow the attacker to perform offline
 dictionary attacks on the password. This is also the reason a parallel
 combiner cannot provide the desired hybrid security (see {{cpacequake-composition}}):
-if one PAKE is not unconditionally password hiding, breaking its assumptions
-yields the password, which is then sufficient to also break the other PAKE.
+if one PAKE is not unconditionally password hiding, breaking its underlying assumption can yield the password, and learning the password is sufficient to also break the other PAKE.
 In contrast, the sequential hybrid variants do not suffer from the same
 weakness: the input to OQUAKE is `PRS2`, derived via `KDF.Extract/Expand`
 over `(fullsid, msg1, msg2, key1A)`, not the original PRS. Performing an
