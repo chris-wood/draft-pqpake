@@ -1655,7 +1655,7 @@ when instantiating these protocols.
 
 ## Timing Attacks and Tempo {#timing-and-tempo}
 
-OQUAKE (without the Tempo fix from {{TEMPO}}) is subject to a timing attack
+OQUAKE (without the fix from {{TEMPO}}) is subject to a timing attack
 due to how the ML-KEM expands the key-generation seed (rho) to a matrix (A).
 An internal function — SampleNTT — uses rejection sampling based on the seed
 and therefore is variable time. In NoIC / OQUAKE, after a sender password-encrypts
