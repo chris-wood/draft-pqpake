@@ -93,6 +93,33 @@ informative:
         name: Manuel Barbosa
       -
         name: Stanislaw Jarecki
+  TEMPO:
+    title: "Tempo: ML-KEM to PAKE Compiler Resilient to Timing Attacks"
+    target: https://eprint.iacr.org/2025/1399
+    author:
+      -
+        name: Afonso Arriaga
+      -
+        name: Manuel Barbosa
+      -
+        name: Stanislaw Jarecki
+  VJWYMS25:
+    title: A Hybrid Asymmetric Password-Authenticated Key Exchange in the Random Oracle Model
+    target: https://eprint.iacr.org/2025/1343
+    author:
+      -
+        name: Jelle Vos
+      -
+        name: Stanislaw Jarecki
+      -
+        name: Christopher A. Wood
+      -
+        name: Cathie Yun
+      -
+        name: Steve Myers
+      -
+        name: Yannick Sierra
+
 
 --- abstract
 
@@ -138,6 +165,7 @@ This document describes the CPaceOQUAKE+ protocol, an aPAKE that supports mutual
 authentication in a client-server setting secure against
 quantum-capable attackers. CPaceOQUAKE+ is the result of a KEM-based transformation
 from the hybrid symmetric PAKE protocol called CPaceOQUAKE.
+The design securely composes multiple existing primitives {{VJWYMS25}}.
 
 This document fully specifies CPaceOQUAKE+ and all dependencies necessary
 to implement it. {{configurations}} provides recommended configurations.
@@ -231,7 +259,7 @@ specified in {{crypto-deps}}.
 The protocols in this document have four primary dependencies:
 
 - Key Encapsulation Mechanism (KEM); {{deps-kem}}
-- Binary Key Encapsulation Mechanism with specific uniformity properties (binary UPK-ANO-KEM, or BUA-KEM); {{deps-BUA-KEM}}
+- Splittable Binary Key Encapsulation Mechanism with specific uniformity properties (binary UPK-ANO-KEM, or BUA-sKEM); {{deps-BUA-sKEM}}
 - Key Derivation Function (KDF); {{deps-symmetric}}
 - Key Stretching Function (KSF); {{deps-ksf}}
 
@@ -245,13 +273,13 @@ a secret from one party to another. We require an IND-CCA-secure KEM with key
 derivation from a seed. It consists of the following syntax.
 
 - DeriveKeyPair(seed): Deterministic algorithm to derive a key pair
-  `(sk, pk)` from the byte string `seed`, where `seed` SHOULD have `Nseed` bytes.
+  `(sk, pk)` from the byte string `seed`, where `seed` MUST have `Nseed` bytes.
 - Encaps(pk): Randomized algorithm to generate an ephemeral,
   fixed-length symmetric key (the KEM shared secret) and
   a fixed-length encapsulation of that key that can be decapsulated
   by the holder of the secret key corresponding to `pk`. This function
   can raise an `EncapsError` on encapsulation failure.
-- Decaps(ct, skR): Deterministic algorithm using the secret key `sk`
+- Decaps(ct, sk): Deterministic algorithm using the secret key `sk`
   to recover the ephemeral symmetric key (the KEM shared secret) from
   its encapsulated representation `ct`. This function can raise a
   `DecapsError` on decapsulation failure.
@@ -261,7 +289,7 @@ derivation from a seed. It consists of the following syntax.
 
 This specification uses X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}.
 
-## Binary UPK-ANO-KEM {#deps-BUA-KEM}
+## Splittable binary UPK-ANO-KEM {#deps-BUA-sKEM}
 
 A binary UPK-ANO-KEM supports the same functions as defined above for
 a KEM, and it must also be IND-CCA secure, but it must also achieve
@@ -278,12 +306,13 @@ These additional properties are crucial for the security of OQUAKE. In
 other words, one MUST NOT use a KEM that has no uniform public keys
 and/or no anonymous ciphertexts in place of a UPK-ANO-KEM.
 
-In the remainder of this specification, we abbreviate binary UPK-ANO-KEM to BUA-KEM.
-This specification uses a variant of ML-KEM768 {{FIPS203}}, which we therefore denote by ML-BUA-KEM768.
-This is instantiated with "KemeleonNR - ML-KEM768" {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
+In this specification, we also require a third property: the KEM must be splittable. A splittable KEM (sKEM) implements the `Split(pk) -> (t, ⍴)` function and its inverse, which takes a public key and splits it into a part `⍴` that is indepdendent of the KEM's secret key and can therefore be made public, and a part `t` that does depend on the secret key. This property allows parties to perform variable-time operations on `⍴` without revealing information about the secret key. We use N⍴ to denote the byte-length of ⍴ and Nt to denote the byte-length of t. We use `Combine(t, ⍴) -> pk` to refer to the inverse operation of `Split`.
+
+In the remainder of this specification, we abbreviate 'splittable binary UPK-ANO-KEM' as BUA-sKEM.
+This specification uses a variant of ML-KEM1024 {{FIPS203}}, which we therefore denote by ML-BUA-sKEM1024. It is specified in {{ML-BUA-sKEM}}.
+This is instantiated with "KemeleonNR - ML-KEM1024" {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
-require uniform enoding for public keys. Future specifications can replace use of
-Kemeleon with a binary UPK-ANO-KEM that is more efficient if one becomes available.
+require uniform enoding for public keys. Future specifications can replace ML-BUA-sKEM1024 with another splittable binary UPK-ANO-KEM that is more efficient if one becomes available.
 
 
 ## Key Derivation Function {#deps-symmetric}
@@ -308,11 +337,147 @@ and expensive cryptographic hash function with the following API:
 and salt `salt`, hardening it against offline dictionary attacks. This function also
 needs to satisfy collision resistance. The output is a string of L bytes.
 
+# ML-BUA-sKEM: A BUA-sKEM around ML-KEM {#ML-BUA-sKEM}
+
+## Splittable ML-KEM
+ML-KEM {{FIPS203}} is already specified in a way that allows one to separate out the part of the public key that does not depend on the secret key; this feature is also used in Kemeleon {{!KEMELEON=I-D.veitch-kemeleon}}. The Split function is defined as follows for ML-KEM {{TEMPO}}. The part of the public key that does not depend on the secret key represents the final 32 bytes. For this reason, Nt = ML-KEM.Npk - 32 and N⍴ = 32.
+
+~~~
+ML-KEM.Split
+
+Input:
+- pk, an ML-KEM public key, a byte string of ML-KEM.Npk bytes
+
+Output:
+- t, part of the public key that depends on the secret key
+- ⍴, part of the public key that does NOT depend on the secret key
+
+def Split(pk):
+  t = pk[0 : ML-KEM.Npk - 32]
+  ⍴ = pk[ML-KEM.Npk - 32 : ML-KEM.Npk]
+  return t, ⍴
+~~~
+
+For ML-KEM, the inverse of the split operation is concatenation.
+
+~~~
+ML-KEM.Combine
+
+Input:
+- t, part of the public key that depends on the secret key
+- ⍴, part of the public key that does NOT depend on the secret key
+
+Output:
+- pk, an ML-KEM public key, a byte string of ML-KEM.Npk bytes
+
+def Combine(t, ⍴):
+  return t || ⍴
+~~~
+
+## ML-BUA-sKEM Key Derivation
+
+The design of ML-BUA-sKEM is such that it does not change the internals of ML-KEM; it only uses the Split function. To ensure that the public key generated by ML-BUA-sKEM.DeriveKeyPair is binary and uniform, it uses Kemeleon {{!KEMELEON=I-D.veitch-kemeleon}} to (re-)encode ML-KEM's public keys. In the PAKEs described in this specification, it is crucial that this happens in constant time. For this reason, ML-BUA-sKEM uses the non-rejection sampling variants of Kemeleon, as denoted by `VectorEncodeNR` and `VectorDecodeNR`. ML-BUA-sKEM is defined as follows.
+
+~~~
+ML-BUA-sKEM.DeriveKeyPair
+
+Input:
+- seed, a random byte string of ML-BUA-sKEM.Nseed bytes
+
+Output:
+- sk, a secret decapsulation key, a byte string
+- upk, a uniform public key for encapsulation, a byte string
+
+Parameter:
+- Kemeleon.sec_param, a security parameter that tunes the bias of the produced upk
+
+def DeriveKeyPair(seed):
+  (sk, pk) = ML-KEM.DeriveKeyPair(seed)
+  (t, ⍴) = ML-KEM.Split(pk)
+  ut = VectorEncodeNR(t)
+  upk = ut || ⍴
+  return sk, upk
+~~~
+
+The uniform public keys produced by ML-BUA-sKEM are longer than those produced by ML-KEM. The final 32 bytes of the public key still represent the part that does not depend on the secret key.
+
+~~~
+ML-BUA-sKEM.Split
+
+Input:
+- upk, an ML-BUA-sKEM public key, a byte string of ML-BUA-sKEM.Npk bytes
+
+Output:
+- ut, part of the uniform public key that depends on the secret key
+- ⍴, part of the uniform public key that does NOT depend on the secret key
+
+def Split(upk):
+  ut = upk[0 : ML-BUA-sKEM.Nt]
+  ⍴ = upk[ML-BUA-sKEM.Nt : ML-BUA-sKEM.Npk]
+  return ut, ⍴
+~~~
+
+For ML-BUA-sKEM, the inverse of the split operation is concatenation.
+
+~~~
+ML-BUA-sKEM.Combine
+
+Input:
+- ut, part of the uniform public key that depends on the secret key
+- ⍴, part of the uniform public key that does NOT depend on the secret key
+
+Output:
+- upk, an ML-BUA-sKEM public key, a byte string of ML-BUA-sKEM.Npk bytes
+
+def Combine(ut, ⍴):
+  return ut || ⍴
+~~~
+
+## ML-BUA-sKEM Encapsulation & Decapsulation
+
+ML-BUA-sKEM encapsulation undoes the uniform encoding performed during key derivation before calling ML-KEM.Encaps on the non-uniform public key.
+
+~~~
+ML-BUA-sKEM.Encaps
+
+Input:
+- upk, an ML-BUA-sKEM public key
+
+Output:
+- k, a symmetric shared secret, a byte string
+- ct, an anonymous ciphertext encapsulating k, a byte string
+
+Parameter:
+- Kemeleon.sec_param, a security parameter that tunes the bias of the consumed upk
+
+def Encaps(upk):
+  (ut, ⍴) = ML-BUA-sKEM.Split(upk)
+  t = VectorDecodeNR(ut)
+  pk = ML-KEM.Combine(t, ⍴)
+  return ML-KEM.Encaps(pk)
+~~~
+
+The decapsulation procedure for ML-BUA-sKEM is exactly the same as for ML-KEM.
+
+~~~
+ML-BUA-sKEM.Decaps
+
+Input:
+- ct, an anonymous ciphertext encapsulating k, a byte string
+- sk, a secret decapsulation key, a byte string
+
+Output:
+- k, a symmetric shared secret, a byte string
+
+def Decaps(ct, sk):
+  return ML-KEM.Decaps(ct, sk)
+~~~
+
 # CPaceOQUAKE Protocol {#CPaceOQUAKE}
 
 The hybrid, symmetric PAKE protocol, denoted CPaceOQUAKE consists of CPace {{CPACE}}
-combined with OQUAKE {{ABJ25}}. OQUAKE is a PAKE built from a BUA-KEM and KDF, using a
-2-rounds of Feistel network to password-encrypt the BUA-KEM public key.
+combined with OQUAKE {{ABJ25}}. OQUAKE is a PAKE built from a BUA-sKEM and KDF, using a
+2-rounds of Feistel network to password-encrypt the BUA-sKEM public key.
 The OQUAKE protocol is based on the "NoIC" protocol analyzed in {{ABJ25}}.
 
 The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by
@@ -466,7 +631,7 @@ def Finish(ya, Yb, sid):
 
 ## OQUAKE Specification {#quake}
 
-OQUAKE is a PAKE built on a BUA-KEM and KDF.  If the BUA-KEM provides security against quantum-enabled attacks,
+OQUAKE is a PAKE built on a BUA-sKEM and KDF.  If the BUA-sKEM provides security against quantum-enabled attacks,
 then so does OQUAKE. It consists of three messages sent between initiator and responder, produced by
 the functions Init, Respond, and Finish, described below. Both parties take as input a password-related
 string PRS, an optional session identifier sid, and an optional client identifier U and server
@@ -485,6 +650,8 @@ If no client and server identifiers are provided:
 
 These requirements originate from the security proof for OQUAKE. If these requirements are not met, the proof
 does not apply, but this does not mean that the protocol becomes vulnerable.
+
+The specification follows the design as presented in {{VJWYMS25}}, with the splittable KEM technique described in {{TEMPO}}, which prevents timing attacks caused by rejection sampling in ML-KEM.
 
 ### Initiation
 
@@ -505,29 +672,30 @@ Output:
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
-- BUA-KEM, a BUA-KEM instance
+- BUA-sKEM, a BUA-sKEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
 def Init(PRS, sid, U, S):
-  seed = random(BUA-KEM.Nseed)
-  (pk, sk) = BUA-KEM.DeriveKeyPair(seed)
+  seed = random(BUA-sKEM.Nseed)
+  (pk, sk) = BUA-sKEM.DeriveKeyPair(seed)
+  (ut, ⍴) = BUA-sKEM.Split(pk)
 
   r = random(3 * Nsec)
 
   fullsid = encode_sid(sid, U, S)
 
-  // T = XOR(pk, H(fullsid, PRS, r))
-  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
-  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
-  T = XOR(pk, T_pad)
+  // T = XOR(t, H(fullsid, PRS, ⍴, r))
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
+  T = XOR(ut, T_pad)
 
-  // s = XOR(r, H(fullsid, PRS, T))
-  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
+  // s = XOR(r, H(fullsid, PRS, ⍴, T))
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
-  init_msg = s || T
+  init_msg = s || T || ⍴
 
   return Context(PRS, sk, pk, s, T, fullsid), init_msg
 ~~~
@@ -545,10 +713,10 @@ Output:
 - fullsid, a byte string
 
 Parameters:
-- BUA-KEM, a BUA-KEM instance
+- BUA-sKEM, a BUA-sKEM instance
 - KDF, a KDF instance
 
-def encode_sid(sid, U, U):
+def encode_sid(sid, U, S):
   fullsid =
     bytes_to_int(len(sid), 4) || sid ||
     bytes_to_int(len(U), 4) || U ||
@@ -576,23 +744,24 @@ Output:
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
-- BUA-KEM, a BUA-KEM instance
+- BUA-sKEM, a BUA-sKEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
 def Respond(PRS, init_msg, sid, U, S):
-  (s, T) = init_msg[0..(3 * Nsec)], init_msg[(3 * Nsec)..]
+  (s, T, ⍴) = init_msg[0 : (3 * Nsec)], init_msg[(3 * Nsec) : (6 * Nsec)], init_msg[(6 * Nsec) : (6 * Nsec) + N⍴]
 
   fullsid = encode_sid(sid, U, S)
-  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || T)
+  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || r)
-  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", Npk)
-  pk = XOR(T, T_pad)
+  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
+  ut = XOR(T, T_pad)
 
-  (ct, k) = BUA-KEM.Encaps(pk)
+  pk = BUA-sKEM.Combine(ut, ⍴)
+  (ct, k) = BUA-sKEM.Encaps(pk)
 
   prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
   key = KDF.Expand(prk_sk, DST || "sk", Nkey)
@@ -622,7 +791,7 @@ Output:
 - ss, output shared secret, a byte string of 32 bytes
 
 Parameters:
-- BUA-KEM, a BUA-KEM instance
+- BUA-sKEM, a BUA-sKEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
@@ -634,7 +803,7 @@ def Finish(context, resp_msg):
   ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
   try:
-    k = BUA-KEM.Decaps(sk, ct)
+    k = BUA-sKEM.Decaps(sk, ct)
     prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
 
     key = KDF.Expand(prk_sk, DST || "sk", Nkey)
@@ -656,8 +825,8 @@ a worst-of-both worlds PAKE, this sequential composition realizes a
 best-of-both worlds PAKE. In other words, CPaceOQUAKE remains as secure
 as the strongest PAKE, resisting attacks that break the classical CPace
 (e.g. by a quantum-capable attacker) or attacks that break the
-quantum-resistant OQUAKE (e.g. by a flaw in the BUA-KEM). This assumes that
-OQUAKE is instantiated with a quantum-resistant BUA-KEM.
+quantum-resistant OQUAKE (e.g. by a flaw in the BUA-sKEM). This assumes that
+OQUAKE is instantiated with a quantum-resistant BUA-sKEM.
 
 The reason a parallel combiner does not achieve best-of-both-worlds security
 is that it requires both constituent PAKEs to be unconditionally password
@@ -1310,7 +1479,7 @@ The RECOMMENDED configuration is below.
 - KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
-- BUA-KEM: ML-BUA-KEM768 {{deps-BUA-KEM}}, where Nseed = 64, Nct = 1088, and Npk = 1172.
+- BUA-sKEM: ML-BUA-sKEM1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, and Nct = 1568.
 - PAKE-KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672" (a randomly generated 32-byte string)
@@ -1334,7 +1503,7 @@ For instance, one possible additional configuration is as follows.
 - KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Scrypt(N = 32768, r = 8, p = 1) {{!SCRYPT=RFC7914}}
-- BUA-KEM: ML-BUA-KEM768 {{deps-BUA-KEM}}, where Nseed = 64, Nct = 1088, and Npk = 1172.
+- BUA-sKEM: ML-BUA-sKEM1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, and Nct = 1568.
 - PAKE-KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "b840fa4d4b4caec9e25d13d8c016cfe93e7468d54e936490bd0b0a3ffca1a01b" (a randomly generated 32-byte string)
@@ -1506,7 +1675,7 @@ We have the following requirements:
 
 For ML-KEM we have Nseed = 32.
 For consistency, the spec uses Nverifier = 32.
-ML-KEM768's failure probability is 2^-165.2 and ML-KEM1024's failure probability is 2^-175.2. Both are slightly too large, but we deem them acceptable: the chance that an adversary encounters a failure is purely statistical and very small.
+ML-KEM1024's failure probability is 2^-175.2. This is slightly too large, but we deem it acceptable: the chance that an adversary encounters a failure is purely statistical and very small.
 
 The following subsection discusses the parameters and hardness of CPaceOQUAKE.
 
@@ -1545,22 +1714,20 @@ CPace's session key, to be 32, so one must set H.bmax_in_bytes = 32.
 ## Parameters for OQUAKE
 We have the following requirements:
 
-- BUA-KEM ind vs classical <= -qq - classical hardness
-- BUA-KEM ind vs quantum <= -qq - quantum hardness
-- BUA-KEM public key uniformity vs classical <= -qq - classical hardness
-- BUA-KEM public key uniformity vs quantum <= -qq - quantum hardness
-- BUA-KEM ciphertext uniformity vs classical <= -qq - classical hardness
-- BUA-KEM ciphertext uniformity vs quantum <= -qq - quantum hardness
-- BUA-KEM key * 8 >= qq + classical hardness
+- BUA-sKEM ind vs classical <= -qq - classical hardness
+- BUA-sKEM ind vs quantum <= -qq - quantum hardness
+- BUA-sKEM public key uniformity vs classical <= -qq - classical hardness
+- BUA-sKEM public key uniformity vs quantum <= -qq - quantum hardness
+- BUA-sKEM ciphertext uniformity vs classical <= -qq - classical hardness
+- BUA-sKEM ciphertext uniformity vs quantum <= -qq - quantum hardness
+- BUA-sKEM key * 8 >= qq + classical hardness
 - KEM failure <= -qq - classical hardness
 
-For, ML-BUA-KEM it is as hard or harder to break public key and ciphertext uniformity as it is to break indistinguishability, so we discuss all three properties at once.
+For ML-BUA-sKEM, if we set Kemeleon.sec_param to 256, it is as hard or harder to break public key and ciphertext uniformity as it is to break indistinguishability, so we discuss all three properties at once.
 
-For ML-BUA-KEM768, the resistance to classical attacks is approximately `181 - qq` bits of security. So for qq = 64, classical hardness is approximately 117 bits of security. The resistance to quantum attacks is approximately `164 - qq` bits of security. So for qq = 64, quantum hardness is approximately 100 bits of security.
+For ML-BUA-sKEM1024, the resistance to classical attacks is approximately `253 - qq` bits of security. So for qq = 64, classical hardness is approximately 189 bits of security. The resistance to quantum attacks is approximately `230 - qq` bits of security. So for qq = 64, quantum hardness is approximately 166 bits of security.
 
-For ML-BUA-KEM1024, this would come out to `253 - 64 = 189` bits of security for classical attacks and `230 - 64 = 166` bits of security for quantum attacks.
-
-The ML-BUA-KEM key is 32 bytes, so this satisfies the requirements.
+The ML-BUA-sKEM key is 32 bytes, so this satisfies the requirements.
 We ignore the KEM failure following the same reasoning as above.
 
 
