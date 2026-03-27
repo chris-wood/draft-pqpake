@@ -3191,11 +3191,11 @@ combiner cannot provide the desired hybrid security (see <a href="#cpacequake-co
 if one PAKE is not unconditionally password hiding, breaking its assumptions
 yields the password, which is then sufficient to also break the other PAKE.
 In contrast, the sequential hybrid variants do not suffer from the same
-weakness: the input to OQUAKE is <code>H(fullsid, PRS, tr1, SK1)</code>, not the
-original PRS. Performing an offline dictionary attack against the original PRS
-would require the attacker to also guess SK1, the CPace session key, which is
-computationally indistinguishable from a random value under the gap
-Diffie-Hellman assumption.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+weakness: the input to OQUAKE is <code>PRS2</code>, derived via <code>KDF.Extract/Expand</code>
+over <code>(fullsid, msg1, msg2, key1A)</code>, not the original PRS. Performing an
+offline dictionary attack against the original PRS would require the attacker
+to also guess <code>key1A</code>, the CPace-derived key, which is computationally
+indistinguishable from a random value under the gap Diffie-Hellman assumption.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
 <p id="section-9.1-3">The benefits of this hybrid protection come at the cost of protocol and round
 complexity. From a protocol perspective, beyond two independent PAKEs treated
 nearly as black boxes, additional protocol logic is needed to combine the PAKEs
