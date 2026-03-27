@@ -651,7 +651,9 @@ If no client and server identifiers are provided:
 These requirements originate from the security proof for OQUAKE. If these requirements are not met, the proof
 does not apply, but this does not mean that the protocol becomes vulnerable.
 
-The specification follows the design as presented in {{VJWYMS25}}, with the splittable KEM technique described in {{TEMPO}}, which prevents timing attacks caused by rejection sampling in ML-KEM.
+The specification follows the design as presented in {{VJWYMS25}}, with the splittable KEM technique described
+in {{TEMPO}}, which prevents timing attacks caused by rejection sampling in ML-KEM. See {{timing-and-tempo}}
+for more information on the timing attack and this fix.
 
 ### Initiation
 
@@ -1546,12 +1548,13 @@ assumption can distinguish actual ML-KEM public keys and ciphertexts from
 random bitstrings. For OQUAKE, this would allow the attacker to perform offline
 dictionary attacks on the password. This is also the reason a parallel
 combiner cannot provide the desired hybrid security (see {{cpacequake-composition}}):
-if one PAKE is not unconditionally password hiding, breaking its underlying assumption can yield the password, and learning the password is sufficient to also break the other PAKE.
-In contrast, the sequential hybrid variants do not suffer from the same
-weakness: the input to OQUAKE is `PRS2`, derived via `KDF.Extract/Expand`
-over `(fullsid, msg1, msg2, key1A)`, not the original PRS. Performing an
-offline dictionary attack against the original PRS would require the attacker
-to also guess `key1A`, the CPace-derived key, which is computationally
+if one PAKE is not unconditionally password hiding, breaking its underlying
+assumption can yield the password, and learning the password is sufficient to
+also break the other PAKE. In contrast, the sequential hybrid variants do not
+suffer from the same weakness: the input to OQUAKE is `PRS2`, derived via
+`KDF.Extract/Expand` over `(fullsid, msg1, msg2, key1A)`, not the original PRS.
+Performing an offline dictionary attack against the original PRS would require
+the attacker to also guess `key1A`, the CPace-derived key, which is computationally
 indistinguishable from a random value under the gap Diffie-Hellman assumption.
 
 The benefits of this hybrid protection come at the cost of protocol and round
@@ -1649,6 +1652,22 @@ client, this change is minimal, but for a single server, which can have
 many registered clients, this change can be expensive. Applications therefore
 ought to consider the longevitiy and uniqueness of their party identifiers
 when instantiating these protocols.
+
+## Timing Attacks and Tempo {#timing-and-tempo}
+
+OQUAKE (without the fix from {{TEMPO}}) is subject to a timing attack
+due to how the ML-KEM expands the key-generation seed (rho) to a matrix (A).
+An internal function — SampleNTT — uses rejection sampling based on the seed
+and therefore is variable time. In NoIC / OQUAKE, after a sender password-encrypts
+a public key, an attacker can perform an offline dictionary attack based on
+this key in the following way:
+
+1. Password-decrypt the authenticated public key using a candidate password.
+2. Time the seed-to-matrix expansion step using this candidate public key and
+compare it against the known timing target.
+
+The Tempo fix addresses this issue by ensuring that input to SampleNTT is not
+secret-dependent.
 
 # IANA Considerations
 
