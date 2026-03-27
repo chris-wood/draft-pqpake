@@ -659,6 +659,32 @@ as the strongest PAKE, resisting attacks that break the classical CPace
 quantum-resistant OQUAKE (e.g. by a flaw in the BUA-KEM). This assumes that
 OQUAKE is instantiated with a quantum-resistant BUA-KEM.
 
+The reason a parallel combiner does not achieve best-of-both-worlds security
+is that it requires both constituent PAKEs to be unconditionally password
+hiding, meaning that the password must not be learnable even if all
+computational assumptions underlying the PAKE break. Intuitively, if one
+PAKE is not unconditionally password hiding, an attacker that breaks its
+computational assumptions can recover the password, and knowing the password
+is sufficient to then defeat the other PAKE as well. CPace is unconditionally
+password hiding: breaking the Diffie-Hellman assumption does not expose the
+password since the encoding of the password into a group element is
+information-theoretically hiding. OQUAKE, however, is not unconditionally
+password hiding: an attacker that can break the D-MLWE assumption can
+distinguish ML-KEM public keys and ciphertexts from random bitstrings and
+thereby mount offline dictionary attacks to recover the password. Because
+no currently known post-quantum PAKE built on standard primitives such as
+ML-KEM achieves unconditional password hiding, a parallel combiner cannot
+provide the desired hybrid security guarantee.
+
+The sequential combiner overcomes this limitation. Instead of running OQUAKE
+on the original password-related string PRS, CPaceOQUAKE feeds OQUAKE the
+derived value from CPace, which binds the original PRS to the CPace session
+key. Even if an attacker breaks D-MLWE and can distinguish OQUAKE public keys
+and ciphertexts, offline dictionary attacks against the original PRS are
+infeasible because SK1 is computationally indistinguishable from a random
+value (under the gap Diffie-Hellman assumption). The sequential composition is
+analyzed in {{HR24}} and a close variant is analyzed in {{LL24}}.
+
 To be precise, CPaceOQUAKE first runs CPace using password-related string PRS,
 establishing a session key SK1 with the associated transcript tr1. It
 then initiates OQUAKE using the password-related string `H(fullsid, PRS, tr1, SK1)`;
@@ -1346,10 +1372,16 @@ security assumptions were to break, then the password would be revealed to the
 attacker. The reason for this is that an attacker that can break the D-MLWE
 assumption can distinguish actual ML-KEM public keys and ciphertexts from
 random bitstrings. For OQUAKE, this would allow the attacker to perform offline
-dictionary attacks on the password. In contrast, the hybrid variants do not
-suffer from the same weakness, since performing the same offline password
-guessing attack against OQUAKE in the hybrid variant would require an attacker
-to guess the key produced by CPace.
+dictionary attacks on the password. This is also the reason a parallel
+combiner cannot provide the desired hybrid security (see {{cpacequake-composition}}):
+if one PAKE is not unconditionally password hiding, breaking its assumptions
+yields the password, which is then sufficient to also break the other PAKE.
+In contrast, the sequential hybrid variants do not suffer from the same
+weakness: the input to OQUAKE is `H(fullsid, PRS, tr1, SK1)`, not the
+original PRS. Performing an offline dictionary attack against the original PRS
+would require the attacker to also guess SK1, the CPace session key, which is
+computationally indistinguishable from a random value under the gap
+Diffie-Hellman assumption.
 
 The benefits of this hybrid protection come at the cost of protocol and round
 complexity. From a protocol perspective, beyond two independent PAKEs treated
