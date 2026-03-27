@@ -309,10 +309,10 @@ and/or no anonymous ciphertexts in place of a UPK-ANO-KEM.
 In this specification, we also require a third property: the KEM must be splittable. A splittable KEM (sKEM) implements the `Split(pk) -> (t, ⍴)` function and its inverse, which takes a public key and splits it into a part `⍴` that is indepdendent of the KEM's secret key and can therefore be made public, and a part `t` that does depend on the secret key. This property allows parties to perform variable-time operations on `⍴` without revealing information about the secret key. We use N⍴ to denote the byte-length of ⍴ and Nt to denote the byte-length of t. We use `Combine(t, ⍴) -> pk` to refer to the inverse operation of `Split`.
 
 In the remainder of this specification, we abbreviate 'splittable binary UPK-ANO-KEM' as BUA-sKEM.
-This specification uses a variant of ML-KEM768 {{FIPS203}}, which we therefore denote by ML-BUA-sKEM768. It is specified in {{ML-BUA-sKEM}}.
-This is instantiated with "KemeleonNR - ML-KEM768" {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
+This specification uses a variant of ML-KEM1024 {{FIPS203}}, which we therefore denote by ML-BUA-sKEM1024. It is specified in {{ML-BUA-sKEM}}.
+This is instantiated with "KemeleonNR - ML-KEM1024" {{!KEMELEON=I-D.veitch-kemeleon}}. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
-require uniform enoding for public keys. Future specifications can replace ML-BUA-sKEM768 with another splittable binary UPK-ANO-KEM that is more efficient if one becomes available.
+require uniform enoding for public keys. Future specifications can replace ML-BUA-sKEM1024 with another splittable binary UPK-ANO-KEM that is more efficient if one becomes available.
 
 
 ## Key Derivation Function {#deps-symmetric}
@@ -1448,7 +1448,7 @@ The RECOMMENDED configuration is below.
 - KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
-- BUA-sKEM: ML-BUA-sKEM768 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 192, Nseed = 64, Npk = 1208, and Nct = 1088.
+- BUA-sKEM: ML-BUA-sKEM1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1600, and Nct = 1568.
 - PAKE-KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672" (a randomly generated 32-byte string)
@@ -1472,7 +1472,7 @@ For instance, one possible additional configuration is as follows.
 - KEM: X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Scrypt(N = 32768, r = 8, p = 1) {{!SCRYPT=RFC7914}}
-- BUA-sKEM: ML-BUA-sKEM768 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 192, Nseed = 64, Npk = 1208, and Nct = 1088.
+- BUA-sKEM: ML-BUA-sKEM1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1600, and Nct = 1568.
 - PAKE-KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "b840fa4d4b4caec9e25d13d8c016cfe93e7468d54e936490bd0b0a3ffca1a01b" (a randomly generated 32-byte string)
@@ -1639,7 +1639,7 @@ We have the following requirements:
 
 For ML-KEM we have Nseed = 32.
 For consistency, the spec uses Nverifier = 32.
-ML-KEM768's failure probability is 2^-165.2 and ML-KEM1024's failure probability is 2^-175.2. Both are slightly too large, but we deem them acceptable: the chance that an adversary encounters a failure is purely statistical and very small.
+ML-KEM1024's failure probability is 2^-175.2. This is slightly too large, but we deem it acceptable: the chance that an adversary encounters a failure is purely statistical and very small.
 
 The following subsection discusses the parameters and hardness of CPaceOQUAKE.
 
@@ -1687,11 +1687,9 @@ We have the following requirements:
 - BUA-sKEM key * 8 >= qq + classical hardness
 - KEM failure <= -qq - classical hardness
 
-For ML-BUA-sKEM, if we set Kemeleon.sec_param to 192, it is as hard or harder to break public key and ciphertext uniformity as it is to break indistinguishability, so we discuss all three properties at once.
+For ML-BUA-sKEM, if we set Kemeleon.sec_param to 256, it is as hard or harder to break public key and ciphertext uniformity as it is to break indistinguishability, so we discuss all three properties at once.
 
-For ML-BUA-sKEM768, the resistance to classical attacks is approximately `181 - qq` bits of security. So for qq = 64, classical hardness is approximately 117 bits of security. The resistance to quantum attacks is approximately `164 - qq` bits of security. So for qq = 64, quantum hardness is approximately 100 bits of security.
-
-For ML-BUA-sKEM1024, this would come out to `253 - 64 = 189` bits of security for classical attacks and `230 - 64 = 166` bits of security for quantum attacks.
+For ML-BUA-sKEM1024, the resistance to classical attacks is approximately `253 - qq` bits of security. So for qq = 64, classical hardness is approximately 189 bits of security. The resistance to quantum attacks is approximately `230 - qq` bits of security. So for qq = 64, quantum hardness is approximately 166 bits of security.
 
 The ML-BUA-sKEM key is 32 bytes, so this satisfies the requirements.
 We ignore the KEM failure following the same reasoning as above.
