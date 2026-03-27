@@ -1776,9 +1776,9 @@ Session <--)--------------------------+              +----(--> Session
 
 10.3.  Timing Attacks and Tempo
 
-   OQUAKE (without the Tempo fix from [TEMPO]) is subject to a timing
-   attack due to how the ML-KEM expands the key-generation seed (rho) to
-   a matrix (A).  An internal function — SampleNTT — uses rejection
+   OQUAKE (without the fix from [TEMPO]) is subject to a timing attack
+   due to how the ML-KEM expands the key-generation seed (rho) to a
+   matrix (A).  An internal function — SampleNTT — uses rejection
    sampling based on the seed and therefore is variable time.  In NoIC /
    OQUAKE, after a sender password-encrypts a public key, an attacker
    can perform an offline dictionary attack based on this key in the

@@ -3500,7 +3500,7 @@ when instantiating these protocols.<a href="#section-10.2.2-4" class="pilcrow">�
         <h3 id="name-timing-attacks-and-tempo">
 <a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-timing-attacks-and-tempo" class="section-name selfRef">Timing Attacks and Tempo</a>
         </h3>
-<p id="section-10.3-1">OQUAKE (without the Tempo fix from <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>) is subject to a timing attack
+<p id="section-10.3-1">OQUAKE (without the fix from <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>) is subject to a timing attack
 due to how the ML-KEM expands the key-generation seed (rho) to a matrix (A).
 An internal function — SampleNTT — uses rejection sampling based on the seed
 and therefore is variable time. In NoIC / OQUAKE, after a sender password-encrypts
