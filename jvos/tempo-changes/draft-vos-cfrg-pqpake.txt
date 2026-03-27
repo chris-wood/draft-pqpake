@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                               Apple, Inc.
 Intended status: Informational                                S. Jarecki
-Expires: 31 August 2026                 University of California, Irvine
+Expires: 28 September 2026              University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                        27 February 2026
+                                                           27 March 2026
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 August 2026.
+   This Internet-Draft will expire on 28 September 2026.
 
 Copyright Notice
 
@@ -350,13 +350,13 @@ Table of Contents
 
    In the remainder of this specification, we abbreviate 'splittable
    binary UPK-ANO-KEM' as BUA-sKEM.  This specification uses a variant
-   of ML-KEM768 [FIPS203], which we therefore denote by ML-BUA-sKEM768.
-   It is specified in Section 5.  This is instantiated with "KemeleonNR
-   - ML-KEM768" [KEMELEON].  Note that, while Kemeleon provides uniform
-   encoding for KEM ciphertexts and public keys, we only require uniform
-   enoding for public keys.  Future specifications can replace ML-BUA-
-   sKEM768 with another splittable binary UPK-ANO-KEM that is more
-   efficient if one becomes available.
+   of ML-KEM1024 [FIPS203], which we therefore denote by ML-BUA-
+   sKEM1024.  It is specified in Section 5.  This is instantiated with
+   "KemeleonNR - ML-KEM1024" [KEMELEON].  Note that, while Kemeleon
+   provides uniform encoding for KEM ciphertexts and public keys, we
+   only require uniform enoding for public keys.  Future specifications
+   can replace ML-BUA-sKEM1024 with another splittable binary UPK-ANO-
+   KEM that is more efficient if one becomes available.
 
 4.3.  Key Derivation Function
 
@@ -1518,8 +1518,8 @@ Session <--)--------------------------+              +----(--> Session
    *  PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nh, m = 2^21, t = 1, v
       = 0x13, K = nil, X = nil, y = 2) [ARGON2]
 
-   *  BUA-sKEM: ML-BUA-sKEM768 Section 4.2, where Kemeleon.sec_param =
-      192, Nseed = 64, Npk = 1208, and Nct = 1088.
+   *  BUA-sKEM: ML-BUA-sKEM1024 Section 4.2, where Kemeleon.sec_param =
+      256, Nseed = 64, Npk = 1594, and Nct = 1568.
 
    *  PAKE-KDF: HKDF-SHA-256
 
@@ -1562,8 +1562,8 @@ Session <--)--------------------------+              +----(--> Session
 
    *  PC-KSF: Scrypt(N = 32768, r = 8, p = 1) [SCRYPT]
 
-   *  BUA-sKEM: ML-BUA-sKEM768 Section 4.2, where Kemeleon.sec_param =
-      192, Nseed = 64, Npk = 1208, and Nct = 1088.
+   *  BUA-sKEM: ML-BUA-sKEM1024 Section 4.2, where Kemeleon.sec_param =
+      256, Nseed = 64, Npk = 1594, and Nct = 1568.
 
    *  PAKE-KDF: HKDF-SHA-256
 
@@ -1747,9 +1747,9 @@ Session <--)--------------------------+              +----(--> Session
 
    [CPACE]    Abdalla, M., Haase, B., and J. Hesse, "CPace, a balanced
               composable PAKE", Work in Progress, Internet-Draft, draft-
-              irtf-cfrg-cpace-18, 1 February 2026,
+              irtf-cfrg-cpace-20, 22 March 2026,
               <https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-
-              cpace-18>.
+              cpace-20>.
 
    [FIPS202]  National Institute of Standards and Technology (NIST),
               "SHA-3 Standard: Permutation-Based Hash and Extendable-
@@ -1789,9 +1789,8 @@ Session <--)--------------------------+              +----(--> Session
    [XWING]    Connolly, D., Schwabe, P., and B. Westerbaan, "X-Wing:
               general-purpose hybrid post-quantum KEM", Work in
               Progress, Internet-Draft, draft-connolly-cfrg-xwing-kem-
-              09, 1 September 2025,
-              <https://datatracker.ietf.org/doc/html/draft-connolly-
-              cfrg-xwing-kem-09>.
+              10, 2 March 2026, <https://datatracker.ietf.org/doc/html/
+              draft-connolly-cfrg-xwing-kem-10>.
 
 12.2.  Informative References
 
@@ -1878,10 +1877,9 @@ A.1.  Parameters for CPaceOQUAKE+
    *  CPaceOQUAKE vs quantum <= quantum hardness
 
    For ML-KEM we have Nseed = 32.  For consistency, the spec uses
-   Nverifier = 32.  ML-KEM768's failure probability is 2^-165.2 and ML-
-   KEM1024's failure probability is 2^-175.2.  Both are slightly too
-   large, but we deem them acceptable: the chance that an adversary
-   encounters a failure is purely statistical and very small.
+   Nverifier = 32.  ML-KEM1024's failure probability is 2^-175.2.  This
+   is slightly too large, but we deem it acceptable: the chance that an
+   adversary encounters a failure is purely statistical and very small.
 
    The following subsection discusses the parameters and hardness of
    CPaceOQUAKE.
@@ -1949,20 +1947,16 @@ A.4.  Parameters for OQUAKE
 
    *  KEM failure <= -qq - classical hardness
 
-   For ML-BUA-sKEM, if we set Kemeleon.sec_param to 192, it is as hard
+   For ML-BUA-sKEM, if we set Kemeleon.sec_param to 256, it is as hard
    or harder to break public key and ciphertext uniformity as it is to
    break indistinguishability, so we discuss all three properties at
    once.
 
-   For ML-BUA-sKEM768, the resistance to classical attacks is
-   approximately 181 - qq bits of security.  So for qq = 64, classical
-   hardness is approximately 117 bits of security.  The resistance to
-   quantum attacks is approximately 164 - qq bits of security.  So for
-   qq = 64, quantum hardness is approximately 100 bits of security.
-
-   For ML-BUA-sKEM1024, this would come out to 253 - 64 = 189 bits of
-   security for classical attacks and 230 - 64 = 166 bits of security
-   for quantum attacks.
+   For ML-BUA-sKEM1024, the resistance to classical attacks is
+   approximately 253 - qq bits of security.  So for qq = 64, classical
+   hardness is approximately 189 bits of security.  The resistance to
+   quantum attacks is approximately 230 - qq bits of security.  So for
+   qq = 64, quantum hardness is approximately 166 bits of security.
 
    The ML-BUA-sKEM key is 32 bytes, so this satisfies the requirements.
    We ignore the KEM failure following the same reasoning as above.
