@@ -2075,15 +2075,18 @@ computational assumptions underlying the PAKE break. Intuitively, if one
 PAKE is not unconditionally password hiding, an attacker that breaks its
 computational assumptions can recover the password, and knowing the password
 is sufficient to then defeat the other PAKE as well. CPace is unconditionally
-password hiding: breaking the gap Diffie-Hellman assumption does not expose the
-password since the encoding of the password into a group element is
-information-theoretically hiding. OQUAKE, however, is not unconditionally
-password hiding: an attacker that can break the D-MLWE assumption can
-distinguish ML-KEM public keys and ciphertexts from random bitstrings and
-thereby mount offline dictionary attacks to recover the password. Because
-no currently known post-quantum PAKE built on standard primitives such as
-ML-KEM achieves unconditional password hiding, a parallel combiner cannot
-provide the desired hybrid security guarantee.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+password hiding in the sense that, even if the Diffie-Hellman assumption
+fails, the protocol transcript (including the exchanged group elements) is
+statistically independent of the password-related string PRS: PRS is only
+used to derive a generator, while the transmitted points are fresh random
+scalar multiples of this generator and hence are uniformly distributed in the
+group. OQUAKE, however, is not unconditionally password hiding: an attacker
+that can break the D-MLWE assumption can distinguish ML-KEM public keys and
+ciphertexts from random bitstrings and thereby mount offline dictionary
+attacks to recover the password. Because no currently known post-quantum
+PAKE built on standard primitives such as ML-KEM achieves unconditional
+password hiding, a parallel combiner cannot provide the desired hybrid
+security guarantee.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
 <p id="section-5.3-3">The sequential combiner overcomes this limitation. Instead of running OQUAKE
 on the original password-related string PRS, CPaceOQUAKE feeds OQUAKE the
 derived value from CPace, which binds the original PRS to the CPace session
