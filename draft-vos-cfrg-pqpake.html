@@ -1314,6 +1314,9 @@ configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶
 </li>
                 </ul>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-timing-attacks-and-tempo" class="internal xref">Timing Attacks and Tempo</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
@@ -2048,7 +2051,9 @@ identifier S. Upon completion, both parties obtain matching session keys if thei
         </ul>
 <p id="section-6.2-6">These requirements originate from the security proof for OQUAKE. If these requirements are not met, the proof
 does not apply, but this does not mean that the protocol becomes vulnerable.<a href="#section-6.2-6" class="pilcrow">¶</a></p>
-<p id="section-6.2-7">The specification follows the design as presented in <span>[<a href="#VJWYMS25" class="cite xref">VJWYMS25</a>]</span>, with the splittable KEM technique described in <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>, which prevents timing attacks caused by rejection sampling in ML-KEM.<a href="#section-6.2-7" class="pilcrow">¶</a></p>
+<p id="section-6.2-7">The specification follows the design as presented in <span>[<a href="#VJWYMS25" class="cite xref">VJWYMS25</a>]</span>, with the splittable KEM technique described
+in <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>, which prevents timing attacks caused by rejection sampling in ML-KEM. See <a href="#timing-and-tempo" class="auto internal xref">Section 10.3</a>
+for more information on the timing attack and this fix.<a href="#section-6.2-7" class="pilcrow">¶</a></p>
 <div id="initiation-1">
 <section id="section-6.2.1">
           <h4 id="name-initiation-2">
@@ -3363,12 +3368,13 @@ assumption can distinguish actual ML-KEM public keys and ciphertexts from
 random bitstrings. For OQUAKE, this would allow the attacker to perform offline
 dictionary attacks on the password. This is also the reason a parallel
 combiner cannot provide the desired hybrid security (see <a href="#cpacequake-composition" class="auto internal xref">Section 6.3</a>):
-if one PAKE is not unconditionally password hiding, breaking its underlying assumption can yield the password, and learning the password is sufficient to also break the other PAKE.
-In contrast, the sequential hybrid variants do not suffer from the same
-weakness: the input to OQUAKE is <code>PRS2</code>, derived via <code>KDF.Extract/Expand</code>
-over <code>(fullsid, msg1, msg2, key1A)</code>, not the original PRS. Performing an
-offline dictionary attack against the original PRS would require the attacker
-to also guess <code>key1A</code>, the CPace-derived key, which is computationally
+if one PAKE is not unconditionally password hiding, breaking its underlying
+assumption can yield the password, and learning the password is sufficient to
+also break the other PAKE. In contrast, the sequential hybrid variants do not
+suffer from the same weakness: the input to OQUAKE is <code>PRS2</code>, derived via
+<code>KDF.Extract/Expand</code> over <code>(fullsid, msg1, msg2, key1A)</code>, not the original PRS.
+Performing an offline dictionary attack against the original PRS would require
+the attacker to also guess <code>key1A</code>, the CPace-derived key, which is computationally
 indistinguishable from a random value under the gap Diffie-Hellman assumption.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
 <p id="section-10.1-3">The benefits of this hybrid protection come at the cost of protocol and round
 complexity. From a protocol perspective, beyond two independent PAKEs treated
@@ -3487,6 +3493,30 @@ ought to consider the longevitiy and uniqueness of their party identifiers
 when instantiating these protocols.<a href="#section-10.2.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
+</section>
+</div>
+<div id="timing-and-tempo">
+<section id="section-10.3">
+        <h3 id="name-timing-attacks-and-tempo">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-timing-attacks-and-tempo" class="section-name selfRef">Timing Attacks and Tempo</a>
+        </h3>
+<p id="section-10.3-1">OQUAKE (without the fix from <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>) is subject to a timing attack
+due to how the ML-KEM expands the key-generation seed (rho) to a matrix (A).
+An internal function — SampleNTT — uses rejection sampling based on the seed
+and therefore is variable time. In NoIC / OQUAKE, after a sender password-encrypts
+a public key, an attacker can perform an offline dictionary attack based on
+this key in the following way:<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-10.3-2">
+<li id="section-10.3-2.1">
+            <p id="section-10.3-2.1.1">Password-decrypt the authenticated public key using a candidate password.<a href="#section-10.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-10.3-2.2">
+            <p id="section-10.3-2.2.1">Time the seed-to-matrix expansion step using this candidate public key and
+compare it against the known timing target.<a href="#section-10.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-10.3-3">The Tempo fix addresses this issue by ensuring that input to SampleNTT is not
+secret-dependent.<a href="#section-10.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

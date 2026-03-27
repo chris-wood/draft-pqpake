@@ -112,6 +112,7 @@ Table of Contents
      10.2.  Identities
        10.2.1.  Symmetric PAKE identities
        10.2.2.  Asymmetric PAKE identities
+     10.3.  Timing Attacks and Tempo
    11. IANA Considerations
    12. References
      12.1.  Normative References
@@ -720,7 +721,8 @@ def Init(PRS, sid, U, S):
 
    The specification follows the design as presented in [VJWYMS25], with
    the splittable KEM technique described in [TEMPO], which prevents
-   timing attacks caused by rejection sampling in ML-KEM.
+   timing attacks caused by rejection sampling in ML-KEM.  See
+   Section 10.3 for more information on the timing attack and this fix.
 
 6.2.1.  Initiation
 
@@ -1771,6 +1773,25 @@ Session <--)--------------------------+              +----(--> Session
    can be expensive.  Applications therefore ought to consider the
    longevitiy and uniqueness of their party identifiers when
    instantiating these protocols.
+
+10.3.  Timing Attacks and Tempo
+
+   OQUAKE (without the fix from [TEMPO]) is subject to a timing attack
+   due to how the ML-KEM expands the key-generation seed (rho) to a
+   matrix (A).  An internal function — SampleNTT — uses rejection
+   sampling based on the seed and therefore is variable time.  In NoIC /
+   OQUAKE, after a sender password-encrypts a public key, an attacker
+   can perform an offline dictionary attack based on this key in the
+   following way:
+
+   1.  Password-decrypt the authenticated public key using a candidate
+       password.
+
+   2.  Time the seed-to-matrix expansion step using this candidate
+       public key and compare it against the known timing target.
+
+   The Tempo fix addresses this issue by ensuring that input to
+   SampleNTT is not secret-dependent.
 
 11.  IANA Considerations
 
