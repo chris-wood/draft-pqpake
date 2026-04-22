@@ -126,10 +126,13 @@ informative:
 This document describes the CPaceOQUAKE+ protocol, a hybrid asymmetric
 password-authenticated key exchange (aPAKE) that supports mutual
 authentication in a client-server setting secure against
-quantum-capable attackers. CPaceOQUAKE+ is the result of a KEM-based
-transformation from the hybrid symmetric PAKE protocol called CPaceOQUAKE
-that is also described in this document. This document recommends
-configurations for CPaceOQUAKE+.
+quantum-capable attackers. CPaceOQUAKE+ is composed of three independent
+stages — CPace, OQUAKE, and Password Confirmation — that run sequentially,
+with the output of each stage feeding as context into the next.
+This document also describes OQUAKE+, a post-quantum aPAKE composed
+of the OQUAKE and Password Confirmation stages, and CPaceOQUAKE, the
+hybrid symmetric PAKE composed of the CPace and OQUAKE stages.
+This document recommends configurations for CPaceOQUAKE+.
 
 --- middle
 
@@ -163,8 +166,8 @@ viability of existing aPAKE protocols in practice diminishes in time.
 
 This document describes the CPaceOQUAKE+ protocol, an aPAKE that supports mutual
 authentication in a client-server setting secure against
-quantum-capable attackers. CPaceOQUAKE+ is the result of a KEM-based transformation
-from the hybrid symmetric PAKE protocol called CPaceOQUAKE.
+quantum-capable attackers. CPaceOQUAKE+ is composed of three independent stages
+that run sequentially: CPace, OQUAKE, and Password Confirmation.
 The design securely composes multiple existing primitives {{VJWYMS25}}.
 
 This document fully specifies CPaceOQUAKE+ and all dependencies necessary
@@ -214,44 +217,53 @@ After registration, the client uses its password and the server uses the corresp
 verifier to establish an authenticated shared secret such that the server learns nothing
 of the client's password.
 
-The aPAKE specified in this document is composed of multiple smaller protocols, including
-the hybrid symmetric PAKE protocol called CPaceOQUAKE. CPaceOQUAKE is in turn a composition of two other
-PAKE protocols: the existing CPace {{!CPACE=I-D.irtf-cfrg-cpace}} and a new post-quantum PAKE called OQUAKE.
-To achieve the asymmetric property, the aPAKE also builds upon a password
-confirmation sub-protocol as specified in {{pcp}}.
+The protocols specified in this document are built from three independent stages that
+compose sequentially, where the output of each stage feeds as context into the next:
 
-We refer to the fully composed aPAKE as CPaceOQUAKE+.
-An abstract overview of the composition of this protocol is shown in the figure below.
-In the subsequent sections we break down the sub-protocols into even smaller building blocks.
+1. **CPace** {{!CPACE=I-D.irtf-cfrg-cpace}}: A classical elliptic curve-based symmetric PAKE.
+2. **OQUAKE**: A new post-quantum symmetric PAKE built from a BUA-sKEM.
+3. **Password Confirmation (PC)**: A challenge-response protocol that upgrades a
+   symmetric PAKE to an asymmetric PAKE; see {{pcp}}.
+
+These stages can be composed into the following named protocols:
+
+- **CPaceOQUAKE**: A hybrid symmetric PAKE combining CPace (Stage 1) and OQUAKE (Stage 2).
+- **OQUAKE+**: A post-quantum aPAKE combining OQUAKE (Stage 2) and PC (Stage 3).
+- **CPaceOQUAKE+**: A hybrid aPAKE combining all three stages.
+
+An abstract overview of CPaceOQUAKE+ is shown in the figure below.
 
 ~~~ aasvg
-            +--------------------+
-            | CPaceOQUAKE+       |
-            |  +--------------+  |
-            |  | CPaceOQUAKE  |  |
-            |  | +----------+ |  |
-            |  | |  CPace   | |  |
-Client's    |  | | protocol | |  |
-password -->|  | +----------+ |  |<-- Verifier
-            |  |              |  |
-            |  | +----------+ |  |
-            |  | |  OQUAKE  | |  |
-            |  | | protocol | |  |
-            |  | +----------+ |  |
-            |  +--------------+  |
-            |   .------------.   |
-            |  |   Password   |  |
-Session <---+  | confirmation |  +---> Session
-  key       |   '------------'   |       key
-            +--------------------+
+            Client                  Server
+              |                       |
+              |     +----------+      |
+Client's      |     |  CPace   |      |
+password ---->+---->| (Stage 1)|<-----+<---- Verifier
+              |     +----------+      |
+              |          | SK1        |
+              |          v            |
+              |     +----------+      |
+              |     |  OQUAKE  |      |
+              +---->| (Stage 2)|<-----+
+              |     +----------+      |
+              |          | SK2        |
+              |          v            |
+              |     .----------.      |
+              +---->|   PC     |<-----+<---- Public key
+              |     | (Stage 3)|      |
+              |     '----------'      |
+              |      |       |        |
+              v      v       v        v
+          client_key            server_key
 ~~~
 
-We note that this standard only specifies the composition of CPace and OQUAKE.
+We note that this standard only specifies the compositions listed above.
 It is not necessarily true that one can securely compose all PAKEs this way.
 
 The rest of this document specifies CPaceOQUAKE+ and its dependencies. {{CPaceOQUAKE}}
-specifies the CPaceOQUAKE protocol, and {{CPaceOQUAKEplus}} specifies the CPaceOQUAKE+ protocol,
-incorporating the former protocol. Each of these pieces build upon the cryptographic dependencies
+specifies CPace and OQUAKE as individual stages and their composition into CPaceOQUAKE.
+{{CPaceOQUAKEplus}} specifies the PC stage, the OQUAKE+ composition, and the full
+CPaceOQUAKE+ composition. Each of these pieces build upon the cryptographic dependencies
 specified in {{crypto-deps}}.
 
 # Cryptographic Dependencies {#crypto-deps}
@@ -483,29 +495,35 @@ The OQUAKE protocol is based on the "NoIC" protocol analyzed in {{ABJ25}}.
 The CPaceOQUAKE protocol is based on the `Sequential PAKE Combiner' protocol proposed by
 {{HR24}}. A very close variant of this protocol was also analyzed in {{LL24}}.
 
-At a high level, CPaceOQUAKE is a two-round protocol that runs between client and server
+At a high level, CPaceOQUAKE is a four-message protocol that runs between client and server
 wherein, upon completion, both parties share the same session key if they agree
 on the password-related string (PRS). Otherwise, they obtain random session keys.
 This is summarized in the diagram below.
 
 ~~~ aasvg
-            +----------------------------------------+
-            | CPaceOQUAKE  +----------+              |
-            |              |  CPace   |              |
-Client's    |              | protocol |              |    Server's
-password -->|              +----------+              |<-- password
-            |                                        |
-            |              +----------+              |
-            |              |  OQUAKE  |              |
-Session <---+              | protocol |              +--> Session
-  key       |              +----------+              |      key
-            +----------------------------------------+
+            Client                  Server
+              |                       |
+              |     +----------+      |
+              |     |  CPace   |      |
+Client's      |     | (Stage 1)|      |    Server's
+password ---->+---->|          |<-----+<---- password
+              |     +----------+      |
+              |          |            |
+              |    context=SK1        |
+              |          |            |
+              |     +----------+      |
+              |     |  OQUAKE  |      |
+              +---->| (Stage 2)|<-----+
+              |     +----------+      |
+              |          |            |
+              v          v            v
+          client_key            server_key
 ~~~
 
-CPaceOQUAKE composes CPace and OQUAKE by first running CPace between
-client and server, and then incorporating the CPace session key into
-the password before running OQUAKE between the server and client. We
-explain the composition in more detail in {{!cpacequake-composition}}.
+CPaceOQUAKE composes CPace and OQUAKE by first running CPace to completion
+between client and server, and then running OQUAKE with the CPace session
+key provided as context. We explain the composition in more detail in
+{{!cpacequake-composition}}.
 
 As describes in {{cpace}} and {{quake}}, both CPace and OQUAKE take
 as input optional client and server identifiers, denoted U and S,
@@ -518,7 +536,7 @@ CPace is a classical elliptic curve-based PAKE {{!CPACE}}. This section wraps th
 We use an interactive version of CPace that takes two rounds, in which there is a designated initiator and responder.
 In other words, the responder only starts executing the protocol after it received the first message from the initiator.
 
-The flow of the protocol consists of three messages sent between initiator and responder, produced by the functions
+The flow of the protocol consists of two messages sent between initiator and responder, produced by the functions
 Init, Respond, and Finish, described below. Both parties take as input a password-related
 string PRS, an optional unique shared session identifier sid, and an optional client identifier
 U and server identifier S (e.g., a device identifier, an IP address, or URL pertaining to the
@@ -632,11 +650,16 @@ def Finish(ya, Yb, sid):
 ## OQUAKE Specification {#quake}
 
 OQUAKE is a PAKE built on a BUA-sKEM and KDF.  If the BUA-sKEM provides security against quantum-enabled attacks,
-then so does OQUAKE. It consists of three messages sent between initiator and responder, produced by
+then so does OQUAKE. It consists of two messages sent between initiator and responder, produced by
 the functions Init, Respond, and Finish, described below. Both parties take as input a password-related
-string PRS, an optional session identifier sid, and an optional client identifier U and server
-identifier S. Upon completion, both parties obtain matching session keys if their PRS, sid, key length
-(specified by N), and client and server identifiers match. Otherwise, they obtain random session keys.
+string PRS, an optional application-provided context, an optional session identifier sid, and an optional
+client identifier U and server identifier S. Upon completion, both parties obtain matching session keys if
+their PRS, context, sid, key length (specified by N), and client and server identifiers match. Otherwise,
+they obtain random session keys.
+
+When a context is provided, OQUAKE derives an effective password from (PRS, context) and uses it in place
+of PRS throughout the protocol. This allows OQUAKE to be securely composed with a preceding protocol
+stage whose output key is provided as context.
 
 The shared session identifier has the following requirements. If a client and server identifier are provided:
 
@@ -657,15 +680,16 @@ for more information on the timing attack and this fix.
 
 ### Initiation
 
-Init takes as input the initiator's PRS, an optional session identifier sid, and optional client and server identifiers
-U and S. It produces a context for the initiator to store, as well as a protocol message that is sent to
-the responder. Its implementation is as follows.
+Init takes as input the initiator's PRS, an optional context, an optional session identifier sid, and optional
+client and server identifiers U and S. It produces a context for the initiator to store, as well as a
+protocol message that is sent to the responder. Its implementation is as follows.
 
 ~~~
 OQUAKE.Init
 
 Input:
 - PRS, password-related string, a byte string
+- context, optional application-provided context, a byte string
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
 
@@ -678,28 +702,34 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Init(PRS, sid, U, S):
+def Init(PRS, context, sid, U, S):
+  fullsid = encode_sid(sid, U, S)
+
+  if context is not None:
+    prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+    effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
+  else:
+    effective_PRS = PRS
+
   seed = random(BUA-sKEM.Nseed)
   (pk, sk) = BUA-sKEM.DeriveKeyPair(seed)
   (ut, ⍴) = BUA-sKEM.Split(pk)
 
   r = random(3 * Nsec)
 
-  fullsid = encode_sid(sid, U, S)
-
-  // T = XOR(t, H(fullsid, PRS, ⍴, r))
-  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  // T = XOR(t, H(fullsid, effective_PRS, ⍴, r))
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   T = XOR(ut, T_pad)
 
-  // s = XOR(r, H(fullsid, PRS, ⍴, T))
-  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
+  // s = XOR(r, H(fullsid, effective_PRS, ⍴, T))
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
   init_msg = s || T || ⍴
 
-  return Context(PRS, sk, pk, s, T, fullsid), init_msg
+  return Context(effective_PRS, sk, pk, s, T, fullsid), init_msg
 ~~~
 
 The encode_sid function is defined below.
@@ -728,7 +758,7 @@ def encode_sid(sid, U, S):
 
 ### Response
 
-Respond takes as input the PRS, the initiator's protocol message, an optional session identifier, and optional client and server identifiers.
+Respond takes as input the PRS, an optional context, the initiator's protocol message, an optional session identifier, and optional client and server identifiers.
 It produces a 32-byte symmetric key and a protocol message intended to be sent to the initiator. Its implementation
 is as follows.
 
@@ -737,6 +767,7 @@ OQUAKE.Respond
 
 Input:
 - PRS, password-related string, a byte string
+- context, optional application-provided context, a byte string
 - init_msg, encoded protocol message, a byte string
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
@@ -750,22 +781,29 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Respond(PRS, init_msg, sid, U, S):
+def Respond(PRS, context, init_msg, sid, U, S):
   (s, T, ⍴) = init_msg[0 : (3 * Nsec)], init_msg[(3 * Nsec) : (6 * Nsec)], init_msg[(6 * Nsec) : (6 * Nsec) + N⍴]
 
   fullsid = encode_sid(sid, U, S)
-  prk_s_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
+
+  if context is not None:
+    prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+    effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
+  else:
+    effective_PRS = PRS
+
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   ut = XOR(T, T_pad)
 
   pk = BUA-sKEM.Combine(ut, ⍴)
   (ct, k) = BUA-sKEM.Encaps(pk)
 
-  prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
+  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
   key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
@@ -801,12 +839,12 @@ Exceptions:
 - AuthenticationError, raised when the key confirmation fails
 
 def Finish(context, resp_msg):
-  (PRS, sk, pk, s, T, fullsid) = context
+  (effective_PRS, sk, pk, s, T, fullsid) = context
   ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
   try:
     k = BUA-sKEM.Decaps(sk, ct)
-    prk_sk = KDF.Extract(PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
+    prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
 
     key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
@@ -851,40 +889,46 @@ password hiding, a parallel combiner cannot provide the desired hybrid
 security guarantee.
 
 The sequential combiner overcomes this limitation. Instead of running OQUAKE
-on the original password-related string PRS, CPaceOQUAKE feeds OQUAKE the
-derived value from CPace, which binds the original PRS to the CPace session
-key. Even if an attacker breaks D-MLWE and can distinguish OQUAKE public keys
-and ciphertexts, offline dictionary attacks against the original PRS are
-infeasible because the CPace-derived session key material is computationally
-indistinguishable from a random value (under the gap Diffie-Hellman assumption).
-The sequential composition is analyzed in {{HR24}} and a close variant is analyzed in {{LL24}}.
+on the original password-related string PRS, CPaceOQUAKE feeds the CPace
+session key to OQUAKE as context, which binds the original PRS to the CPace
+session key. Even if an attacker breaks D-MLWE and can distinguish OQUAKE
+public keys and ciphertexts, offline dictionary attacks against the original
+PRS are infeasible because the CPace-derived session key material is
+computationally indistinguishable from a random value (under the gap
+Diffie-Hellman assumption). The sequential composition is analyzed in {{HR24}}
+and a close variant is analyzed in {{LL24}}.
 
-To be precise, CPaceOQUAKE first runs CPace using password-related string PRS,
-establishing a session key SK1 with the associated transcript tr1. It
-then initiates OQUAKE using the password-related string `H(fullsid, PRS, tr1, SK1)`;
-a secret derived from the the original password-related string and the outputs from
-the CPace instance. Here, `fullsid` is the output of encode_sid(sid, U, S).
-The final session key is then a hash of fullsid, the original password-related string,
-both CPace and OQUAKE transcripts (tr1 and tr2, respectively), and both session keys
-output from CPace and OQUAKE (SK1 and SK2, respectively), i.e.,
-H(fullsid, tr1, tr2, SK1, SK2).
+To be precise, CPaceOQUAKE first runs CPace to completion using
+password-related string PRS, establishing a session key SK1. It then runs
+OQUAKE using PRS and context=SK1. OQUAKE derives an effective password from
+(PRS, SK1) and uses it throughout the protocol, producing session key SK2.
+The CPaceOQUAKE session key is SK2, which transitively depends on SK1
+through the effective password derivation.
 
-This is outlined in the diagram below. In CPaceOQUAKE, CPace is initiated by the
-first party, while OQUAKE is initiated by the other party. This results in a protocol
-that requires three messages.
+This is outlined in the diagram below. CPace is initiated by the client, and
+OQUAKE is also initiated by the client after CPace completes. This results
+in a four-message protocol.
 
 ~~~ aasvg
-            +-------------------------------------------------------------------------------+
-Client's    | CPaceOQUAKE                     +----------+                                  |    Server's
-password ---)-------------+---PRS------------>|  CPace   +<--PRS---------+------------------(--- password
-            |             |         +---------+ protocol +-+             |                  |
-            |             |         |         +----------+ |             |                  |
-            |             |         |                      +-------------(---------+        |
-            |             v         v         +----------+               v         v        |
-            | H(fullsid, PRS, tr1, SK1)------>|  OQUAKE  +<--H(fullsid, PRS, tr1, SK1)      |
-Session <---)-H(fullsid, tr1, tr2, SK1, SK2)--+ protocol +---H(fullsid, tr1, tr2, SK1, SK2)-(--> Session
-  key       |                                 +----------+                                  |      key
-            +-------------------------------------------------------------------------------+
+            Client                  Server
+              |                       |
+              |     +----------+      |
+              |     |  CPace   |      |
+         PRS--+---->| (Stage 1)|<-----+--PRS
+              |     +----------+      |
+              |          |            |
+              |         SK1           |
+              |          |            |
+              |     +----------+      |
+              |     |  OQUAKE  |      |
+         PRS--+---->| (Stage 2)|<-----+--PRS
+              |     | ctx=SK1  |      |
+              |     +----------+      |
+              |          |            |
+              |         SK2           |
+              |      |       |        |
+              v      v       v        v
+          client_key            server_key
 ~~~
 
 Unlike OQUAKE, CPaceOQUAKE does not require a shared session identifier sid, although this
@@ -892,33 +936,41 @@ is strongly recommended. If no sid is provided, CPace will run without an sid, a
 will use a random string generated with random material provided by both parties. If an
 sid is provided, both CPace and OQUAKE will use this sid.
 
-An overview of the protocol flow is shown below. The protocol has four functions. Init and
-InitiatorFinish are intended to be called by the initiator, and Respond and ResponderFinish
-are intended to be called by the responder. The following subsections specify these functions.
+An overview of the protocol flow is shown below. The protocol has five functions. Init,
+InitiatorContinue, and InitiatorFinish are intended to be called by the client, and Respond
+and ResponderFinish are intended to be called by the server.
 
 ~~~aasvg
-Client: PRS,sid,U,S       Server: PRS,sid,U,S
+Client: PRS,sid,U,S               Server: PRS,sid,U,S
         -----------------------------------------
-     ctx1, (s1, msg1) =                    |
-CPaceOQUAKE.Init(PRS,sid,U,S)              |
+     ctx, msg1 =                           |
+CPaceOQUAKE.Init(PRS,sid,U,S)             |
              |                             |
-             |         (s1, msg1)          |
+             |           msg1              |
              |---------------------------->|
              |                             |
-             |                ctx2, (s2, msg2, msg3) =
-             |     CPaceOQUAKE.Respond(PRS,(s1,msg1),sid,U,S)
+             |                  ctx, msg2 =
+             |   CPaceOQUAKE.Respond(PRS,msg1,sid,U,S)
              |                             |
-             |       s2, msg2, msg3        |
+             |           msg2              |
              |<----------------------------|
              |                             |
-    client_key, msg4 =                     |
-CPaceOQUAKE.InitiatorFinish(PRS, ...       |
-(ctx1,s1),(s2,msg2,msg3),sid,U,S)          |
-             |            msg4             |
+     ctx, msg3 =                           |
+CPaceOQUAKE.InitiatorContinue(             |
+  PRS,ctx,msg2,sid,U,S)                    |
+             |                             |
+             |           msg3              |
              |---------------------------->|
              |                             |
-             |                       server_key =
-             |           CPaceOQUAKE.ResponderFinish(ctx2, msg4)
+             |           server_key, msg4 =
+             |     CPaceOQUAKE.ResponderFinish(
+             |       PRS,ctx,msg3,sid,U,S)
+             |                             |
+             |           msg4              |
+             |<----------------------------|
+             |                             |
+     client_key =                          |
+CPaceOQUAKE.InitiatorFinish(ctx,msg4)      |
              |                             |
         -----------------------------------------
      output client_key              output server_key
@@ -958,11 +1010,8 @@ def Init(PRS, sid, U, S):
 ### Server Response
 
 The server processes the client message using its input PRS, an optional session identifier sid, and
-optional client and server identifiers U and S. The first output of this function is a context that
-is used to finish the protocol later. The second output is a protocol message intended for the client.
-
-The server responds to the CPace session that the client initiated, and it initiates a new OQUAKE
-session using both the PRS and the key established by CPace.
+optional client and server identifiers U and S. The server responds to the CPace session
+that the client initiated, completing Stage 1.
 
 The server MUST ensure that exactly one of `s1` and `sid` exists. It MUST abort if the message does
 not have the correct length.
@@ -982,43 +1031,31 @@ Output:
 
 Parameters:
 - CPace, parameterized instance of CPace
-- OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
 def Respond(PRS, init_msg, sid, U, S):
   s1, msg1 = init_msg[0..32], lv_decode(init_msg[32..])
 
   key1, msg2 = CPace.Respond(PRS, msg1, sid, U, S)
-  key1A = KDF.Expand(key1, DST || "prskey", Nkey)
-  key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
   s2 = random(32)
-  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
 
-  fullsid = encode_sid(extended_sid, U, S)
+  resp_msg = s2 || lv_encode(msg2)
 
-  prk_PRS2 = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
-  PRS2 = KDF.Expand(prk_PRS2, DST || "PRS2", Nkey)
-
-  ctx2, msg3 = OQUAKE.Init(PRS2, extended_sid, U, S)
-
-  resp_msg = s2 || lv_encode(msg2) || lv_encode(msg3)
-
-  return Context(fullsid, PRS, msg1, msg2, msg3, key1B, ctx2), resp_msg
+  return Context(s1, s2, key1), resp_msg
 ~~~
 
-### Client Finish
+### Client Continue
 
-The client finishes the protocol by processing the server response. The client obtains a
-shared secret and a final message intended for the server. It does so by finishing the
-CPace session and responding to the OQUAKE session.
+The client finishes CPace (Stage 1) and initiates OQUAKE (Stage 2). The client derives
+the CPace session key, then uses it as context for OQUAKE. The output is a new context
+and an OQUAKE init message to send to the server.
 
 The client must ensure that exactly one of (s1, s2) and sid exists.
 The client should abort when the message does not have the correct length.
 
 ~~~
-CPaceOQUAKE.InitiatorFinish
+CPaceOQUAKE.InitiatorContinue
 
 Input:
 - PRS, password-related string, a byte string
@@ -1028,7 +1065,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- key, an N-byte shared secret
+- context, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -1036,40 +1073,67 @@ Parameters:
 - OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
-def InitiatorFinish(PRS, (ctx1, s1), resp_msg, sid, U, S):
+def InitiatorContinue(PRS, (ctx1, s1), resp_msg, sid, U, S):
   s2 = resp_msg[0..32]
   msg2 = lv_decode(resp_msg[32..])
-  msg3 = lv_decode(resp_msg[32+len(msg2)..])
 
   key1 = CPace.Finish(ctx1, msg2, sid)
-  key1A = KDF.Expand(key1, DST || "prskey", Nkey)
-  key1B = KDF.Expand(key1, DST || "outputkey", Nkey)
 
   prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
   extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
 
-  fullsid = encode_sid(extended_sid, U, S)
-  prk_PRS2 = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || key1A)
-  PRS2 = KDF.Expand(prk_PRS2, DST || "PRS2", Nkey)
+  ctx2, msg3 = OQUAKE.Init(PRS, key1, extended_sid, U, S)
 
-  key2, msg4 = OQUAKE.Respond(PRS2, msg3, extended_sid, U, S)
-
-  prk_sessionkey = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
-  client_key = KDF.Expand(prk_sessionkey, DST || "sessionkey", Nkey)
-
-  return client_key, msg4
+  return ctx2, msg3
 ~~~
 
 ### Server Finish
 
-The server finishes the protocol by finising OQUAKE using the client's response, outputting a shared secret of N bytes.
-It should abort when the message does not have the correct length.
+The server completes the protocol by responding to the OQUAKE session (Stage 2).
+The server uses the CPace session key from Stage 1 as context for OQUAKE.
+The OQUAKE output key is the CPaceOQUAKE session key.
+
+The server should abort when the message does not have the correct length.
 
 ~~~
 CPaceOQUAKE.ResponderFinish
 
 Input:
+- PRS, password-related string, a byte string
 - ctx, context from the server's Response
+- msg3, the message received from the client, a byte string
+- sid, session identifier, a byte string
+- U and S, client and server identifiers
+
+Output:
+- key, an N-byte shared secret
+- msg, an encoded protocol message for the responder to send to the initiator
+
+Parameters:
+- OQUAKE, parameterized instance of OQUAKE
+- DST, domain separation tag, a byte string
+
+def ResponderFinish(PRS, ctx, msg3, sid, U, S):
+  (s1, s2, key1) = ctx
+
+  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
+  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
+
+  resp_msg, server_key = OQUAKE.Respond(PRS, key1, msg3, extended_sid, U, S)
+
+  return server_key, resp_msg
+~~~
+
+### Client Finish
+
+The client finishes the protocol by completing OQUAKE (Stage 2). The OQUAKE
+output key is the CPaceOQUAKE session key.
+
+~~~
+CPaceOQUAKE.InitiatorFinish
+
+Input:
+- ctx, context from OQUAKE.Init (stored by CPaceOQUAKE.InitiatorContinue)
 - msg4, the message received from the server, a byte string
 
 Output:
@@ -1077,30 +1141,27 @@ Output:
 
 Parameters:
 - OQUAKE, parameterized instance of OQUAKE
-- DST, domain separation tag, a byte string
 
-def ResponderFinish(ctx, msg4):
-  (fullsid, PRS, msg1, msg2, msg3, key1B, ctx2) = ctx
-
-  key2 = OQUAKE.Finish(ctx2, msg4)
-
-  prk_sessionkey = KDF.Extract(PRS, DST || "CPaceOQUAKE" || fullsid || msg1 || msg2 || msg3 || msg4 || key1B || key2)
-  server_key = KDF.Expand(prk_sessionkey, DST || "sessionkey", Nkey)
-
-  return server_key
+def InitiatorFinish(ctx, msg4):
+  client_key = OQUAKE.Finish(ctx, msg4)
+  return client_key
 ~~~
 
 # CPaceOQUAKE+ Protocol {#CPaceOQUAKEplus}
 
-CPaceOQUAKE+ is the 5 message aPAKE resulting from applying a KEM-based
-PAKE-to-aPAKE transformation to CPaceOQUAKE. At a high level, this
-involves running CPaceOQUAKE on a verifier of the client's password.
-To ensure that the client does indeed know the password pertaining
-to that verifier, there is an additional password confirmation
-stage that uses seed derived from the password. Both the verifier and
+CPaceOQUAKE+ is the seven-message aPAKE resulting from composing CPace
+(Stage 1), OQUAKE (Stage 2), and Password Confirmation (Stage 3). At a
+high level, this involves running CPaceOQUAKE on a verifier of the
+client's password, followed by a password confirmation stage. To ensure
+that the client does indeed know the password pertaining to that verifier,
+the PC stage uses a seed derived from the password. Both the verifier and
 the seed are derived from the password using a key stretching function.
 The seed is later used to derive a KEM public key. We refer to the collection
 of the verifier and this public key as 'the verifiers'.
+
+This document also specifies OQUAKE+ (see {{oquakeplus-composition}}),
+a post-quantum aPAKE that composes OQUAKE (Stage 2) and PC (Stage 3)
+without the classical CPace stage.
 
 The CPaceOQUAKE+ protocol can be seen as a close variant (and a specific
 instance) of the `augmented PAKE' construction presented in {{LLH24}} and in {{Gu24}}.
@@ -1201,32 +1262,36 @@ Client: PRS, salt, U, S              Server: N/A
 
 In the password confirmation (PC) stage, the client proves knowledge
 of its password without revealing it. It uses the registered verifiers from the
-previous subsection. To do so securely, it uses the key established by CPaceOQUAKE,
-which allows it to realize a confidential but unauthenticated channel.
-In other words, this password confirmation stage cannot be used by itself.
-This PC stage is parameterized by a KEM, KDF, KSF, and is additionally bound
-to the preceding protocol via an agreed-upon transcript (tx); see {{configurations}}
-for specific parameter configurations.
+previous subsection. To do so securely, it uses the key established by a preceding
+PAKE stage (e.g., CPaceOQUAKE or OQUAKE), which provides a confidential but
+unauthenticated channel. This PC stage is parameterized by a KEM, KDF, and KSF;
+see {{configurations}} for specific parameter configurations.
 
-The password confirmation is a two-round challenge-response flow between the
-server and client. In particular, the server challenges the client to prove
-knowledge of its password. More precisely, it challenges the client to prove
-knowledge of a seed, derived from the GenVerifierMaterial function (and
-in turn derived from the password using a key stretching function).
-Both client and server share a symmetric key as input. Additionally, the server
-has the client's public key and salt stored from the previous registration flow.
+The password confirmation is a three-message flow between the client and server.
+The client initiates the PC stage, the server issues a challenge, and the client
+responds. More precisely, the server challenges the client to prove knowledge of a
+seed, derived from the GenVerifierMaterial function (and in turn derived from the
+password using a key stretching function). Both client and server share a symmetric
+key SK as input from the preceding stage. Additionally, the server has the client's
+public key and salt stored from the previous registration flow.
 
 A high level overview of this flow is below.
 
 ~~~aasvg
-Client: SK, tx, seed, sid, U, S      Server: SK, tx, pk, sid, U, S
+Client: SK, seed, sid, U, S        Server: SK, pk, sid, U, S
        ---------------------------------------
-          ctx, challenge = PC-Challenge(SK, tx, pk, sid, U, S)
+            |                           |
+    pc_init = PC-Init(SK, sid, U, S)    |
+            |                           |
+            |         pc_init           |
+            |-------------------------->|
+            |                           |
+            | ctx, challenge = PC-Challenge(SK, pc_init, pk, sid, U, S)
             |                           |
             |         challenge         |
             |<--------------------------|
             |                           |
-client_key, response = PC-Response(SK, tx, seed, challenge, sid, U, S)
+client_key, response = PC-Response(SK, seed, challenge, sid, U, S)
             |                           |
             |         response          |
             |-------------------------->|
@@ -1237,13 +1302,39 @@ client_key, response = PC-Response(SK, tx, seed, challenge, sid, U, S)
   output client_key            output server_key
 ~~~
 
+### Client Initiation
+
+The client initiates the PC stage by sending a message to the server. This
+message signals that the client has completed the preceding PAKE stage and
+is ready for password confirmation.
+
+~~~
+PC-Init
+
+Input:
+- SK, 32-byte symmetric key, a byte string
+- sid, session identifier, a byte string
+- U and S, client and server identifiers
+
+Output:
+- pc_init, an encoded protocol message for the client to send to the server
+
+Parameters:
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
+
+def PC-Init(SK, sid, U, S):
+  pc_init = KDF.Expand(SK, DST || "pc_init" || encode_sid(sid, U, S), Nkc)
+  return pc_init
+~~~
+
 ### Server Challenge
 
-To construct the challenge, the server encapsulates to the client's public
-key. From the resulting shared secret, it then derives password confirmation
-values and a new shared secret. The challenge message is the ciphertext encrypted
-using a one-time pad derived from the shared secret. The password confirmation
-values are byte strings of length `Nkc`.
+To construct the challenge, the server first verifies the client's PC-Init message,
+then encapsulates to the client's public key. From the resulting shared secret,
+it derives password confirmation values and a new shared secret. The challenge
+message is the ciphertext encrypted using a one-time pad derived from the shared
+secret. The password confirmation values are byte strings of length `Nkc`.
 
 The implementation MUST NOT reveal server_key from the context.
 
@@ -1252,7 +1343,7 @@ PC-Challenge
 
 Input:
 - SK, 32-byte symmetric key, a byte string
-- transcript, the transcript from previously executed protocols to which this protocol is bound, a byte string
+- pc_init, the message received from the client, a byte string
 - pk, client-registered public key, a KEM public key
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
@@ -1266,20 +1357,25 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def PC-Challenge(SK, transcript, pk, sid, U, S):
+Exceptions:
+- AuthenticationError, raised when the PC-Init message does not match
+
+def PC-Challenge(SK, pc_init, pk, sid, U, S):
+  pc_init_expected = KDF.Expand(SK, DST || "pc_init" || encode_sid(sid, U, S), Nkc)
+  if pc_init != pc_init_expected:
+    raise AuthenticationError
+
   (c, k) = KEM.Encaps(pk)
   r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  confirm_input = encode_sid(sid, U, S) || enc_c || transcript
+  confirm_input = encode_sid(sid, U, S) || enc_c
 
   prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
   prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
 
-  // Derive h1 from the full transcript excluding k
   client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
 
-  // Derive h2 || SK from the full transcript including k
   server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
   server_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
 
@@ -1306,9 +1402,8 @@ PC-Response
 
 Input:
 - SK, 32-byte symmetric key, a byte string
-- transcript, the transcript from previously executed protocols to which this protocol is bound, a byte string
 - seed, seed used to derive KEM public key
-- challenge, an encoded protocol message for the server to send to the client
+- challenge, an encoded protocol message received from the server
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
 
@@ -1324,7 +1419,7 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def PC-Response(SK, transcript, seed, challenge, sid, U, S):
+def PC-Response(SK, seed, challenge, sid, U, S):
   (enc_c, client_confirm_target) = challenge
   r = KDF.Expand(SK, DST || "OTP", Nct)
   c = XOR(enc_c, r)
@@ -1334,15 +1429,13 @@ def PC-Response(SK, transcript, seed, challenge, sid, U, S):
   try:
     k = KEM.Decaps(sk, c)
 
-    confirm_input = encode_sid(sid, U, S) || enc_c || transcript
+    confirm_input = encode_sid(sid, U, S) || enc_c
 
     prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
     prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
 
-    // Derive h1 from the full transcript excluding k
     client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
 
-    // Derive h2 || SK from the full transcript including k
     server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
     client_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
 
@@ -1382,41 +1475,99 @@ def PC-Verify(context, server_confirm_target):
   return server_key
 ~~~
 
+## OQUAKE+ Composition {#oquakeplus-composition}
+
+OQUAKE+ is the composition of OQUAKE (Stage 2) and Password Confirmation
+(Stage 3). It is a post-quantum aPAKE that upgrades the symmetric OQUAKE
+to an asymmetric setting using password confirmation. The client runs
+OQUAKE with the verifier, and upon completion, the PC stage uses the
+OQUAKE session key to authenticate the client's knowledge of the password.
+
+OQUAKE+ consists of five messages:
+
+~~~aasvg
+Client: PRS,salt,U,S,sid          Server: v,pk,U,S,sid
+          ----------------------------------------
+(v, seed) = GenVerifierMaterial(PRS,salt,U,S)  |
+            |                                  |
+   Stage 2: OQUAKE                             |
+            |                                  |
+ctx, msg1 = OQUAKE.Init(v,None,sid,U,S)        |
+            |               msg1               |
+            |--------------------------------->|
+            |                                  |
+            |      msg2, SK2 = OQUAKE.Respond(v,None,msg1,sid,U,S)
+            |                                  |
+            |               msg2               |
+            |<---------------------------------|
+            |                                  |
+   SK2 = OQUAKE.Finish(ctx,msg2)               |
+            |                                  |
+   Stage 3: Password Confirmation              |
+            |                                  |
+   msg3 = PC-Init(SK2,sid,U,S)                 |
+            |               msg3               |
+            |--------------------------------->|
+            |                                  |
+            |     ctx, msg4 = PC-Challenge(SK2,msg3,pk,sid,U,S)
+            |                                  |
+            |               msg4               |
+            |<---------------------------------|
+            |                                  |
+client_key, msg5 = PC-Response(SK2,seed,msg4,sid,U,S)
+            |                                  |
+            |               msg5               |
+            |--------------------------------->|
+            |                                  |
+            |        server_key = PC-Verify(ctx,msg5)
+            |                                  |
+          ----------------------------------------
+      output client_key                 output server_key
+~~~
+
+
 ## Composition of CPaceOQUAKE & Password Confirmation
 
-The composition of CPaceOQUAKE and the password confirmation stage is
-strictly sequential. First, the parties run CPaceOQUAKE using the verifier.
+CPaceOQUAKE+ is the composition of all three stages: CPace (Stage 1),
+OQUAKE (Stage 2), and Password Confirmation (Stage 3). It is a hybrid
+aPAKE that provides security against both classical and quantum-capable
+attackers.
+
+The composition is strictly sequential. First, the parties run CPaceOQUAKE
+(Stage 1 + Stage 2) using the verifier derived from the client's password.
 The client recovers this verifier using the `GenVerifierMaterial` function.
-After that, the parties proceed with password confirmation, which is
-initiated by the server using the stored public key. The client uses the
-seed that was also produced by `GenVerifierMaterial` to prove knowledge of
-the password. This seed MUST remain secret to prevent impersonation. An
-overview of the composition is below.
+After CPaceOQUAKE completes, the parties proceed with password confirmation
+(Stage 3), which is initiated by the client. The server uses the stored
+public key to challenge the client, and the client uses the seed produced
+by `GenVerifierMaterial` to prove knowledge of the password. This seed
+MUST remain secret to prevent impersonation.
+
+An overview of the composition is below.
 
 ~~~ aasvg
-           +----------------------------------------------+
-           | CPaceOQUAKE+                                 |
-           |                          +--------------+    |
-Client's   |   .-------------------.  | CPaceOQUAKE  |    |
-password --)->| GenVerifierMaterial + | +----------+ |    |
-           |   '----+---+----------'  | |  CPace   | |    |
-           |        |   |             | | protocol | |    |
-           |        |   +--Verifier-->| +----------+ |<---(-- Verifier
-           |        |                 |              |    |
-           |        |                 | +----------+ |    |
-           |        |                 | |  OQUAKE  | |    |
-           |        |               +-+ | protocol | +-+  |
-           |        |               | | +----------+ | |  |
-           |        |               | +--------------+ |  |
-           |        |              SK  .------------.  SK |
-           |        |               | |              | |  |
-           |        |               | |              | |  |
-           |        |               +->   Password   <-+  |
-           |        +------seed-------> confirmation <----(-- Public key
-           |                          |              |    |
-Session <--)--------------------------+              +----(--> Session
-  key      |                           '------------'     |      key
-           +----------------------------------------------+
+            Client                  Server
+              |                       |
+              |     +----------+      |
+              |     |  CPace   |      |
+ Verifier---->+---->| (Stage 1)|<-----+<---- Verifier
+              |     +----------+      |
+              |          |            |
+              |    context=SK1        |
+              |          |            |
+              |     +----------+      |
+              |     |  OQUAKE  |      |
+ Verifier---->+---->| (Stage 2)|<-----+<---- Verifier
+              |     +----------+      |
+              |          |            |
+              |       SK=SK_co        |
+              |          |            |
+              |     .----------.      |
+    seed----->+---->|   PC     |<-----+<---- Public key
+              |     | (Stage 3)|      |
+              |     '----------'      |
+              |      |       |        |
+              v      v       v        v
+          client_key            server_key
 ~~~
 
 Upon successful completion of the entire protocol, the client and server will share a
@@ -1426,39 +1577,53 @@ Note here that if the client does not know the salt, the server must send
 it to the client before the protocol starts, which it can do in plain text.
 
 ~~~aasvg
-Client: PRS,salt,U,S,sid      Server: v,pk,U,S,sid
+Client: PRS,salt,U,S,sid          Server: v,pk,U,S,sid
           ----------------------------------------
 (v, seed) = GenVerifierMaterial(PRS,salt,U,S)  |
-ctx1, msg1 = CPaceOQUAKE.Init(v,sid,U,S)       |
             |                                  |
+   Stage 1: CPace                              |
+            |                                  |
+ctx, msg1 = CPaceOQUAKE.Init(v,sid,U,S)        |
             |               msg1               |
             |--------------------------------->|
             |                                  |
-            | ctx2, msg2 = CPaceOQUAKE.Respond(v,msg1,sid,U,S)
+            |   ctx, msg2 = CPaceOQUAKE.Respond(v,msg1,sid,U,S)
             |                                  |
             |               msg2               |
             |<---------------------------------|
             |                                  |
-SK, msg3 = CPaceOQUAKE.InitiatorFinish(        |
-  v,ctx1,msg2,sid,U,S)                         |
+   Stage 2: OQUAKE                             |
             |                                  |
+ctx, msg3 = CPaceOQUAKE.InitiatorContinue(     |
+   v,ctx,msg2,sid,U,S)                         |
             |               msg3               |
             |--------------------------------->|
             |                                  |
-            |              SK = CPaceOQUAKE.ResponderFinish(ctx2,msg3)
-            |              tx = msg1 || msg2 || msg3
-            |             ctx3, chal = PC-Challenge(SK,tx,pk,sid,U,S)
+            |  SK_co, msg4 = CPaceOQUAKE.ResponderFinish(
+            |    v,ctx,msg3,sid,U,S)           |
             |                                  |
-            |               chal               |
+            |               msg4               |
             |<---------------------------------|
             |                                  |
-      tx = msg1 || msg2 || msg3                |
-client_key, resp = PC-Response(SK,tx,seed,chal,sid,U,S)
+SK_co = CPaceOQUAKE.InitiatorFinish(ctx,msg4)  |
             |                                  |
-            |               resp               |
+   Stage 3: Password Confirmation              |
+            |                                  |
+   msg5 = PC-Init(SK_co,sid,U,S)               |
+            |               msg5               |
             |--------------------------------->|
             |                                  |
-            |                   server_key = PC-Verify(ctx2, resp)
+            |  ctx, msg6 = PC-Challenge(SK_co,msg5,pk,sid,U,S)
+            |                                  |
+            |               msg6               |
+            |<---------------------------------|
+            |                                  |
+client_key, msg7 = PC-Response(SK_co,seed,msg6,sid,U,S)
+            |                                  |
+            |               msg7               |
+            |--------------------------------->|
+            |                                  |
+            |        server_key = PC-Verify(ctx,msg7)
             |                                  |
           ----------------------------------------
       output client_key                 output server_key
@@ -1551,25 +1716,28 @@ combiner cannot provide the desired hybrid security (see {{cpacequake-compositio
 if one PAKE is not unconditionally password hiding, breaking its underlying
 assumption can yield the password, and learning the password is sufficient to
 also break the other PAKE. In contrast, the sequential hybrid variants do not
-suffer from the same weakness: the input to OQUAKE is `PRS2`, derived via
-`KDF.Extract/Expand` over `(fullsid, msg1, msg2, key1A)`, not the original PRS.
-Performing an offline dictionary attack against the original PRS would require
-the attacker to also guess `key1A`, the CPace-derived key, which is computationally
-indistinguishable from a random value under the gap Diffie-Hellman assumption.
+suffer from the same weakness: the input to OQUAKE is an effective password,
+derived from (PRS, context) where context is the CPace session key, not the
+original PRS. Performing an offline dictionary attack against the original PRS
+would require the attacker to also guess the CPace-derived key, which is
+computationally indistinguishable from a random value under the gap
+Diffie-Hellman assumption.
 
 The benefits of this hybrid protection come at the cost of protocol and round
 complexity. From a protocol perspective, beyond two independent PAKEs treated
 nearly as black boxes, additional protocol logic is needed to combine the PAKEs
 together and produce a shared secret based on both PAKEs. From a round
-perspective, the hybrid PAKE introduces another round trip, complicating integration
-into higher-level protocols like TLS. Specifically, integrating CPaceOQUAKE+ into
-TLS would require the following five messages:
+perspective, the hybrid PAKE introduces additional round trips, complicating
+integration into higher-level protocols like TLS. Specifically, integrating
+CPaceOQUAKE+ into TLS would require seven messages:
 
-* Client -> Server: ClientHello carrying msg1
-* Server -> Client: ServerHello carrying msg2
-* Client -> Server: ClientPAKEMessage carrying msg3 (this is a new message, but sent in an existing round)
-* Server -> Client: Finished
-* Client -> Server: Finished
+* Client -> Server: ClientHello carrying msg1 (CPace init)
+* Server -> Client: ServerHello carrying msg2 (CPace resp)
+* Client -> Server: msg3 (OQUAKE init)
+* Server -> Client: msg4 (OQUAKE resp)
+* Client -> Server: msg5 (PC init)
+* Server -> Client: msg6 (PC challenge)
+* Client -> Server: msg7 (PC response)
 
 Compared to the basic TLS handshake, which has three messages:
 
