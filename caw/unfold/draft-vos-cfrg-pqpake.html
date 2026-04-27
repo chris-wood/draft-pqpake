@@ -12,12 +12,12 @@
        This document describes the CPaceOQUAKE+ protocol, a hybrid asymmetric
 password-authenticated key exchange (aPAKE) that supports mutual
 authentication in a client-server setting secure against
-quantum-capable attackers. CPaceOQUAKE+ is composed of three independent
-stages — CPace, OQUAKE, and Password Confirmation — that run sequentially,
-with the output of each stage feeding as context into the next.
-This document also describes OQUAKE+, a post-quantum aPAKE composed
-of the OQUAKE and Password Confirmation stages, and CPaceOQUAKE, the
-hybrid symmetric PAKE composed of the CPace and OQUAKE stages.
+quantum-capable attackers. CPaceOQUAKE+ is composed of two stages
+— CPace and OQUAKE+ — that run sequentially,
+with the output of CPace feeding as context into OQUAKE+. OQUAKE+ is an
+augmented variant of OQUAKE that adds password confirmation.
+This document also describes standalone OQUAKE+, a post-quantum aPAKE,
+and CPaceOQUAKE, the hybrid symmetric PAKE composed of the CPace and OQUAKE stages.
 This document recommends configurations for CPaceOQUAKE+. 
     " name="description">
 <meta content="xml2rfc 3.33.0" name="generator">
@@ -1059,7 +1059,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 24 October 2026</td>
+<td class="center">Expires 29 October 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1072,12 +1072,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-04-22" class="published">22 April 2026</time>
+<time datetime="2026-04-27" class="published">27 April 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-10-24">24 October 2026</time></dd>
+<dd class="expires"><time datetime="2026-10-29">29 October 2026</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1101,12 +1101,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <p id="section-abstract-1">This document describes the CPaceOQUAKE+ protocol, a hybrid asymmetric
 password-authenticated key exchange (aPAKE) that supports mutual
 authentication in a client-server setting secure against
-quantum-capable attackers. CPaceOQUAKE+ is composed of three independent
-stages — CPace, OQUAKE, and Password Confirmation — that run sequentially,
-with the output of each stage feeding as context into the next.
-This document also describes OQUAKE+, a post-quantum aPAKE composed
-of the OQUAKE and Password Confirmation stages, and CPaceOQUAKE, the
-hybrid symmetric PAKE composed of the CPace and OQUAKE stages.
+quantum-capable attackers. CPaceOQUAKE+ is composed of two stages
+— CPace and OQUAKE+ — that run sequentially,
+with the output of CPace feeding as context into OQUAKE+. OQUAKE+ is an
+augmented variant of OQUAKE that adds password confirmation.
+This document also describes standalone OQUAKE+, a post-quantum aPAKE,
+and CPaceOQUAKE, the hybrid symmetric PAKE composed of the CPace and OQUAKE stages.
 This document recommends configurations for CPaceOQUAKE+.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
@@ -1143,7 +1143,7 @@ This document recommends configurations for CPaceOQUAKE+.<a href="#section-abstr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 24 October 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 29 October 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1282,27 +1282,27 @@ This document recommends configurations for CPaceOQUAKE+.<a href="#section-abstr
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
-                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-the-password-confirmation-s" class="internal xref">The Password Confirmation Stage</a></p>
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-the-oquake-stage" class="internal xref">The OQUAKE+ Stage</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2.2.1">
-                    <p id="section-toc.1-1.7.2.2.2.1.1"><a href="#section-7.2.1" class="auto internal xref">7.2.1</a>.  <a href="#name-client-initiation-2" class="internal xref">Client Initiation</a></p>
+                    <p id="section-toc.1-1.7.2.2.2.1.1"><a href="#section-7.2.1" class="auto internal xref">7.2.1</a>.  <a href="#name-initiation-3" class="internal xref">Initiation</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2.2.2">
-                    <p id="section-toc.1-1.7.2.2.2.2.1"><a href="#section-7.2.2" class="auto internal xref">7.2.2</a>.  <a href="#name-server-challenge" class="internal xref">Server Challenge</a></p>
+                    <p id="section-toc.1-1.7.2.2.2.2.1"><a href="#section-7.2.2" class="auto internal xref">7.2.2</a>.  <a href="#name-response-3" class="internal xref">Response</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2.2.3">
-                    <p id="section-toc.1-1.7.2.2.2.3.1"><a href="#section-7.2.3" class="auto internal xref">7.2.3</a>.  <a href="#name-client-response" class="internal xref">Client Response</a></p>
+                    <p id="section-toc.1-1.7.2.2.2.3.1"><a href="#section-7.2.3" class="auto internal xref">7.2.3</a>.  <a href="#name-finish-3" class="internal xref">Finish</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2.2.4">
-                    <p id="section-toc.1-1.7.2.2.2.4.1"><a href="#section-7.2.4" class="auto internal xref">7.2.4</a>.  <a href="#name-server-verify" class="internal xref">Server Verify</a></p>
+                    <p id="section-toc.1-1.7.2.2.2.4.1"><a href="#section-7.2.4" class="auto internal xref">7.2.4</a>.  <a href="#name-verify" class="internal xref">Verify</a></p>
 </li>
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
-                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-oquake-composition" class="internal xref">OQUAKE+ Composition</a></p>
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-standalone-oquake" class="internal xref">Standalone OQUAKE+</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.4">
-                <p id="section-toc.1-1.7.2.4.1"><a href="#section-7.4" class="auto internal xref">7.4</a>.  <a href="#name-composition-of-cpaceoquake-" class="internal xref">Composition of CPaceOQUAKE &amp; Password Confirmation</a></p>
+                <p id="section-toc.1-1.7.2.4.1"><a href="#section-7.4" class="auto internal xref">7.4</a>.  <a href="#name-composition-of-cpace-oquake-2" class="internal xref">Composition of CPace &amp; OQUAKE+</a></p>
 </li>
             </ul>
 </li>
@@ -1402,8 +1402,8 @@ used in OPAQUE-3DH). As the threat of quantum-capable attackers looms, the
 viability of existing aPAKE protocols in practice diminishes in time.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">This document describes the CPaceOQUAKE+ protocol, an aPAKE that supports mutual
 authentication in a client-server setting secure against
-quantum-capable attackers. CPaceOQUAKE+ is composed of three independent stages
-that run sequentially: CPace, OQUAKE, and Password Confirmation.
+quantum-capable attackers. CPaceOQUAKE+ is composed of two stages
+that run sequentially: CPace and OQUAKE+.
 The design securely composes multiple existing primitives <span>[<a href="#VJWYMS25" class="cite xref">VJWYMS25</a>]</span>.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">This document fully specifies CPaceOQUAKE+ and all dependencies necessary
 to implement it. <a href="#configurations" class="auto internal xref">Section 8</a> provides recommended configurations.<a href="#section-1-5" class="pilcrow">¶</a></p>
@@ -1477,74 +1477,108 @@ from the password and which the client will later use to demonstrate knowledge o
 After registration, the client uses its password and the server uses the corresponding
 verifier to establish an authenticated shared secret such that the server learns nothing
 of the client's password.<a href="#section-3-1" class="pilcrow">¶</a></p>
-<p id="section-3-2">The protocols specified in this document are built from three independent stages that
-compose sequentially, where the output of each stage feeds as context into the next:<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-2">The protocols specified in this document are built from two stages:<a href="#section-3-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-3-3">
 <li id="section-3-3.1">
           <p id="section-3-3.1.1"><strong>CPace</strong> <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span>: A classical elliptic curve-based symmetric PAKE.<a href="#section-3-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-3-3.2">
-          <p id="section-3-3.2.1"><strong>OQUAKE</strong>: A new post-quantum symmetric PAKE built from a BUA-sKEM.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li id="section-3-3.3">
-          <p id="section-3-3.3.1"><strong>Password Confirmation (PC)</strong>: A challenge-response protocol that upgrades a
-symmetric PAKE to an asymmetric PAKE; see <a href="#pcp" class="auto internal xref">Section 7.2</a>.<a href="#section-3-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-3-3.2.1"><strong>OQUAKE</strong>: A new post-quantum symmetric PAKE built from a BUA-sKEM; see <a href="#quake" class="auto internal xref">Section 6.2</a>.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-3-4">These stages can be composed into the following named protocols:<a href="#section-3-4" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-3-5.1">
-          <p id="section-3-5.1.1"><strong>CPaceOQUAKE</strong>: A hybrid symmetric PAKE combining CPace (Stage 1) and OQUAKE (Stage 2).<a href="#section-3-5.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-3-5.2">
-          <p id="section-3-5.2.1"><strong>OQUAKE+</strong>: A post-quantum aPAKE combining OQUAKE (Stage 2) and PC (Stage 3).<a href="#section-3-5.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-3-5.3">
-          <p id="section-3-5.3.1"><strong>CPaceOQUAKE+</strong>: A hybrid aPAKE combining all three stages.<a href="#section-3-5.3.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-3-6">An abstract overview of CPaceOQUAKE+ is shown in the figure below.<a href="#section-3-6" class="pilcrow">¶</a></p>
-<div id="section-3-7">
-        <div class="alignLeft art-svg artwork" id="section-3-7.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="368" width="448" viewBox="0 0 448 368" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-            <path d="M 120,48 L 120,336" fill="none" stroke="black"></path>
+<p id="section-3-4">An abstract overview of CPaceOQUAKE+ is shown in the figure below.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<div id="section-3-5">
+        <div class="alignLeft art-svg artwork" id="section-3-5.1">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="272" width="432" viewBox="0 0 432 272" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+            <path d="M 120,48 L 120,240" fill="none" stroke="black"></path>
             <path d="M 168,64 L 168,112" fill="none" stroke="black"></path>
             <path d="M 168,160 L 168,208" fill="none" stroke="black"></path>
-            <path d="M 168,256 L 168,304" fill="none" stroke="black"></path>
-            <path d="M 176,312 L 176,336" fill="none" stroke="black"></path>
+            <path d="M 176,216 L 176,240" fill="none" stroke="black"></path>
             <path d="M 208,120 L 208,152" fill="none" stroke="black"></path>
-            <path d="M 208,216 L 208,248" fill="none" stroke="black"></path>
-            <path d="M 240,312 L 240,336" fill="none" stroke="black"></path>
+            <path d="M 240,216 L 240,240" fill="none" stroke="black"></path>
             <path d="M 256,64 L 256,112" fill="none" stroke="black"></path>
             <path d="M 256,160 L 256,208" fill="none" stroke="black"></path>
-            <path d="M 256,256 L 256,304" fill="none" stroke="black"></path>
-            <path d="M 312,48 L 312,336" fill="none" stroke="black"></path>
+            <path d="M 312,48 L 312,240" fill="none" stroke="black"></path>
+            <path d="M 168,64 L 256,64" fill="none" stroke="black"></path>
+            <path d="M 80,96 L 160,96" fill="none" stroke="black"></path>
+            <path d="M 264,96 L 352,96" fill="none" stroke="black"></path>
+            <path d="M 168,112 L 256,112" fill="none" stroke="black"></path>
+            <path d="M 168,160 L 256,160" fill="none" stroke="black"></path>
+            <path d="M 168,208 L 256,208" fill="none" stroke="black"></path>
+            <polygon class="arrowhead" points="328,96 316,90.4 316,101.6" fill="black" transform="rotate(180,320,96)"></polygon>
+            <polygon class="arrowhead" points="320,240 308,234.4 308,245.6" fill="black" transform="rotate(90,312,240)"></polygon>
+            <polygon class="arrowhead" points="272,96 260,90.4 260,101.6" fill="black" transform="rotate(180,264,96)"></polygon>
+            <polygon class="arrowhead" points="248,240 236,234.4 236,245.6" fill="black" transform="rotate(90,240,240)"></polygon>
+            <polygon class="arrowhead" points="216,152 204,146.4 204,157.6" fill="black" transform="rotate(90,208,152)"></polygon>
+            <polygon class="arrowhead" points="184,240 172,234.4 172,245.6" fill="black" transform="rotate(90,176,240)"></polygon>
+            <polygon class="arrowhead" points="168,96 156,90.4 156,101.6" fill="black" transform="rotate(0,160,96)"></polygon>
+            <polygon class="arrowhead" points="128,240 116,234.4 116,245.6" fill="black" transform="rotate(90,120,240)"></polygon>
+            <polygon class="arrowhead" points="120,96 108,90.4 108,101.6" fill="black" transform="rotate(0,112,96)"></polygon>
+            <g class="text">
+              <text x="124" y="36">Client</text>
+              <text x="316" y="36">Server</text>
+              <text x="208" y="84">CPace</text>
+              <text x="36" y="100">Password</text>
+              <text x="204" y="100">(Stage</text>
+              <text x="244" y="100">1)</text>
+              <text x="396" y="100">Password</text>
+              <text x="232" y="132">SK1</text>
+              <text x="212" y="180">OQUAKE</text>
+              <text x="204" y="196">(Stage</text>
+              <text x="244" y="196">2)</text>
+              <text x="124" y="260">client_key</text>
+              <text x="300" y="260">server_key</text>
+            </g>
+          </svg><a href="#section-3-5.1" class="pilcrow">¶</a>
+</div>
+</div>
+<p id="section-3-6">Additionally, the document specifies <strong>OQUAKE+</strong>, an augmented variant of OQUAKE that
+adds password confirmation to upgrade the symmetric PAKE to an asymmetric PAKE; see
+<a href="#oquakeplus-stage" class="auto internal xref">Section 7.2</a>.<a href="#section-3-6" class="pilcrow">¶</a></p>
+<p id="section-3-7">These building blocks are composed into the following named protocols:<a href="#section-3-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-8.1">
+          <p id="section-3-8.1.1"><strong>CPaceOQUAKE</strong>: A hybrid symmetric PAKE combining CPace and OQUAKE.<a href="#section-3-8.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-8.2">
+          <p id="section-3-8.2.1"><strong>OQUAKE+</strong>: A post-quantum aPAKE; see <a href="#oquakeplus-stage" class="auto internal xref">Section 7.2</a>.<a href="#section-3-8.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-8.3">
+          <p id="section-3-8.3.1"><strong>CPaceOQUAKE+</strong>: A hybrid aPAKE combining CPace and OQUAKE+.<a href="#section-3-8.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-3-9">An abstract overview of CPaceOQUAKE+ is shown in the figure below.<a href="#section-3-9" class="pilcrow">¶</a></p>
+<div id="section-3-10">
+        <div class="alignLeft art-svg artwork" id="section-3-10.1">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="272" width="448" viewBox="0 0 448 272" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+            <path d="M 120,48 L 120,240" fill="none" stroke="black"></path>
+            <path d="M 168,64 L 168,112" fill="none" stroke="black"></path>
+            <path d="M 168,160 L 168,208" fill="none" stroke="black"></path>
+            <path d="M 176,216 L 176,240" fill="none" stroke="black"></path>
+            <path d="M 208,120 L 208,152" fill="none" stroke="black"></path>
+            <path d="M 240,216 L 240,240" fill="none" stroke="black"></path>
+            <path d="M 256,64 L 256,112" fill="none" stroke="black"></path>
+            <path d="M 256,160 L 256,208" fill="none" stroke="black"></path>
+            <path d="M 312,48 L 312,240" fill="none" stroke="black"></path>
             <path d="M 168,64 L 256,64" fill="none" stroke="black"></path>
             <path d="M 80,96 L 160,96" fill="none" stroke="black"></path>
             <path d="M 264,96 L 352,96" fill="none" stroke="black"></path>
             <path d="M 168,112 L 256,112" fill="none" stroke="black"></path>
             <path d="M 168,160 L 256,160" fill="none" stroke="black"></path>
             <path d="M 120,192 L 160,192" fill="none" stroke="black"></path>
-            <path d="M 264,192 L 312,192" fill="none" stroke="black"></path>
+            <path d="M 264,192 L 352,192" fill="none" stroke="black"></path>
             <path d="M 168,208 L 256,208" fill="none" stroke="black"></path>
-            <path d="M 168,256 L 256,256" fill="none" stroke="black"></path>
-            <path d="M 120,272 L 160,272" fill="none" stroke="black"></path>
-            <path d="M 264,272 L 352,272" fill="none" stroke="black"></path>
-            <path d="M 168,304 L 256,304" fill="none" stroke="black"></path>
-            <polygon class="arrowhead" points="328,272 316,266.4 316,277.6" fill="black" transform="rotate(180,320,272)"></polygon>
+            <polygon class="arrowhead" points="328,192 316,186.4 316,197.6" fill="black" transform="rotate(180,320,192)"></polygon>
             <polygon class="arrowhead" points="328,96 316,90.4 316,101.6" fill="black" transform="rotate(180,320,96)"></polygon>
-            <polygon class="arrowhead" points="320,336 308,330.4 308,341.6" fill="black" transform="rotate(90,312,336)"></polygon>
-            <polygon class="arrowhead" points="272,272 260,266.4 260,277.6" fill="black" transform="rotate(180,264,272)"></polygon>
+            <polygon class="arrowhead" points="320,240 308,234.4 308,245.6" fill="black" transform="rotate(90,312,240)"></polygon>
             <polygon class="arrowhead" points="272,192 260,186.4 260,197.6" fill="black" transform="rotate(180,264,192)"></polygon>
             <polygon class="arrowhead" points="272,96 260,90.4 260,101.6" fill="black" transform="rotate(180,264,96)"></polygon>
-            <polygon class="arrowhead" points="248,336 236,330.4 236,341.6" fill="black" transform="rotate(90,240,336)"></polygon>
-            <polygon class="arrowhead" points="216,248 204,242.4 204,253.6" fill="black" transform="rotate(90,208,248)"></polygon>
+            <polygon class="arrowhead" points="248,240 236,234.4 236,245.6" fill="black" transform="rotate(90,240,240)"></polygon>
             <polygon class="arrowhead" points="216,152 204,146.4 204,157.6" fill="black" transform="rotate(90,208,152)"></polygon>
-            <polygon class="arrowhead" points="184,336 172,330.4 172,341.6" fill="black" transform="rotate(90,176,336)"></polygon>
-            <polygon class="arrowhead" points="168,272 156,266.4 156,277.6" fill="black" transform="rotate(0,160,272)"></polygon>
+            <polygon class="arrowhead" points="184,240 172,234.4 172,245.6" fill="black" transform="rotate(90,176,240)"></polygon>
             <polygon class="arrowhead" points="168,192 156,186.4 156,197.6" fill="black" transform="rotate(0,160,192)"></polygon>
             <polygon class="arrowhead" points="168,96 156,90.4 156,101.6" fill="black" transform="rotate(0,160,96)"></polygon>
-            <polygon class="arrowhead" points="128,336 116,330.4 116,341.6" fill="black" transform="rotate(90,120,336)"></polygon>
+            <polygon class="arrowhead" points="128,240 116,234.4 116,245.6" fill="black" transform="rotate(90,120,240)"></polygon>
             <polygon class="arrowhead" points="120,96 108,90.4 108,101.6" fill="black" transform="rotate(0,112,96)"></polygon>
             <g class="text">
               <text x="124" y="36">Client</text>
@@ -1556,28 +1590,24 @@ symmetric PAKE to an asymmetric PAKE; see <a href="#pcp" class="auto internal xr
               <text x="244" y="100">1)</text>
               <text x="396" y="100">Verifier</text>
               <text x="232" y="132">SK1</text>
-              <text x="212" y="180">OQUAKE</text>
+              <text x="208" y="180">OQUAKE+</text>
               <text x="204" y="196">(Stage</text>
               <text x="244" y="196">2)</text>
-              <text x="232" y="228">SK2</text>
-              <text x="204" y="276">PC</text>
-              <text x="388" y="276">Public</text>
-              <text x="432" y="276">key</text>
-              <text x="204" y="292">(Stage</text>
-              <text x="244" y="292">3)</text>
-              <text x="124" y="356">client_key</text>
-              <text x="300" y="356">server_key</text>
+              <text x="388" y="196">Public</text>
+              <text x="432" y="196">key</text>
+              <text x="124" y="260">client_key</text>
+              <text x="300" y="260">server_key</text>
             </g>
-          </svg><a href="#section-3-7.1" class="pilcrow">¶</a>
+          </svg><a href="#section-3-10.1" class="pilcrow">¶</a>
 </div>
 </div>
-<p id="section-3-8">We note that this standard only specifies the compositions listed above.
-It is not necessarily true that one can securely compose all PAKEs this way.<a href="#section-3-8" class="pilcrow">¶</a></p>
-<p id="section-3-9">The rest of this document specifies CPaceOQUAKE+ and its dependencies. <a href="#CPaceOQUAKE" class="auto internal xref">Section 6</a>
+<p id="section-3-11">We note that this standard only specifies the compositions listed above.
+It is not necessarily true that one can securely compose all PAKEs this way.<a href="#section-3-11" class="pilcrow">¶</a></p>
+<p id="section-3-12">The rest of this document specifies CPaceOQUAKE+ and its dependencies. <a href="#CPaceOQUAKE" class="auto internal xref">Section 6</a>
 specifies CPace and OQUAKE as individual stages and their composition into CPaceOQUAKE.
-<a href="#CPaceOQUAKEplus" class="auto internal xref">Section 7</a> specifies the PC stage, the OQUAKE+ composition, and the full
-CPaceOQUAKE+ composition. Each of these pieces build upon the cryptographic dependencies
-specified in <a href="#crypto-deps" class="auto internal xref">Section 4</a>.<a href="#section-3-9" class="pilcrow">¶</a></p>
+<a href="#CPaceOQUAKEplus" class="auto internal xref">Section 7</a> specifies OQUAKE+ and its composition with CPace into
+CPaceOQUAKE+. Each of these pieces build upon the cryptographic dependencies
+specified in <a href="#crypto-deps" class="auto internal xref">Section 4</a>.<a href="#section-3-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="crypto-deps">
@@ -2362,30 +2392,26 @@ in a four-message protocol.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
 <div id="section-6.3-6">
           <div class="alignLeft art-svg artwork" id="section-6.3-6.1">
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="352" width="288" viewBox="0 0 288 352" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-              <path d="M 48,48 L 48,304" fill="none" stroke="black"></path>
+              <path d="M 48,48 L 48,272" fill="none" stroke="black"></path>
+              <path d="M 80,272 L 80,304" fill="none" stroke="black"></path>
               <path d="M 96,64 L 96,112" fill="none" stroke="black"></path>
               <path d="M 96,176 L 96,240" fill="none" stroke="black"></path>
-              <path d="M 104,288 L 104,304" fill="none" stroke="black"></path>
-              <path d="M 168,288 L 168,304" fill="none" stroke="black"></path>
               <path d="M 184,64 L 184,112" fill="none" stroke="black"></path>
               <path d="M 184,176 L 184,240" fill="none" stroke="black"></path>
-              <path d="M 240,48 L 240,304" fill="none" stroke="black"></path>
+              <path d="M 200,272 L 200,304" fill="none" stroke="black"></path>
+              <path d="M 240,48 L 240,272" fill="none" stroke="black"></path>
               <path d="M 96,64 L 184,64" fill="none" stroke="black"></path>
               <path d="M 32,96 L 88,96" fill="none" stroke="black"></path>
               <path d="M 192,96 L 256,96" fill="none" stroke="black"></path>
               <path d="M 96,112 L 184,112" fill="none" stroke="black"></path>
               <path d="M 96,176 L 184,176" fill="none" stroke="black"></path>
-              <path d="M 32,208 L 88,208" fill="none" stroke="black"></path>
-              <path d="M 192,208 L 256,208" fill="none" stroke="black"></path>
               <path d="M 96,240 L 184,240" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="248,304 236,298.4 236,309.6" fill="black" transform="rotate(90,240,304)"></polygon>
-              <polygon class="arrowhead" points="200,208 188,202.4 188,213.6" fill="black" transform="rotate(180,192,208)"></polygon>
+              <path d="M 80,272 L 120,272" fill="none" stroke="black"></path>
+              <path d="M 152,272 L 200,272" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="208,304 196,298.4 196,309.6" fill="black" transform="rotate(90,200,304)"></polygon>
               <polygon class="arrowhead" points="200,96 188,90.4 188,101.6" fill="black" transform="rotate(180,192,96)"></polygon>
-              <polygon class="arrowhead" points="176,304 164,298.4 164,309.6" fill="black" transform="rotate(90,168,304)"></polygon>
-              <polygon class="arrowhead" points="112,304 100,298.4 100,309.6" fill="black" transform="rotate(90,104,304)"></polygon>
-              <polygon class="arrowhead" points="96,208 84,202.4 84,213.6" fill="black" transform="rotate(0,88,208)"></polygon>
               <polygon class="arrowhead" points="96,96 84,90.4 84,101.6" fill="black" transform="rotate(0,88,96)"></polygon>
-              <polygon class="arrowhead" points="56,304 44,298.4 44,309.6" fill="black" transform="rotate(90,48,304)"></polygon>
+              <polygon class="arrowhead" points="88,304 76,298.4 76,309.6" fill="black" transform="rotate(90,80,304)"></polygon>
               <g class="text">
                 <text x="52" y="36">Client</text>
                 <text x="244" y="36">Server</text>
@@ -2398,15 +2424,13 @@ in a four-message protocol.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
                 <text x="136" y="148">SK1</text>
                 <text x="136" y="164">|</text>
                 <text x="140" y="196">OQUAKE</text>
-                <text x="16" y="212">PRS</text>
                 <text x="132" y="212">(Stage</text>
                 <text x="172" y="212">2)</text>
-                <text x="272" y="212">PRS</text>
                 <text x="136" y="228">ctx=SK1</text>
                 <text x="136" y="260">|</text>
                 <text x="136" y="276">SK2</text>
-                <text x="52" y="324">client_key</text>
-                <text x="228" y="324">server_key</text>
+                <text x="68" y="324">client_key</text>
+                <text x="204" y="324">server_key</text>
               </g>
             </svg><a href="#section-6.3-6.1" class="pilcrow">¶</a>
 </div>
@@ -2677,18 +2701,18 @@ def InitiatorFinish(ctx, msg4):
       <h2 id="name-cpaceoquake-protocol-2">
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-cpaceoquake-protocol-2" class="section-name selfRef">CPaceOQUAKE+ Protocol</a>
       </h2>
-<p id="section-7-1">CPaceOQUAKE+ is the seven-message aPAKE resulting from composing CPace
-(Stage 1), OQUAKE (Stage 2), and Password Confirmation (Stage 3). At a
-high level, this involves running CPaceOQUAKE on a verifier of the
-client's password, followed by a password confirmation stage. To ensure
+<p id="section-7-1">CPaceOQUAKE+ is the five-message aPAKE resulting from composing CPace
+(Stage 1) and OQUAKE+ (Stage 2). At a
+high level, this involves running CPace on a verifier of the
+client's password, followed by OQUAKE+, which performs the post-quantum
+key exchange and password confirmation in a single stage. To ensure
 that the client does indeed know the password pertaining to that verifier,
-the PC stage uses a seed derived from the password. Both the verifier and
+the OQUAKE+ stage uses a seed derived from the password. Both the verifier and
 the seed are derived from the password using a key stretching function.
 The seed is later used to derive a KEM public key. We refer to the collection
 of the verifier and this public key as 'the verifiers'.<a href="#section-7-1" class="pilcrow">¶</a></p>
-<p id="section-7-2">This document also specifies OQUAKE+ (see <a href="#oquakeplus-composition" class="auto internal xref">Section 7.3</a>),
-a post-quantum aPAKE that composes OQUAKE (Stage 2) and PC (Stage 3)
-without the classical CPace stage.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-2">This document also specifies standalone OQUAKE+ (see <a href="#oquakeplus-standalone" class="auto internal xref">Section 7.3</a>),
+a post-quantum aPAKE that uses the OQUAKE+ stage without the classical CPace stage.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <p id="section-7-3">The CPaceOQUAKE+ protocol can be seen as a close variant (and a specific
 instance) of the `augmented PAKE' construction presented in <span>[<a href="#LLH24" class="cite xref">LLH24</a>]</span> and in <span>[<a href="#Gu24" class="cite xref">Gu24</a>]</span>.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <div id="registering-clients">
@@ -2818,165 +2842,170 @@ client-specific value that it knows and can retain locally.<a href="#section-7.1
 </div>
 </section>
 </div>
-<div id="pcp">
+<div id="oquakeplus-stage">
 <section id="section-7.2">
-        <h3 id="name-the-password-confirmation-s">
-<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-the-password-confirmation-s" class="section-name selfRef">The Password Confirmation Stage</a>
+        <h3 id="name-the-oquake-stage">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-the-oquake-stage" class="section-name selfRef">The OQUAKE+ Stage</a>
         </h3>
-<p id="section-7.2-1">In the password confirmation (PC) stage, the client proves knowledge
-of its password without revealing it. It uses the registered verifiers from the
-previous subsection. To do so securely, it uses the key established by a preceding
-PAKE stage (e.g., CPaceOQUAKE or OQUAKE), which provides a confidential but
-unauthenticated channel. This PC stage is parameterized by a KEM, KDF, and KSF;
-see <a href="#configurations" class="auto internal xref">Section 8</a> for specific parameter configurations.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2-2">The password confirmation is a three-message flow between the client and server.
-The client initiates the PC stage, the server issues a challenge, and the client
-responds. More precisely, the server challenges the client to prove knowledge of a
-seed, derived from the GenVerifierMaterial function (and in turn derived from the
-password using a key stretching function). Both client and server share a symmetric
-key SK as input from the preceding stage. Additionally, the server has the client's
-public key and salt stored from the previous registration flow.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2-1">OQUAKE+ is an augmented variant of OQUAKE that adds password confirmation
+to upgrade the symmetric PAKE to an asymmetric PAKE. It uses the registered
+verifiers from the previous subsection. In the OQUAKE+ stage, the client
+proves knowledge of its password without revealing it by responding to a
+challenge from the server. OQUAKE+ is parameterized by a BUA-sKEM, KEM,
+KDF, and KSF; see <a href="#configurations" class="auto internal xref">Section 8</a> for specific parameter configurations.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">OQUAKE+ is a three-message flow between the client and server.
+The client initiates the OQUAKE key exchange. The server responds
+with the OQUAKE key exchange response and a password confirmation
+challenge (piggybacked into a single message). The client completes
+the OQUAKE key exchange, then responds to the challenge.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
 <p id="section-7.2-3">A high level overview of this flow is below.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 <div id="section-7.2-4">
           <div class="alignLeft art-svg artwork" id="section-7.2-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="384" width="576" viewBox="0 0 576 384" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-              <path d="M 104,96 L 104,224" fill="none" stroke="black"></path>
-              <path d="M 104,256 L 104,304" fill="none" stroke="black"></path>
-              <path d="M 328,56 L 328,144" fill="none" stroke="black"></path>
-              <path d="M 328,176 L 328,224" fill="none" stroke="black"></path>
-              <path d="M 328,256 L 328,304" fill="none" stroke="black"></path>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="480" viewBox="0 0 480 432" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+              <path d="M 104,112 L 104,256" fill="none" stroke="black"></path>
+              <path d="M 104,304 L 104,352" fill="none" stroke="black"></path>
+              <path d="M 320,80 L 320,96" fill="none" stroke="black"></path>
+              <path d="M 320,272 L 320,288" fill="none" stroke="black"></path>
+              <path d="M 328,112 L 328,160" fill="none" stroke="black"></path>
+              <path d="M 328,208 L 328,256" fill="none" stroke="black"></path>
+              <path d="M 328,304 L 328,352" fill="none" stroke="black"></path>
               <path d="M 64,48 L 368,48" fill="none" stroke="black"></path>
-              <path d="M 112,128 L 320,128" fill="none" stroke="black"></path>
-              <path d="M 112,208 L 320,208" fill="none" stroke="black"></path>
-              <path d="M 112,288 L 320,288" fill="none" stroke="black"></path>
-              <path d="M 64,352 L 368,352" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="328,288 316,282.4 316,293.6" fill="black" transform="rotate(0,320,288)"></polygon>
-              <polygon class="arrowhead" points="328,128 316,122.4 316,133.6" fill="black" transform="rotate(0,320,128)"></polygon>
-              <polygon class="arrowhead" points="120,208 108,202.4 108,213.6" fill="black" transform="rotate(180,112,208)"></polygon>
+              <path d="M 112,144 L 320,144" fill="none" stroke="black"></path>
+              <path d="M 112,240 L 320,240" fill="none" stroke="black"></path>
+              <path d="M 112,336 L 320,336" fill="none" stroke="black"></path>
+              <path d="M 64,400 L 368,400" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="328,336 316,330.4 316,341.6" fill="black" transform="rotate(0,320,336)"></polygon>
+              <polygon class="arrowhead" points="328,144 316,138.4 316,149.6" fill="black" transform="rotate(0,320,144)"></polygon>
+              <polygon class="arrowhead" points="120,240 108,234.4 108,245.6" fill="black" transform="rotate(180,112,240)"></polygon>
               <g class="text">
                 <text x="32" y="36">Client:</text>
-                <text x="80" y="36">SK,</text>
-                <text x="120" y="36">seed,</text>
-                <text x="164" y="36">sid,</text>
-                <text x="196" y="36">U,</text>
-                <text x="216" y="36">S</text>
+                <text x="84" y="36">PRS,</text>
+                <text x="128" y="36">seed,</text>
+                <text x="172" y="36">sid,</text>
+                <text x="204" y="36">U,</text>
+                <text x="224" y="36">S</text>
                 <text x="312" y="36">Server:</text>
-                <text x="360" y="36">SK,</text>
-                <text x="392" y="36">pk,</text>
-                <text x="428" y="36">sid,</text>
-                <text x="460" y="36">U,</text>
-                <text x="480" y="36">S</text>
+                <text x="356" y="36">v,</text>
+                <text x="384" y="36">pk,</text>
+                <text x="420" y="36">sid,</text>
+                <text x="452" y="36">U,</text>
+                <text x="472" y="36">S</text>
                 <text x="104" y="68">|</text>
-                <text x="64" y="84">pc_init</text>
-                <text x="104" y="84">=</text>
-                <text x="160" y="84">PC-Init(SK,</text>
-                <text x="228" y="84">sid,</text>
-                <text x="260" y="84">U,</text>
-                <text x="284" y="84">S)</text>
-                <text x="208" y="116">pc_init</text>
-                <text x="132" y="164">ctx,</text>
-                <text x="192" y="164">challenge</text>
-                <text x="240" y="164">=</text>
-                <text x="316" y="164">PC-Challenge(SK,</text>
-                <text x="420" y="164">pc_init,</text>
-                <text x="472" y="164">pk,</text>
-                <text x="508" y="164">sid,</text>
-                <text x="540" y="164">U,</text>
-                <text x="564" y="164">S)</text>
-                <text x="216" y="196">challenge</text>
-                <text x="48" y="244">client_key,</text>
-                <text x="132" y="244">response</text>
-                <text x="176" y="244">=</text>
-                <text x="248" y="244">PC-Response(SK,</text>
-                <text x="336" y="244">seed,</text>
-                <text x="404" y="244">challenge,</text>
-                <text x="468" y="244">sid,</text>
-                <text x="500" y="244">U,</text>
-                <text x="524" y="244">S)</text>
-                <text x="212" y="276">response</text>
-                <text x="172" y="324">server_key</text>
-                <text x="224" y="324">=</text>
-                <text x="292" y="324">PC-Verify(ctx,</text>
-                <text x="392" y="324">response)</text>
-                <text x="104" y="340">|</text>
-                <text x="328" y="340">|</text>
-                <text x="44" y="372">output</text>
-                <text x="116" y="372">client_key</text>
-                <text x="276" y="372">output</text>
-                <text x="348" y="372">server_key</text>
+                <text x="328" y="68">|</text>
+                <text x="44" y="84">ctx,</text>
+                <text x="84" y="84">msg1</text>
+                <text x="112" y="84">=</text>
+                <text x="176" y="84">OQUAKE+.Init(</text>
+                <text x="52" y="100">v,</text>
+                <text x="100" y="100">context,</text>
+                <text x="156" y="100">sid,</text>
+                <text x="188" y="100">U,</text>
+                <text x="212" y="100">S)</text>
+                <text x="196" y="132">msg1</text>
+                <text x="156" y="180">ctx,</text>
+                <text x="196" y="180">msg2</text>
+                <text x="224" y="180">=</text>
+                <text x="300" y="180">OQUAKE+.Respond(</text>
+                <text x="164" y="196">v,</text>
+                <text x="212" y="196">context,</text>
+                <text x="272" y="196">msg1,</text>
+                <text x="312" y="196">pk,</text>
+                <text x="348" y="196">sid,</text>
+                <text x="380" y="196">U,</text>
+                <text x="404" y="196">S)</text>
+                <text x="196" y="228">msg2</text>
+                <text x="48" y="276">client_key,</text>
+                <text x="116" y="276">msg3</text>
+                <text x="144" y="276">=</text>
+                <text x="216" y="276">OQUAKE+.Finish(</text>
+                <text x="36" y="292">ctx,</text>
+                <text x="80" y="292">seed,</text>
+                <text x="128" y="292">msg2,</text>
+                <text x="172" y="292">sid,</text>
+                <text x="204" y="292">U,</text>
+                <text x="228" y="292">S)</text>
+                <text x="196" y="324">msg3</text>
+                <text x="172" y="372">server_key</text>
+                <text x="224" y="372">=</text>
+                <text x="312" y="372">OQUAKE+.Verify(ctx,</text>
+                <text x="416" y="372">msg3)</text>
+                <text x="104" y="388">|</text>
+                <text x="328" y="388">|</text>
+                <text x="44" y="420">output</text>
+                <text x="116" y="420">client_key</text>
+                <text x="276" y="420">output</text>
+                <text x="348" y="420">server_key</text>
               </g>
             </svg><a href="#section-7.2-4.1" class="pilcrow">¶</a>
 </div>
 </div>
-<div id="client-initiation-1">
+<div id="initiation-2">
 <section id="section-7.2.1">
-          <h4 id="name-client-initiation-2">
-<a href="#section-7.2.1" class="section-number selfRef">7.2.1. </a><a href="#name-client-initiation-2" class="section-name selfRef">Client Initiation</a>
+          <h4 id="name-initiation-3">
+<a href="#section-7.2.1" class="section-number selfRef">7.2.1. </a><a href="#name-initiation-3" class="section-name selfRef">Initiation</a>
           </h4>
-<p id="section-7.2.1-1">The client initiates the PC stage by sending a message to the server. This
-message signals that the client has completed the preceding PAKE stage and
-is ready for password confirmation.<a href="#section-7.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.2.1-1">Init takes the same inputs as OQUAKE.Init and produces the same outputs.
+It is defined identically to OQUAKE.Init (see <a href="#quake" class="auto internal xref">Section 6.2</a>).<a href="#section-7.2.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-7.2.1-2">
 <pre>
-PC-Init
+OQUAKE+.Init
 
 Input:
-- SK, 32-byte symmetric key, a byte string
+- PRS, password-related string, a byte string
+- context, optional application-provided context, a byte string
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
 
 Output:
-- pc_init, an encoded protocol message for the client to send to the server
+- context, opaque state for the initiator to store
+- msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
+- BUA-sKEM, a BUA-sKEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def PC-Init(SK, sid, U, S):
-  pc_init = KDF.Expand(SK, DST || "pc_init" || encode_sid(sid, U, S), Nkc)
-  return pc_init
+def Init(PRS, context, sid, U, S):
+  return OQUAKE.Init(PRS, context, sid, U, S)
 </pre><a href="#section-7.2.1-2" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
-<div id="server-challenge">
+<div id="response-2">
 <section id="section-7.2.2">
-          <h4 id="name-server-challenge">
-<a href="#section-7.2.2" class="section-number selfRef">7.2.2. </a><a href="#name-server-challenge" class="section-name selfRef">Server Challenge</a>
+          <h4 id="name-response-3">
+<a href="#section-7.2.2" class="section-number selfRef">7.2.2. </a><a href="#name-response-3" class="section-name selfRef">Response</a>
           </h4>
-<p id="section-7.2.2-1">To construct the challenge, the server first verifies the client's PC-Init message,
-then encapsulates to the client's public key. From the resulting shared secret,
-it derives password confirmation values and a new shared secret. The challenge
-message is the ciphertext encrypted using a one-time pad derived from the shared
-secret. The password confirmation values are byte strings of length <code>Nkc</code>.<a href="#section-7.2.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2.2-1">Respond takes as input the PRS, an optional context, the initiator's
+protocol message, the client's registered public key, an optional
+session identifier, and optional client and server identifiers.
+It produces an opaque context and a protocol message that combines
+the OQUAKE response with a password confirmation challenge.<a href="#section-7.2.2-1" class="pilcrow">¶</a></p>
 <p id="section-7.2.2-2">The implementation <span class="bcp14">MUST NOT</span> reveal server_key from the context.<a href="#section-7.2.2-2" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-7.2.2-3">
 <pre>
-PC-Challenge
+OQUAKE+.Respond
 
 Input:
-- SK, 32-byte symmetric key, a byte string
-- pc_init, the message received from the client, a byte string
+- PRS, password-related string, a byte string
+- context, optional application-provided context, a byte string
+- init_msg, encoded protocol message, a byte string
 - pk, client-registered public key, a KEM public key
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
 
 Output:
 - context, opaque state for the server to store values to complete the protocol
-- challenge, an encoded protocol message for the server to send to the client
+- resp_msg, encoded protocol message, a byte string
 
 Parameters:
+- BUA-sKEM, a BUA-sKEM instance
 - KEM, a KEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-Exceptions:
-- AuthenticationError, raised when the PC-Init message does not match
-
-def PC-Challenge(SK, pc_init, pk, sid, U, S):
-  pc_init_expected = KDF.Expand(SK, DST || "pc_init" || encode_sid(sid, U, S), Nkc)
-  if pc_init != pc_init_expected:
-    raise AuthenticationError
+def Respond(PRS, context, init_msg, pk, sid, U, S):
+  oquake_resp, SK = OQUAKE.Respond(PRS, context, init_msg, sid, U, S)
 
   (c, k) = KEM.Encaps(pk)
   r = KDF.Expand(SK, DST || "OTP", Nct)
@@ -2992,35 +3021,37 @@ def PC-Challenge(SK, pc_init, pk, sid, U, S):
   server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
   server_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
 
-  challenge = (enc_c, client_confirm)
+  resp_msg = oquake_resp || enc_c || client_confirm
 
-  return Context(server_confirm, server_key), challenge
+  return Context(server_confirm, server_key), resp_msg
 </pre><a href="#section-7.2.2-3" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
-<div id="client-response">
+<div id="oquakeplus-finish">
 <section id="section-7.2.3">
-          <h4 id="name-client-response">
-<a href="#section-7.2.3" class="section-number selfRef">7.2.3. </a><a href="#name-client-response" class="section-name selfRef">Client Response</a>
+          <h4 id="name-finish-3">
+<a href="#section-7.2.3" class="section-number selfRef">7.2.3. </a><a href="#name-finish-3" class="section-name selfRef">Finish</a>
           </h4>
-<p id="section-7.2.3-1">Upon receipt of the challenge, the client recovers the KEM ciphertext by decrypting
-the one-time pad ciphertext included in the challenge, using the key derived from the shared secret.
-It then uses the seed to re-derive the KEM key pair, using the same procedure followed during
-the registration flow. The client then decapsulates the KEM ciphertext to recover
-the shared secret and derive the same password confirmation values and new
-shared secret as the server.<a href="#section-7.2.3-1" class="pilcrow">¶</a></p>
-<p id="section-7.2.3-2">The client then checks that the server-provided confirmation value matches its
-own and aborts if not. Otherwise, it returns its own password confirmation value.
-The client outputs the new shared secret as its output.<a href="#section-7.2.3-2" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-7.2.3-3">
+<p id="section-7.2.3-1">Finish takes as input the initiator-created context from Init, the seed
+used to derive the KEM key pair during registration, the responder's
+combined reply message, a session identifier, and client and server identifiers.<a href="#section-7.2.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.2.3-2">The client completes the OQUAKE key exchange to recover the shared secret,
+then uses it to decrypt the password confirmation challenge. The client
+re-derives the KEM key pair from the seed and decapsulates the KEM
+ciphertext to recover the shared secret and derive password confirmation
+values and a new shared secret.<a href="#section-7.2.3-2" class="pilcrow">¶</a></p>
+<p id="section-7.2.3-3">The client checks that the server-provided confirmation value matches its
+own and aborts if not. Otherwise, it returns its own password confirmation
+value. The client outputs the new shared secret as its output.<a href="#section-7.2.3-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-7.2.3-4">
 <pre>
-PC-Response
+OQUAKE+.Finish
 
 Input:
-- SK, 32-byte symmetric key, a byte string
+- context, opaque state for the initiator to store
 - seed, seed used to derive KEM public key
-- challenge, an encoded protocol message received from the server
+- resp_msg, encoded protocol message, a byte string
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
 
@@ -3032,12 +3063,18 @@ Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
 
 Parameters:
+- BUA-sKEM, a BUA-sKEM instance
 - KEM, a KEM instance
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def PC-Response(SK, seed, challenge, sid, U, S):
-  (enc_c, client_confirm_target) = challenge
+def Finish(context, seed, resp_msg, sid, U, S):
+  oquake_resp = resp_msg[0 : Nct_bua + Nkc]
+  enc_c = resp_msg[Nct_bua + Nkc : Nct_bua + Nkc + Nct]
+  client_confirm_target = resp_msg[Nct_bua + Nkc + Nct :]
+
+  SK = OQUAKE.Finish(context, oquake_resp)
+
   r = KDF.Expand(SK, DST || "OTP", Nct)
   c = XOR(enc_c, r)
 
@@ -3062,24 +3099,24 @@ def PC-Response(SK, seed, challenge, sid, U, S):
     return client_key, server_confirm
   catch DecapsError:
     raise AuthenticationError
-</pre><a href="#section-7.2.3-3" class="pilcrow">¶</a>
+</pre><a href="#section-7.2.3-4" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
-<div id="server-verify">
+<div id="verify">
 <section id="section-7.2.4">
-          <h4 id="name-server-verify">
-<a href="#section-7.2.4" class="section-number selfRef">7.2.4. </a><a href="#name-server-verify" class="section-name selfRef">Server Verify</a>
+          <h4 id="name-verify">
+<a href="#section-7.2.4" class="section-number selfRef">7.2.4. </a><a href="#name-verify" class="section-name selfRef">Verify</a>
           </h4>
 <p id="section-7.2.4-1">Upon receipt of the response, the server validates that the password confirmation
 value matches its own value. If the value does not match, the server aborts.
 Otherwise, the server outputs the new shared secret as its output.<a href="#section-7.2.4-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-7.2.4-2">
 <pre>
-PC-Verify
+OQUAKE+.Verify
 
 Input:
-- context, opaque context produced by Challenge
+- context, opaque context produced by Respond
 - server_confirm_target, client's response message, a byte string
 
 Output:
@@ -3090,7 +3127,7 @@ Exceptions:
 
 Parameters:
 
-def PC-Verify(context, server_confirm_target):
+def Verify(context, server_confirm_target):
   (server_confirm, server_key) = context
   if server_confirm != server_confirm_target:
     raise AuthenticationError
@@ -3101,38 +3138,31 @@ def PC-Verify(context, server_confirm_target):
 </div>
 </section>
 </div>
-<div id="oquakeplus-composition">
+<div id="oquakeplus-standalone">
 <section id="section-7.3">
-        <h3 id="name-oquake-composition">
-<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-oquake-composition" class="section-name selfRef">OQUAKE+ Composition</a>
+        <h3 id="name-standalone-oquake">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-standalone-oquake" class="section-name selfRef">Standalone OQUAKE+</a>
         </h3>
-<p id="section-7.3-1">OQUAKE+ is the composition of OQUAKE (Stage 2) and Password Confirmation
-(Stage 3). It is a post-quantum aPAKE that upgrades the symmetric OQUAKE
-to an asymmetric setting using password confirmation. The client runs
-OQUAKE with the verifier, and upon completion, the PC stage uses the
-OQUAKE session key to authenticate the client's knowledge of the password.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
-<p id="section-7.3-2">OQUAKE+ consists of five messages:<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+<p id="section-7.3-1">OQUAKE+ can be used as a standalone post-quantum aPAKE without the
+classical CPace stage. The client runs OQUAKE+ with the verifier as
+the password-related string, and uses the seed to respond to the
+password confirmation challenge.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">Standalone OQUAKE+ consists of three messages:<a href="#section-7.3-2" class="pilcrow">¶</a></p>
 <div id="section-7.3-3">
           <div class="alignLeft art-svg artwork" id="section-7.3-3.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="624" width="536" viewBox="0 0 536 624" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-              <path d="M 104,144 L 104,256" fill="none" stroke="black"></path>
-              <path d="M 104,344 L 104,464" fill="none" stroke="black"></path>
-              <path d="M 104,496 L 104,584" fill="none" stroke="black"></path>
-              <path d="M 384,56 L 384,384" fill="none" stroke="black"></path>
-              <path d="M 384,416 L 384,464" fill="none" stroke="black"></path>
-              <path d="M 384,496 L 384,584" fill="none" stroke="black"></path>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="384" width="536" viewBox="0 0 536 384" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+              <path d="M 104,112 L 104,224" fill="none" stroke="black"></path>
+              <path d="M 104,256 L 104,344" fill="none" stroke="black"></path>
+              <path d="M 384,56 L 384,144" fill="none" stroke="black"></path>
+              <path d="M 384,176 L 384,304" fill="none" stroke="black"></path>
               <path d="M 88,48 L 400,48" fill="none" stroke="black"></path>
-              <path d="M 112,160 L 376,160" fill="none" stroke="black"></path>
-              <path d="M 112,240 L 376,240" fill="none" stroke="black"></path>
-              <path d="M 112,368 L 376,368" fill="none" stroke="black"></path>
-              <path d="M 112,448 L 376,448" fill="none" stroke="black"></path>
-              <path d="M 112,528 L 376,528" fill="none" stroke="black"></path>
-              <path d="M 88,592 L 400,592" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="384,528 372,522.4 372,533.6" fill="black" transform="rotate(0,376,528)"></polygon>
-              <polygon class="arrowhead" points="384,368 372,362.4 372,373.6" fill="black" transform="rotate(0,376,368)"></polygon>
-              <polygon class="arrowhead" points="384,160 372,154.4 372,165.6" fill="black" transform="rotate(0,376,160)"></polygon>
-              <polygon class="arrowhead" points="120,448 108,442.4 108,453.6" fill="black" transform="rotate(180,112,448)"></polygon>
-              <polygon class="arrowhead" points="120,240 108,234.4 108,245.6" fill="black" transform="rotate(180,112,240)"></polygon>
+              <path d="M 112,128 L 376,128" fill="none" stroke="black"></path>
+              <path d="M 112,208 L 376,208" fill="none" stroke="black"></path>
+              <path d="M 112,288 L 376,288" fill="none" stroke="black"></path>
+              <path d="M 88,352 L 400,352" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="384,288 372,282.4 372,293.6" fill="black" transform="rotate(0,376,288)"></polygon>
+              <polygon class="arrowhead" points="384,128 372,122.4 372,133.6" fill="black" transform="rotate(0,376,128)"></polygon>
+              <polygon class="arrowhead" points="120,208 108,202.4 108,213.6" fill="black" transform="rotate(180,112,208)"></polygon>
               <g class="text">
                 <text x="32" y="36">Client:</text>
                 <text x="132" y="36">PRS,salt,U,S,sid</text>
@@ -3143,89 +3173,65 @@ OQUAKE session key to authenticate the client's knowledge of the password.<a hre
                 <text x="88" y="68">=</text>
                 <text x="232" y="68">GenVerifierMaterial(PRS,salt,U,S)</text>
                 <text x="104" y="84">|</text>
-                <text x="48" y="100">Stage</text>
-                <text x="84" y="100">2:</text>
-                <text x="124" y="100">OQUAKE</text>
-                <text x="104" y="116">|</text>
-                <text x="20" y="132">ctx,</text>
-                <text x="60" y="132">msg1</text>
-                <text x="88" y="132">=</text>
-                <text x="208" y="132">OQUAKE.Init(v,None,sid,U,S)</text>
-                <text x="244" y="148">msg1</text>
-                <text x="176" y="196">msg2,</text>
-                <text x="216" y="196">SK2</text>
-                <text x="240" y="196">=</text>
-                <text x="316" y="196">OQUAKE.Respond(v</text>
-                <text x="460" y="196">None,msg1,sid,U,S)</text>
-                <text x="244" y="228">msg2</text>
-                <text x="40" y="276">SK2</text>
-                <text x="64" y="276">=</text>
-                <text x="168" y="276">OQUAKE.Finish(ctx,msg2)</text>
-                <text x="104" y="292">|</text>
-                <text x="48" y="308">Stage</text>
-                <text x="84" y="308">3:</text>
-                <text x="132" y="308">Password</text>
-                <text x="220" y="308">Confirmation</text>
-                <text x="104" y="324">|</text>
-                <text x="44" y="340">msg3</text>
-                <text x="72" y="340">=</text>
-                <text x="164" y="340">PC-Init(SK2,sid,U,S)</text>
-                <text x="244" y="356">msg3</text>
-                <text x="164" y="404">ctx,</text>
-                <text x="204" y="404">msg4</text>
-                <text x="232" y="404">=</text>
-                <text x="376" y="404">PC-Challenge(SK2,msg3,pk,sid,U,S)</text>
-                <text x="244" y="436">msg4</text>
-                <text x="48" y="484">client_key,</text>
-                <text x="116" y="484">msg5</text>
-                <text x="144" y="484">=</text>
-                <text x="292" y="484">PC-Response(SK2,seed,msg4,sid,U,S)</text>
-                <text x="244" y="516">msg5</text>
-                <text x="212" y="564">server_key</text>
-                <text x="264" y="564">=</text>
-                <text x="328" y="564">PC-Verify(ctx</text>
-                <text x="408" y="564">msg5)</text>
-                <text x="76" y="612">output</text>
-                <text x="148" y="612">client_key</text>
-                <text x="348" y="612">output</text>
-                <text x="420" y="612">server_key</text>
+                <text x="20" y="100">ctx,</text>
+                <text x="60" y="100">msg1</text>
+                <text x="88" y="100">=</text>
+                <text x="212" y="100">OQUAKE+.Init(v,None,sid,U,S)</text>
+                <text x="244" y="116">msg1</text>
+                <text x="140" y="164">ctx,</text>
+                <text x="180" y="164">msg2</text>
+                <text x="208" y="164">=</text>
+                <text x="376" y="164">OQUAKE+.Respond(v,None,msg1,pk,sid,U,S)</text>
+                <text x="244" y="196">msg2</text>
+                <text x="48" y="244">client_key,</text>
+                <text x="116" y="244">msg3</text>
+                <text x="144" y="244">=</text>
+                <text x="268" y="244">OQUAKE+.Finish(ctx,seed,msg2</text>
+                <text x="420" y="244">sid,U,S)</text>
+                <text x="244" y="276">msg3</text>
+                <text x="212" y="324">server_key</text>
+                <text x="264" y="324">=</text>
+                <text x="372" y="324">OQUAKE+.Verify(ctx,msg3)</text>
+                <text x="384" y="340">|</text>
+                <text x="76" y="372">output</text>
+                <text x="148" y="372">client_key</text>
+                <text x="348" y="372">output</text>
+                <text x="420" y="372">server_key</text>
               </g>
             </svg><a href="#section-7.3-3.1" class="pilcrow">¶</a>
 </div>
 </div>
 </section>
 </div>
-<div id="composition-of-cpaceoquake-password-confirmation">
+<div id="cpacequakeplus-composition">
 <section id="section-7.4">
-        <h3 id="name-composition-of-cpaceoquake-">
-<a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-composition-of-cpaceoquake-" class="section-name selfRef">Composition of CPaceOQUAKE &amp; Password Confirmation</a>
+        <h3 id="name-composition-of-cpace-oquake-2">
+<a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-composition-of-cpace-oquake-2" class="section-name selfRef">Composition of CPace &amp; OQUAKE+</a>
         </h3>
-<p id="section-7.4-1">CPaceOQUAKE+ is the composition of all three stages: CPace (Stage 1),
-OQUAKE (Stage 2), and Password Confirmation (Stage 3). It is a hybrid
+<p id="section-7.4-1">CPaceOQUAKE+ is the composition of CPace (Stage 1) and OQUAKE+
+(Stage 2). It is a hybrid
 aPAKE that provides security against both classical and quantum-capable
 attackers.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
-<p id="section-7.4-2">The composition is strictly sequential. First, the parties run CPaceOQUAKE
-(Stage 1 + Stage 2) using the verifier derived from the client's password.
+<p id="section-7.4-2">The composition is strictly sequential. First, the parties run CPace
+using the verifier derived from the client's password.
 The client recovers this verifier using the <code>GenVerifierMaterial</code> function.
-After CPaceOQUAKE completes, the parties proceed with password confirmation
-(Stage 3), which is initiated by the client. The server uses the stored
+After CPace completes, the parties proceed with OQUAKE+,
+which is initiated by the client. The server uses the stored
 public key to challenge the client, and the client uses the seed produced
 by <code>GenVerifierMaterial</code> to prove knowledge of the password. This seed
 <span class="bcp14">MUST</span> remain secret to prevent impersonation.<a href="#section-7.4-2" class="pilcrow">¶</a></p>
 <p id="section-7.4-3">An overview of the composition is below.<a href="#section-7.4-3" class="pilcrow">¶</a></p>
 <div id="section-7.4-4">
           <div class="alignLeft art-svg artwork" id="section-7.4-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="416" width="440" viewBox="0 0 440 416" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-              <path d="M 112,48 L 112,368" fill="none" stroke="black"></path>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="320" width="440" viewBox="0 0 440 320" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+              <path d="M 112,48 L 112,272" fill="none" stroke="black"></path>
               <path d="M 160,64 L 160,112" fill="none" stroke="black"></path>
-              <path d="M 160,176 L 160,224" fill="none" stroke="black"></path>
-              <path d="M 160,288 L 160,336" fill="none" stroke="black"></path>
-              <path d="M 168,344 L 168,368" fill="none" stroke="black"></path>
-              <path d="M 232,344 L 232,368" fill="none" stroke="black"></path>
+              <path d="M 160,176 L 160,240" fill="none" stroke="black"></path>
+              <path d="M 168,248 L 168,272" fill="none" stroke="black"></path>
+              <path d="M 232,248 L 232,272" fill="none" stroke="black"></path>
               <path d="M 248,64 L 248,112" fill="none" stroke="black"></path>
-              <path d="M 248,176 L 248,224" fill="none" stroke="black"></path>
-              <path d="M 248,288 L 248,336" fill="none" stroke="black"></path>
-              <path d="M 304,48 L 304,368" fill="none" stroke="black"></path>
+              <path d="M 248,176 L 248,240" fill="none" stroke="black"></path>
+              <path d="M 304,48 L 304,272" fill="none" stroke="black"></path>
               <path d="M 160,64 L 248,64" fill="none" stroke="black"></path>
               <path d="M 72,96 L 152,96" fill="none" stroke="black"></path>
               <path d="M 256,96 L 344,96" fill="none" stroke="black"></path>
@@ -3233,25 +3239,21 @@ by <code>GenVerifierMaterial</code> to prove knowledge of the password. This see
               <path d="M 160,176 L 248,176" fill="none" stroke="black"></path>
               <path d="M 72,208 L 152,208" fill="none" stroke="black"></path>
               <path d="M 256,208 L 344,208" fill="none" stroke="black"></path>
-              <path d="M 160,224 L 248,224" fill="none" stroke="black"></path>
-              <path d="M 160,288 L 248,288" fill="none" stroke="black"></path>
-              <path d="M 64,304 L 152,304" fill="none" stroke="black"></path>
-              <path d="M 256,304 L 344,304" fill="none" stroke="black"></path>
-              <path d="M 160,336 L 248,336" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="320,304 308,298.4 308,309.6" fill="black" transform="rotate(180,312,304)"></polygon>
+              <path d="M 64,224 L 104,224" fill="none" stroke="black"></path>
+              <path d="M 312,224 L 344,224" fill="none" stroke="black"></path>
+              <path d="M 160,240 L 248,240" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="320,224 308,218.4 308,229.6" fill="black" transform="rotate(180,312,224)"></polygon>
               <polygon class="arrowhead" points="320,208 308,202.4 308,213.6" fill="black" transform="rotate(180,312,208)"></polygon>
               <polygon class="arrowhead" points="320,96 308,90.4 308,101.6" fill="black" transform="rotate(180,312,96)"></polygon>
-              <polygon class="arrowhead" points="312,368 300,362.4 300,373.6" fill="black" transform="rotate(90,304,368)"></polygon>
-              <polygon class="arrowhead" points="264,304 252,298.4 252,309.6" fill="black" transform="rotate(180,256,304)"></polygon>
+              <polygon class="arrowhead" points="312,272 300,266.4 300,277.6" fill="black" transform="rotate(90,304,272)"></polygon>
               <polygon class="arrowhead" points="264,208 252,202.4 252,213.6" fill="black" transform="rotate(180,256,208)"></polygon>
               <polygon class="arrowhead" points="264,96 252,90.4 252,101.6" fill="black" transform="rotate(180,256,96)"></polygon>
-              <polygon class="arrowhead" points="240,368 228,362.4 228,373.6" fill="black" transform="rotate(90,232,368)"></polygon>
-              <polygon class="arrowhead" points="176,368 164,362.4 164,373.6" fill="black" transform="rotate(90,168,368)"></polygon>
-              <polygon class="arrowhead" points="160,304 148,298.4 148,309.6" fill="black" transform="rotate(0,152,304)"></polygon>
+              <polygon class="arrowhead" points="240,272 228,266.4 228,277.6" fill="black" transform="rotate(90,232,272)"></polygon>
+              <polygon class="arrowhead" points="176,272 164,266.4 164,277.6" fill="black" transform="rotate(90,168,272)"></polygon>
               <polygon class="arrowhead" points="160,208 148,202.4 148,213.6" fill="black" transform="rotate(0,152,208)"></polygon>
               <polygon class="arrowhead" points="160,96 148,90.4 148,101.6" fill="black" transform="rotate(0,152,96)"></polygon>
-              <polygon class="arrowhead" points="120,368 108,362.4 108,373.6" fill="black" transform="rotate(90,112,368)"></polygon>
-              <polygon class="arrowhead" points="112,304 100,298.4 100,309.6" fill="black" transform="rotate(0,104,304)"></polygon>
+              <polygon class="arrowhead" points="120,272 108,266.4 108,277.6" fill="black" transform="rotate(90,112,272)"></polygon>
+              <polygon class="arrowhead" points="112,224 100,218.4 100,229.6" fill="black" transform="rotate(0,104,224)"></polygon>
               <polygon class="arrowhead" points="112,208 100,202.4 100,213.6" fill="black" transform="rotate(0,104,208)"></polygon>
               <polygon class="arrowhead" points="112,96 100,90.4 100,101.6" fill="black" transform="rotate(0,104,96)"></polygon>
               <g class="text">
@@ -3265,22 +3267,16 @@ by <code>GenVerifierMaterial</code> to prove knowledge of the password. This see
                 <text x="200" y="132">|</text>
                 <text x="192" y="148">context=SK1</text>
                 <text x="200" y="164">|</text>
-                <text x="204" y="196">OQUAKE</text>
+                <text x="200" y="196">OQUAKE+</text>
                 <text x="36" y="212">Verifier</text>
                 <text x="196" y="212">(Stage</text>
                 <text x="236" y="212">2)</text>
                 <text x="388" y="212">Verifier</text>
-                <text x="200" y="244">|</text>
-                <text x="204" y="260">SK=SK_co</text>
-                <text x="200" y="276">|</text>
-                <text x="44" y="308">seed</text>
-                <text x="196" y="308">PC</text>
-                <text x="380" y="308">Public</text>
-                <text x="424" y="308">key</text>
-                <text x="196" y="324">(Stage</text>
-                <text x="236" y="324">3)</text>
-                <text x="116" y="388">client_key</text>
-                <text x="292" y="388">server_key</text>
+                <text x="44" y="228">seed</text>
+                <text x="380" y="228">Public</text>
+                <text x="424" y="228">key</text>
+                <text x="116" y="292">client_key</text>
+                <text x="292" y="292">server_key</text>
               </g>
             </svg><a href="#section-7.4-4.1" class="pilcrow">¶</a>
 </div>
@@ -3292,31 +3288,26 @@ Note here that if the client does not know the salt, the server must send
 it to the client before the protocol starts, which it can do in plain text.<a href="#section-7.4-5" class="pilcrow">¶</a></p>
 <div id="section-7.4-6">
           <div class="alignLeft art-svg artwork" id="section-7.4-6.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="832" width="512" viewBox="0 0 512 832" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="640" width="536" viewBox="0 0 536 640" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 104,144 L 104,256" fill="none" stroke="black"></path>
               <path d="M 104,336 L 104,464" fill="none" stroke="black"></path>
-              <path d="M 104,552 L 104,672" fill="none" stroke="black"></path>
-              <path d="M 104,704 L 104,792" fill="none" stroke="black"></path>
-              <path d="M 384,56 L 384,184" fill="none" stroke="black"></path>
-              <path d="M 384,200 L 384,368" fill="none" stroke="black"></path>
-              <path d="M 384,400 L 384,592" fill="none" stroke="black"></path>
-              <path d="M 384,624 L 384,672" fill="none" stroke="black"></path>
-              <path d="M 384,704 L 384,792" fill="none" stroke="black"></path>
+              <path d="M 104,512 L 104,600" fill="none" stroke="black"></path>
+              <path d="M 312,384 L 312,392" fill="none" stroke="black"></path>
+              <path d="M 384,56 L 384,176" fill="none" stroke="black"></path>
+              <path d="M 384,208 L 384,368" fill="none" stroke="black"></path>
+              <path d="M 384,400 L 384,472" fill="none" stroke="black"></path>
+              <path d="M 384,488 L 384,560" fill="none" stroke="black"></path>
               <path d="M 88,48 L 400,48" fill="none" stroke="black"></path>
               <path d="M 112,160 L 376,160" fill="none" stroke="black"></path>
               <path d="M 112,240 L 376,240" fill="none" stroke="black"></path>
               <path d="M 112,352 L 376,352" fill="none" stroke="black"></path>
               <path d="M 112,448 L 376,448" fill="none" stroke="black"></path>
-              <path d="M 112,576 L 376,576" fill="none" stroke="black"></path>
-              <path d="M 112,656 L 376,656" fill="none" stroke="black"></path>
-              <path d="M 112,736 L 376,736" fill="none" stroke="black"></path>
-              <path d="M 88,800 L 400,800" fill="none" stroke="black"></path>
-              <path class="jump" d="M 384,200 C 378,200 378,184 384,184" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="384,736 372,730.4 372,741.6" fill="black" transform="rotate(0,376,736)"></polygon>
-              <polygon class="arrowhead" points="384,576 372,570.4 372,581.6" fill="black" transform="rotate(0,376,576)"></polygon>
+              <path d="M 112,544 L 376,544" fill="none" stroke="black"></path>
+              <path d="M 88,608 L 400,608" fill="none" stroke="black"></path>
+              <path class="jump" d="M 384,488 C 378,488 378,472 384,472" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="384,544 372,538.4 372,549.6" fill="black" transform="rotate(0,376,544)"></polygon>
               <polygon class="arrowhead" points="384,352 372,346.4 372,357.6" fill="black" transform="rotate(0,376,352)"></polygon>
               <polygon class="arrowhead" points="384,160 372,154.4 372,165.6" fill="black" transform="rotate(0,376,160)"></polygon>
-              <polygon class="arrowhead" points="120,656 108,650.4 108,661.6" fill="black" transform="rotate(180,112,656)"></polygon>
               <polygon class="arrowhead" points="120,448 108,442.4 108,453.6" fill="black" transform="rotate(180,112,448)"></polygon>
               <polygon class="arrowhead" points="120,240 108,234.4 108,245.6" fill="black" transform="rotate(180,112,240)"></polygon>
               <g class="text">
@@ -3336,61 +3327,44 @@ it to the client before the protocol starts, which it can do in plain text.<a hr
                 <text x="20" y="132">ctx,</text>
                 <text x="60" y="132">msg1</text>
                 <text x="88" y="132">=</text>
-                <text x="208" y="132">CPaceOQUAKE.Init(v,sid,U,S)</text>
+                <text x="212" y="132">CPaceOQUAKE+.Init(v,sid,U,S)</text>
                 <text x="244" y="148">msg1</text>
                 <text x="148" y="196">ctx,</text>
                 <text x="188" y="196">msg2</text>
                 <text x="216" y="196">=</text>
-                <text x="304" y="196">CPaceOQUAKE.Respond</text>
-                <text x="448" y="196">v,msg1,sid,U,S)</text>
+                <text x="372" y="196">CPaceOQUAKE+.Respond(v,msg1,sid,U,S)</text>
                 <text x="244" y="228">msg2</text>
                 <text x="48" y="276">Stage</text>
                 <text x="84" y="276">2:</text>
-                <text x="124" y="276">OQUAKE</text>
+                <text x="128" y="276">OQUAKE+</text>
                 <text x="104" y="292">|</text>
                 <text x="20" y="308">ctx,</text>
                 <text x="60" y="308">msg3</text>
                 <text x="88" y="308">=</text>
-                <text x="220" y="308">CPaceOQUAKE.InitiatorContinue(</text>
+                <text x="224" y="308">CPaceOQUAKE+.InitiatorContinue(</text>
                 <text x="104" y="324">v,ctx,msg2,sid,U,S)</text>
                 <text x="244" y="340">msg3</text>
-                <text x="148" y="388">SK_co,</text>
-                <text x="196" y="388">msg4</text>
-                <text x="224" y="388">=</text>
-                <text x="348" y="388">CPaceOQUAKE.ResponderFinish(</text>
-                <text x="216" y="404">v,ctx,msg3,sid,U,S)</text>
+                <text x="140" y="388">ctx,</text>
+                <text x="180" y="388">msg4</text>
+                <text x="208" y="388">=</text>
+                <text x="264" y="388">CPaceOQUAKE</text>
+                <text x="392" y="388">.ResponderContinue(</text>
+                <text x="228" y="404">v,ctx,msg3,pk,sid,U,S)</text>
                 <text x="244" y="436">msg4</text>
-                <text x="24" y="484">SK_co</text>
-                <text x="56" y="484">=</text>
-                <text x="216" y="484">CPaceOQUAKE.InitiatorFinish(ctx,msg4)</text>
-                <text x="104" y="500">|</text>
-                <text x="48" y="516">Stage</text>
-                <text x="84" y="516">3:</text>
-                <text x="132" y="516">Password</text>
-                <text x="220" y="516">Confirmation</text>
-                <text x="104" y="532">|</text>
-                <text x="44" y="548">msg5</text>
-                <text x="72" y="548">=</text>
-                <text x="172" y="548">PC-Init(SK_co,sid,U,S)</text>
-                <text x="244" y="564">msg5</text>
-                <text x="140" y="612">ctx,</text>
-                <text x="180" y="612">msg6</text>
-                <text x="208" y="612">=</text>
-                <text x="360" y="612">PC-Challenge(SK_co,msg5,pk,sid,U,S)</text>
-                <text x="244" y="644">msg6</text>
-                <text x="48" y="692">client_key,</text>
-                <text x="116" y="692">msg7</text>
-                <text x="144" y="692">=</text>
-                <text x="300" y="692">PC-Response(SK_co,seed,msg6,sid,U,S)</text>
-                <text x="244" y="724">msg7</text>
-                <text x="212" y="772">server_key</text>
-                <text x="264" y="772">=</text>
-                <text x="328" y="772">PC-Verify(ctx</text>
-                <text x="408" y="772">msg7)</text>
-                <text x="76" y="820">output</text>
-                <text x="148" y="820">client_key</text>
-                <text x="348" y="820">output</text>
-                <text x="420" y="820">server_key</text>
+                <text x="48" y="484">client_key,</text>
+                <text x="116" y="484">msg5</text>
+                <text x="144" y="484">=</text>
+                <text x="268" y="484">CPaceOQUAKE+.InitiatorFinish</text>
+                <text x="116" y="500">ctx,seed,msg4,sid,U,S)</text>
+                <text x="244" y="532">msg5</text>
+                <text x="164" y="580">server_key</text>
+                <text x="216" y="580">=</text>
+                <text x="380" y="580">CPaceOQUAKE+.ResponderFinish(ctx,msg5)</text>
+                <text x="384" y="596">|</text>
+                <text x="76" y="628">output</text>
+                <text x="148" y="628">client_key</text>
+                <text x="348" y="628">output</text>
+                <text x="420" y="628">server_key</text>
               </g>
             </svg><a href="#section-7.4-6.1" class="pilcrow">¶</a>
 </div>
@@ -3405,15 +3379,15 @@ it to the client before the protocol starts, which it can do in plain text.<a hr
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-cpaceoquake-configurations" class="section-name selfRef">CPaceOQUAKE+ Configurations</a>
       </h2>
 <p id="section-8-1">CPaceOQUAKE+ is instantiated by selecting a configuration of a group and hash function
-for the CPace protocol, a KEM, KDF, KSF, for password confirmation, and a KEM and KDF
-for CPaceOQUAKE, and a general purpose cryptographic hash function H. The KEM, KDF,
+for the CPace protocol, a KEM, KDF, KSF, for the OQUAKE+ stage, and a KEM and KDF
+for the OQUAKE stage, and a general purpose cryptographic hash function H. The KEM, KDF,
 are not required to be the same, so they are distinguished by "PC-" and "PAKE-"
-prefixes, e.g., PC-KDF and PAKE-KDF are the KDFs for the password confirmation stage
-and the CPaceOQUAKE protocol, respectively.<a href="#section-8-1" class="pilcrow">¶</a></p>
+prefixes, e.g., PC-KDF and PAKE-KDF are the KDFs for the OQUAKE+ stage
+and the OQUAKE stage, respectively.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">The <span class="bcp14">RECOMMENDED</span> configuration is below.<a href="#section-8-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8-3.1">
-          <p id="section-8-3.1.1">CPace-Group: CPACE-RISTR255-SHA512 <span><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-20#section-4" class="relref">Section 4</a> of [<a href="#CPACE" class="cite xref">CPACE</a>]</span><a href="#section-8-3.1.1" class="pilcrow">¶</a></p>
+          <p id="section-8-3.1.1">CPace-Group: CPACE-RISTR255-SHA512 <span><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-21#section-4" class="relref">Section 4</a> of [<a href="#CPACE" class="cite xref">CPACE</a>]</span><a href="#section-8-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-3.2">
           <p id="section-8-3.2.1">CPace-Hash: SHA-512<a href="#section-8-3.2.1" class="pilcrow">¶</a></p>
@@ -3467,7 +3441,7 @@ and the CPaceOQUAKE protocol, respectively.<a href="#section-8-1" class="pilcrow
 <p id="section-8-8">For instance, one possible additional configuration is as follows.<a href="#section-8-8" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8-9.1">
-          <p id="section-8-9.1.1">CPace-Group: CPACE-P256<em>XMD:SHA-256_SSWU_NU</em>-SHA256 <span><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-20#section-4" class="relref">Section 4</a> of [<a href="#CPACE" class="cite xref">CPACE</a>]</span><a href="#section-8-9.1.1" class="pilcrow">¶</a></p>
+          <p id="section-8-9.1.1">CPace-Group: CPACE-P256<em>XMD:SHA-256_SSWU_NU</em>-SHA256 <span><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-21#section-4" class="relref">Section 4</a> of [<a href="#CPACE" class="cite xref">CPACE</a>]</span><a href="#section-8-9.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-9.2">
           <p id="section-8-9.2.1">CPace-Hash: SHA-256<a href="#section-8-9.2.1" class="pilcrow">¶</a></p>
@@ -3507,8 +3481,8 @@ throughout this specification, along with conditions that lead to each error,
 are as follows:<a href="#section-9-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-2.1">
-          <p id="section-9-2.1.1">AuthenticationError: The PC protocol fails password confirmation checks at the
-client or server; <a href="#pcp" class="auto internal xref">Section 7.2</a><a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-9-2.1.1">AuthenticationError: The OQUAKE+ stage fails password confirmation checks at the
+client or server; <a href="#oquakeplus-stage" class="auto internal xref">Section 7.2</a><a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-9-3">Beyond these explicit errors, CPaceOQUAKE+ implementations can produce implicit errors.
@@ -3558,7 +3532,7 @@ nearly as black boxes, additional protocol logic is needed to combine the PAKEs
 together and produce a shared secret based on both PAKEs. From a round
 perspective, the hybrid PAKE introduces additional round trips, complicating
 integration into higher-level protocols like TLS. Specifically, integrating
-CPaceOQUAKE+ into TLS would require seven messages:<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+CPaceOQUAKE+ into TLS would require five messages:<a href="#section-10.1-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10.1-4.1">
             <p id="section-10.1-4.1.1">Client -&gt; Server: ClientHello carrying msg1 (CPace init)<a href="#section-10.1-4.1.1" class="pilcrow">¶</a></p>
@@ -3567,19 +3541,13 @@ CPaceOQUAKE+ into TLS would require seven messages:<a href="#section-10.1-3" cla
             <p id="section-10.1-4.2.1">Server -&gt; Client: ServerHello carrying msg2 (CPace resp)<a href="#section-10.1-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-4.3">
-            <p id="section-10.1-4.3.1">Client -&gt; Server: msg3 (OQUAKE init)<a href="#section-10.1-4.3.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-4.3.1">Client -&gt; Server: msg3 (OQUAKE+ init)<a href="#section-10.1-4.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-4.4">
-            <p id="section-10.1-4.4.1">Server -&gt; Client: msg4 (OQUAKE resp)<a href="#section-10.1-4.4.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-4.4.1">Server -&gt; Client: msg4 (OQUAKE+ resp + PC challenge)<a href="#section-10.1-4.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.1-4.5">
-            <p id="section-10.1-4.5.1">Client -&gt; Server: msg5 (PC init)<a href="#section-10.1-4.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-10.1-4.6">
-            <p id="section-10.1-4.6.1">Server -&gt; Client: msg6 (PC challenge)<a href="#section-10.1-4.6.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-10.1-4.7">
-            <p id="section-10.1-4.7.1">Client -&gt; Server: msg7 (PC response)<a href="#section-10.1-4.7.1" class="pilcrow">¶</a></p>
+            <p id="section-10.1-4.5.1">Client -&gt; Server: msg5 (PC response)<a href="#section-10.1-4.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-10.1-5">Compared to the basic TLS handshake, which has three messages:<a href="#section-10.1-5" class="pilcrow">¶</a></p>
@@ -3728,7 +3696,7 @@ secret-dependent.<a href="#section-10.3-3" class="pilcrow">¶</a></p>
 <dd class="break"></dd>
 <dt id="CPACE">[CPACE]</dt>
         <dd>
-<span class="refAuthor">Abdalla, M.</span>, <span class="refAuthor">Haase, B.</span>, and <span class="refAuthor">J. Hesse</span>, <span class="refTitle">"CPace, a balanced composable PAKE"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-cpace-20</span>, <time datetime="2026-03-22" class="refDate">22 March 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-20">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-20</a>&gt;</span>. </dd>
+<span class="refAuthor">Abdalla, M.</span>, <span class="refAuthor">Haase, B.</span>, and <span class="refAuthor">J. Hesse</span>, <span class="refTitle">"CPace, a balanced composable PAKE"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-cpace-21</span>, <time datetime="2026-04-22" class="refDate">22 April 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-21">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-cpace-21</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="FIPS202">[FIPS202]</dt>
         <dd>
