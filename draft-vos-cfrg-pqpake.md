@@ -222,24 +222,25 @@ The protocols specified in this document are built from two stages:
 1. **CPace** {{!CPACE=I-D.irtf-cfrg-cpace}}: A classical elliptic curve-based symmetric PAKE.
 2. **OQUAKE**: A new post-quantum symmetric PAKE built from a BUA-sKEM; see {{quake}}.
 
-An abstract overview of CPaceOQUAKE+ is shown in the figure below.
+An abstract overview of CPaceOQUAKE is shown in the figure below.
 
 ~~~ aasvg
             Client                  Server
               |                       |
               |     +----------+      |
               |     |  CPace   |      |
-Password ---->+---->| (Stage 1)|<-----+<---- Password
-              |     +----------+      |
-              |          | SK1        |
-              |          v            |
-              |     +----------+      |
-              |     |  OQUAKE  |      |
-              +     | (Stage 2)|      +
-              |     +----------+      |
-              |      |       |        |
-              v      v       v        v
-          client_key            server_key
+     PRS ---->+---->| (Stage 1)|<-----+<---- PRS
+                    +----------+
+                         |
+                        SK1
+                         |
+                    +----v-----+
+                    |  OQUAKE  |
+                    | (Stage 2)|
+                    +----------+
+                      |      |
+                      |      |
+  client_key <--------+      +------> server_key
 ~~~
 
 Additionally, the document specifies **OQUAKE+**, an augmented variant of OQUAKE that
@@ -258,18 +259,20 @@ An abstract overview of CPaceOQUAKE+ is shown in the figure below.
             Client                  Server
               |                       |
               |     +----------+      |
-Client's      |     |  CPace   |      |
-password ---->+---->| (Stage 1)|<-----+<---- Verifier
+              |     |  CPace   |      |
+ Verifier---->+---->| (Stage 1)|<-----+<---- Verifier
               |     +----------+      |
-              |          | SK1        |
-              |          v            |
+              |          |            |
+              |    context=SK1        |
+              |          |            |
               |     +----------+      |
               |     | OQUAKE+  |      |
-              +---->| (Stage 2)|<-----+<---- Public key
-              |     +----------+      |
-              |      |       |        |
-              v      v       v        v
-          client_key            server_key
+ Verifier---->+---->| (Stage 2)|<-----+<---- Verifier
+    seed            |          |            Public key
+                    +----------+
+                      |      |
+                      |      |
+  client_key <--------+      +------> server_key
 ~~~
 
 We note that this standard only specifies the compositions listed above.
@@ -520,19 +523,18 @@ This is summarized in the diagram below.
               |                       |
               |     +----------+      |
               |     |  CPace   |      |
-Client's      |     | (Stage 1)|      |    Server's
-password ---->+---->|          |<-----+<---- password
-              |     +----------+      |
-              |          |            |
-              |    context=SK1        |
-              |          |            |
-              |     +----------+      |
-              |     |  OQUAKE  |      |
-              +---->| (Stage 2)|<-----+
-              |     +----------+      |
-              |          |            |
-              v          v            v
-          client_key            server_key
+     PRS ---->+---->| (Stage 1)|<-----+<---- PRS
+                    +----------+
+                         |
+                        SK1
+                         |
+                    +----v-----+
+                    |  OQUAKE  |
+                    | (Stage 2)|
+                    +----------+
+                      |      |
+                      |      |
+  client_key <--------+      +------> server_key
 ~~~
 
 CPaceOQUAKE composes CPace and OQUAKE by first running CPace to completion
@@ -921,31 +923,7 @@ The CPaceOQUAKE session key is SK2, which transitively depends on SK1
 through the effective password derivation.
 
 This is outlined in the diagram below. CPace is initiated by the client, and
-OQUAKE is also initiated by the client after CPace completes. This results
-in a four-message protocol.
-
-~~~ aasvg
-            Client                  Server
-              |                       |
-              |     +----------+      |
-              |     |  CPace   |      |
-         PRS--+---->| (Stage 1)|<-----+--PRS
-              |     +----------+      |
-              |          |            |
-              |         SK1           |
-              |          |            |
-              |     +----------+      |
-              |     |  OQUAKE  |      |
-              |     | (Stage 2)|      |
-              |     | ctx=SK1  |      |
-              |     +----------+      |
-              |          |            |
-              |   +-----SK2------+    |
-                  |              |
-                  v              v
-            client_key       server_key
-~~~
-
+OQUAKE is also initiated by the client after CPace completes.
 Unlike OQUAKE, CPaceOQUAKE does not require a shared session identifier sid, although this
 is strongly recommended. If no sid is provided, CPace will run without an sid, and OQUAKE
 will use a random string generated with random material provided by both parties. If an
@@ -959,7 +937,7 @@ and ResponderFinish are intended to be called by the server.
 Client: PRS,sid,U,S               Server: PRS,sid,U,S
         -----------------------------------------
      ctx, msg1 =                           |
-CPaceOQUAKE.Init(PRS,sid,U,S)             |
+CPaceOQUAKE.Init(PRS,sid,U,S)              |
              |                             |
              |           msg1              |
              |---------------------------->|
@@ -1291,11 +1269,11 @@ the OQUAKE key exchange, then responds to the challenge.
 A high level overview of this flow is below.
 
 ~~~aasvg
-Client: PRS, seed, sid, U, S       Server: v, pk, sid, U, S
+Client: v, seed, sid, U, S       Server: v, pk, sid, U, S
        ---------------------------------------
             |                           |
-   ctx, msg1 = OQUAKE+.Init(           |
-     v, context, sid, U, S)            |
+   ctx, msg1 = OQUAKE+.Init(            |
+     v, context, sid, U, S)             |
             |                           |
             |         msg1              |
             |-------------------------->|
@@ -1306,13 +1284,13 @@ Client: PRS, seed, sid, U, S       Server: v, pk, sid, U, S
             |         msg2              |
             |<--------------------------|
             |                           |
-client_key, msg3 = OQUAKE+.Finish(     |
-  ctx, seed, msg2, sid, U, S)          |
+client_key, msg3 = OQUAKE+.Finish(      |
+  ctx, seed, msg2, sid, U, S)           |
             |                           |
             |         msg3              |
             |-------------------------->|
             |                           |
-                server_key = OQUAKE+.Verify(ctx, msg3)
+            |   server_key = OQUAKE+.Verify(ctx, msg3)
             |                           |
        ---------------------------------------
   output client_key            output server_key
@@ -1564,11 +1542,11 @@ An overview of the composition is below.
               |     +----------+      |
               |     | OQUAKE+  |      |
  Verifier---->+---->| (Stage 2)|<-----+<---- Verifier
-    seed----->+     |          |      +<---- Public key
-              |     +----------+      |
-              |      |       |        |
-              v      v       v        v
-          client_key            server_key
+    seed            |          |            Public key
+                    +----------+
+                      |      |
+                      |      |
+  client_key <--------+      +------> server_key
 ~~~
 
 Upon successful completion of the entire protocol, the client and server will share a
