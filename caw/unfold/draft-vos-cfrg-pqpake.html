@@ -33,8 +33,8 @@ This document recommends configurations for CPaceOQUAKE+.
     platformdirs 4.9.6
     pycountry 24.6.1
     PyYAML 6.0.3
-    requests 2.32.5
-    wcwidth 0.6.0
+    requests 2.33.1
+    wcwidth 0.7.0
 -->
 <link href="draft-vos-cfrg-pqpake.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1055,11 +1055,11 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">Hybrid PQ-PAKE</td>
-<td class="right">April 2026</td>
+<td class="right">May 2026</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 29 October 2026</td>
+<td class="center">Expires 13 November 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1072,12 +1072,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-04-27" class="published">27 April 2026</time>
+<time datetime="2026-05-12" class="published">12 May 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-10-29">29 October 2026</time></dd>
+<dd class="expires"><time datetime="2026-11-13">13 November 2026</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1143,7 +1143,7 @@ This document recommends configurations for CPaceOQUAKE+.<a href="#section-abstr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 29 October 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 13 November 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1486,48 +1486,50 @@ of the client's password.<a href="#section-3-1" class="pilcrow">¶</a></p>
           <p id="section-3-3.2.1"><strong>OQUAKE</strong>: A new post-quantum symmetric PAKE built from a BUA-sKEM; see <a href="#quake" class="auto internal xref">Section 6.2</a>.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-3-4">An abstract overview of CPaceOQUAKE+ is shown in the figure below.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<p id="section-3-4">An abstract overview of CPaceOQUAKE is shown in the figure below.<a href="#section-3-4" class="pilcrow">¶</a></p>
 <div id="section-3-5">
         <div class="alignLeft art-svg artwork" id="section-3-5.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="272" width="432" viewBox="0 0 432 272" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-            <path d="M 120,48 L 120,240" fill="none" stroke="black"></path>
-            <path d="M 168,64 L 168,112" fill="none" stroke="black"></path>
-            <path d="M 168,160 L 168,208" fill="none" stroke="black"></path>
-            <path d="M 176,216 L 176,240" fill="none" stroke="black"></path>
-            <path d="M 208,120 L 208,152" fill="none" stroke="black"></path>
-            <path d="M 240,216 L 240,240" fill="none" stroke="black"></path>
-            <path d="M 256,64 L 256,112" fill="none" stroke="black"></path>
-            <path d="M 256,160 L 256,208" fill="none" stroke="black"></path>
-            <path d="M 312,48 L 312,240" fill="none" stroke="black"></path>
-            <path d="M 168,64 L 256,64" fill="none" stroke="black"></path>
-            <path d="M 80,96 L 160,96" fill="none" stroke="black"></path>
-            <path d="M 264,96 L 352,96" fill="none" stroke="black"></path>
-            <path d="M 168,112 L 256,112" fill="none" stroke="black"></path>
-            <path d="M 168,160 L 256,160" fill="none" stroke="black"></path>
-            <path d="M 168,208 L 256,208" fill="none" stroke="black"></path>
-            <polygon class="arrowhead" points="328,96 316,90.4 316,101.6" fill="black" transform="rotate(180,320,96)"></polygon>
-            <polygon class="arrowhead" points="320,240 308,234.4 308,245.6" fill="black" transform="rotate(90,312,240)"></polygon>
-            <polygon class="arrowhead" points="272,96 260,90.4 260,101.6" fill="black" transform="rotate(180,264,96)"></polygon>
-            <polygon class="arrowhead" points="248,240 236,234.4 236,245.6" fill="black" transform="rotate(90,240,240)"></polygon>
-            <polygon class="arrowhead" points="216,152 204,146.4 204,157.6" fill="black" transform="rotate(90,208,152)"></polygon>
-            <polygon class="arrowhead" points="184,240 172,234.4 172,245.6" fill="black" transform="rotate(90,176,240)"></polygon>
-            <polygon class="arrowhead" points="168,96 156,90.4 156,101.6" fill="black" transform="rotate(0,160,96)"></polygon>
-            <polygon class="arrowhead" points="128,240 116,234.4 116,245.6" fill="black" transform="rotate(90,120,240)"></polygon>
-            <polygon class="arrowhead" points="120,96 108,90.4 108,101.6" fill="black" transform="rotate(0,112,96)"></polygon>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="304" width="376" viewBox="0 0 376 304" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+            <path d="M 104,48 L 104,96" fill="none" stroke="black"></path>
+            <path d="M 152,64 L 152,112" fill="none" stroke="black"></path>
+            <path d="M 152,176 L 152,224" fill="none" stroke="black"></path>
+            <path d="M 168,232 L 168,272" fill="none" stroke="black"></path>
+            <path d="M 192,160 L 192,176" fill="none" stroke="black"></path>
+            <path d="M 224,232 L 224,272" fill="none" stroke="black"></path>
+            <path d="M 240,64 L 240,112" fill="none" stroke="black"></path>
+            <path d="M 240,176 L 240,224" fill="none" stroke="black"></path>
+            <path d="M 296,48 L 296,96" fill="none" stroke="black"></path>
+            <path d="M 152,64 L 240,64" fill="none" stroke="black"></path>
+            <path d="M 64,96 L 144,96" fill="none" stroke="black"></path>
+            <path d="M 248,96 L 336,96" fill="none" stroke="black"></path>
+            <path d="M 152,112 L 240,112" fill="none" stroke="black"></path>
+            <path d="M 152,176 L 184,176" fill="none" stroke="black"></path>
+            <path d="M 200,176 L 240,176" fill="none" stroke="black"></path>
+            <path d="M 152,224 L 240,224" fill="none" stroke="black"></path>
+            <path d="M 96,272 L 168,272" fill="none" stroke="black"></path>
+            <path d="M 224,272 L 280,272" fill="none" stroke="black"></path>
+            <polygon class="arrowhead" points="312,96 300,90.4 300,101.6" fill="black" transform="rotate(180,304,96)"></polygon>
+            <polygon class="arrowhead" points="288,272 276,266.4 276,277.6" fill="black" transform="rotate(0,280,272)"></polygon>
+            <polygon class="arrowhead" points="256,96 244,90.4 244,101.6" fill="black" transform="rotate(180,248,96)"></polygon>
+            <polygon class="arrowhead" points="200,176 188,170.4 188,181.6" fill="black" transform="rotate(90,192,176)"></polygon>
+            <polygon class="arrowhead" points="152,96 140,90.4 140,101.6" fill="black" transform="rotate(0,144,96)"></polygon>
+            <polygon class="arrowhead" points="104,272 92,266.4 92,277.6" fill="black" transform="rotate(180,96,272)"></polygon>
+            <polygon class="arrowhead" points="104,96 92,90.4 92,101.6" fill="black" transform="rotate(0,96,96)"></polygon>
             <g class="text">
-              <text x="124" y="36">Client</text>
-              <text x="316" y="36">Server</text>
-              <text x="208" y="84">CPace</text>
-              <text x="36" y="100">Password</text>
-              <text x="204" y="100">(Stage</text>
-              <text x="244" y="100">1)</text>
-              <text x="396" y="100">Password</text>
-              <text x="232" y="132">SK1</text>
-              <text x="212" y="180">OQUAKE</text>
-              <text x="204" y="196">(Stage</text>
-              <text x="244" y="196">2)</text>
-              <text x="124" y="260">client_key</text>
-              <text x="300" y="260">server_key</text>
+              <text x="108" y="36">Client</text>
+              <text x="300" y="36">Server</text>
+              <text x="192" y="84">CPace</text>
+              <text x="40" y="100">PRS</text>
+              <text x="188" y="100">(Stage</text>
+              <text x="228" y="100">1)</text>
+              <text x="360" y="100">PRS</text>
+              <text x="192" y="132">|</text>
+              <text x="192" y="148">SK1</text>
+              <text x="196" y="196">OQUAKE</text>
+              <text x="188" y="212">(Stage</text>
+              <text x="228" y="212">2)</text>
+              <text x="44" y="276">client_key</text>
+              <text x="332" y="276">server_key</text>
             </g>
           </svg><a href="#section-3-5.1" class="pilcrow">¶</a>
 </div>
@@ -1550,53 +1552,56 @@ adds password confirmation to upgrade the symmetric PAKE to an asymmetric PAKE; 
 <p id="section-3-9">An abstract overview of CPaceOQUAKE+ is shown in the figure below.<a href="#section-3-9" class="pilcrow">¶</a></p>
 <div id="section-3-10">
         <div class="alignLeft art-svg artwork" id="section-3-10.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="272" width="448" viewBox="0 0 448 272" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-            <path d="M 120,48 L 120,240" fill="none" stroke="black"></path>
-            <path d="M 168,64 L 168,112" fill="none" stroke="black"></path>
-            <path d="M 168,160 L 168,208" fill="none" stroke="black"></path>
-            <path d="M 176,216 L 176,240" fill="none" stroke="black"></path>
-            <path d="M 208,120 L 208,152" fill="none" stroke="black"></path>
-            <path d="M 240,216 L 240,240" fill="none" stroke="black"></path>
-            <path d="M 256,64 L 256,112" fill="none" stroke="black"></path>
-            <path d="M 256,160 L 256,208" fill="none" stroke="black"></path>
-            <path d="M 312,48 L 312,240" fill="none" stroke="black"></path>
-            <path d="M 168,64 L 256,64" fill="none" stroke="black"></path>
-            <path d="M 80,96 L 160,96" fill="none" stroke="black"></path>
-            <path d="M 264,96 L 352,96" fill="none" stroke="black"></path>
-            <path d="M 168,112 L 256,112" fill="none" stroke="black"></path>
-            <path d="M 168,160 L 256,160" fill="none" stroke="black"></path>
-            <path d="M 120,192 L 160,192" fill="none" stroke="black"></path>
-            <path d="M 264,192 L 352,192" fill="none" stroke="black"></path>
-            <path d="M 168,208 L 256,208" fill="none" stroke="black"></path>
-            <polygon class="arrowhead" points="328,192 316,186.4 316,197.6" fill="black" transform="rotate(180,320,192)"></polygon>
-            <polygon class="arrowhead" points="328,96 316,90.4 316,101.6" fill="black" transform="rotate(180,320,96)"></polygon>
-            <polygon class="arrowhead" points="320,240 308,234.4 308,245.6" fill="black" transform="rotate(90,312,240)"></polygon>
-            <polygon class="arrowhead" points="272,192 260,186.4 260,197.6" fill="black" transform="rotate(180,264,192)"></polygon>
-            <polygon class="arrowhead" points="272,96 260,90.4 260,101.6" fill="black" transform="rotate(180,264,96)"></polygon>
-            <polygon class="arrowhead" points="248,240 236,234.4 236,245.6" fill="black" transform="rotate(90,240,240)"></polygon>
-            <polygon class="arrowhead" points="216,152 204,146.4 204,157.6" fill="black" transform="rotate(90,208,152)"></polygon>
-            <polygon class="arrowhead" points="184,240 172,234.4 172,245.6" fill="black" transform="rotate(90,176,240)"></polygon>
-            <polygon class="arrowhead" points="168,192 156,186.4 156,197.6" fill="black" transform="rotate(0,160,192)"></polygon>
-            <polygon class="arrowhead" points="168,96 156,90.4 156,101.6" fill="black" transform="rotate(0,160,96)"></polygon>
-            <polygon class="arrowhead" points="128,240 116,234.4 116,245.6" fill="black" transform="rotate(90,120,240)"></polygon>
-            <polygon class="arrowhead" points="120,96 108,90.4 108,101.6" fill="black" transform="rotate(0,112,96)"></polygon>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="320" width="432" viewBox="0 0 432 320" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+            <path d="M 112,48 L 112,208" fill="none" stroke="black"></path>
+            <path d="M 160,64 L 160,112" fill="none" stroke="black"></path>
+            <path d="M 160,176 L 160,240" fill="none" stroke="black"></path>
+            <path d="M 176,248 L 176,288" fill="none" stroke="black"></path>
+            <path d="M 232,248 L 232,288" fill="none" stroke="black"></path>
+            <path d="M 248,64 L 248,112" fill="none" stroke="black"></path>
+            <path d="M 248,176 L 248,240" fill="none" stroke="black"></path>
+            <path d="M 304,48 L 304,208" fill="none" stroke="black"></path>
+            <path d="M 160,64 L 248,64" fill="none" stroke="black"></path>
+            <path d="M 72,96 L 152,96" fill="none" stroke="black"></path>
+            <path d="M 256,96 L 344,96" fill="none" stroke="black"></path>
+            <path d="M 160,112 L 248,112" fill="none" stroke="black"></path>
+            <path d="M 160,176 L 248,176" fill="none" stroke="black"></path>
+            <path d="M 72,208 L 152,208" fill="none" stroke="black"></path>
+            <path d="M 256,208 L 344,208" fill="none" stroke="black"></path>
+            <path d="M 160,240 L 248,240" fill="none" stroke="black"></path>
+            <path d="M 104,288 L 176,288" fill="none" stroke="black"></path>
+            <path d="M 232,288 L 288,288" fill="none" stroke="black"></path>
+            <polygon class="arrowhead" points="320,208 308,202.4 308,213.6" fill="black" transform="rotate(180,312,208)"></polygon>
+            <polygon class="arrowhead" points="320,96 308,90.4 308,101.6" fill="black" transform="rotate(180,312,96)"></polygon>
+            <polygon class="arrowhead" points="296,288 284,282.4 284,293.6" fill="black" transform="rotate(0,288,288)"></polygon>
+            <polygon class="arrowhead" points="264,208 252,202.4 252,213.6" fill="black" transform="rotate(180,256,208)"></polygon>
+            <polygon class="arrowhead" points="264,96 252,90.4 252,101.6" fill="black" transform="rotate(180,256,96)"></polygon>
+            <polygon class="arrowhead" points="160,208 148,202.4 148,213.6" fill="black" transform="rotate(0,152,208)"></polygon>
+            <polygon class="arrowhead" points="160,96 148,90.4 148,101.6" fill="black" transform="rotate(0,152,96)"></polygon>
+            <polygon class="arrowhead" points="112,288 100,282.4 100,293.6" fill="black" transform="rotate(180,104,288)"></polygon>
+            <polygon class="arrowhead" points="112,208 100,202.4 100,213.6" fill="black" transform="rotate(0,104,208)"></polygon>
+            <polygon class="arrowhead" points="112,96 100,90.4 100,101.6" fill="black" transform="rotate(0,104,96)"></polygon>
             <g class="text">
-              <text x="124" y="36">Client</text>
-              <text x="316" y="36">Server</text>
-              <text x="36" y="84">Client's</text>
-              <text x="208" y="84">CPace</text>
-              <text x="36" y="100">password</text>
-              <text x="204" y="100">(Stage</text>
-              <text x="244" y="100">1)</text>
-              <text x="396" y="100">Verifier</text>
-              <text x="232" y="132">SK1</text>
-              <text x="208" y="180">OQUAKE+</text>
-              <text x="204" y="196">(Stage</text>
-              <text x="244" y="196">2)</text>
-              <text x="388" y="196">Public</text>
-              <text x="432" y="196">key</text>
-              <text x="124" y="260">client_key</text>
-              <text x="300" y="260">server_key</text>
+              <text x="116" y="36">Client</text>
+              <text x="308" y="36">Server</text>
+              <text x="200" y="84">CPace</text>
+              <text x="36" y="100">Verifier</text>
+              <text x="196" y="100">(Stage</text>
+              <text x="236" y="100">1)</text>
+              <text x="388" y="100">Verifier</text>
+              <text x="200" y="132">|</text>
+              <text x="192" y="148">context=SK1</text>
+              <text x="200" y="164">|</text>
+              <text x="200" y="196">OQUAKE+</text>
+              <text x="36" y="212">Verifier</text>
+              <text x="196" y="212">(Stage</text>
+              <text x="236" y="212">2)</text>
+              <text x="388" y="212">Verifier</text>
+              <text x="44" y="228">seed</text>
+              <text x="372" y="228">Public</text>
+              <text x="416" y="228">key</text>
+              <text x="52" y="292">client_key</text>
+              <text x="340" y="292">server_key</text>
             </g>
           </svg><a href="#section-3-10.1" class="pilcrow">¶</a>
 </div>
@@ -1916,49 +1921,47 @@ on the password-related string (PRS). Otherwise, they obtain random session keys
 This is summarized in the diagram below.<a href="#section-6-3" class="pilcrow">¶</a></p>
 <div id="section-6-4">
         <div class="alignLeft art-svg artwork" id="section-6-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="304" width="432" viewBox="0 0 432 304" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-            <path d="M 120,48 L 120,272" fill="none" stroke="black"></path>
-            <path d="M 168,64 L 168,128" fill="none" stroke="black"></path>
-            <path d="M 168,192 L 168,240" fill="none" stroke="black"></path>
-            <path d="M 208,248 L 208,272" fill="none" stroke="black"></path>
-            <path d="M 256,64 L 256,128" fill="none" stroke="black"></path>
-            <path d="M 256,192 L 256,240" fill="none" stroke="black"></path>
-            <path d="M 312,48 L 312,272" fill="none" stroke="black"></path>
-            <path d="M 168,64 L 256,64" fill="none" stroke="black"></path>
-            <path d="M 80,112 L 160,112" fill="none" stroke="black"></path>
-            <path d="M 264,112 L 352,112" fill="none" stroke="black"></path>
-            <path d="M 168,128 L 256,128" fill="none" stroke="black"></path>
-            <path d="M 168,192 L 256,192" fill="none" stroke="black"></path>
-            <path d="M 120,224 L 160,224" fill="none" stroke="black"></path>
-            <path d="M 264,224 L 312,224" fill="none" stroke="black"></path>
-            <path d="M 168,240 L 256,240" fill="none" stroke="black"></path>
-            <polygon class="arrowhead" points="328,112 316,106.4 316,117.6" fill="black" transform="rotate(180,320,112)"></polygon>
-            <polygon class="arrowhead" points="320,272 308,266.4 308,277.6" fill="black" transform="rotate(90,312,272)"></polygon>
-            <polygon class="arrowhead" points="272,224 260,218.4 260,229.6" fill="black" transform="rotate(180,264,224)"></polygon>
-            <polygon class="arrowhead" points="272,112 260,106.4 260,117.6" fill="black" transform="rotate(180,264,112)"></polygon>
-            <polygon class="arrowhead" points="216,272 204,266.4 204,277.6" fill="black" transform="rotate(90,208,272)"></polygon>
-            <polygon class="arrowhead" points="168,224 156,218.4 156,229.6" fill="black" transform="rotate(0,160,224)"></polygon>
-            <polygon class="arrowhead" points="168,112 156,106.4 156,117.6" fill="black" transform="rotate(0,160,112)"></polygon>
-            <polygon class="arrowhead" points="128,272 116,266.4 116,277.6" fill="black" transform="rotate(90,120,272)"></polygon>
-            <polygon class="arrowhead" points="120,112 108,106.4 108,117.6" fill="black" transform="rotate(0,112,112)"></polygon>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="304" width="376" viewBox="0 0 376 304" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+            <path d="M 104,48 L 104,96" fill="none" stroke="black"></path>
+            <path d="M 152,64 L 152,112" fill="none" stroke="black"></path>
+            <path d="M 152,176 L 152,224" fill="none" stroke="black"></path>
+            <path d="M 168,232 L 168,272" fill="none" stroke="black"></path>
+            <path d="M 192,160 L 192,176" fill="none" stroke="black"></path>
+            <path d="M 224,232 L 224,272" fill="none" stroke="black"></path>
+            <path d="M 240,64 L 240,112" fill="none" stroke="black"></path>
+            <path d="M 240,176 L 240,224" fill="none" stroke="black"></path>
+            <path d="M 296,48 L 296,96" fill="none" stroke="black"></path>
+            <path d="M 152,64 L 240,64" fill="none" stroke="black"></path>
+            <path d="M 64,96 L 144,96" fill="none" stroke="black"></path>
+            <path d="M 248,96 L 336,96" fill="none" stroke="black"></path>
+            <path d="M 152,112 L 240,112" fill="none" stroke="black"></path>
+            <path d="M 152,176 L 184,176" fill="none" stroke="black"></path>
+            <path d="M 200,176 L 240,176" fill="none" stroke="black"></path>
+            <path d="M 152,224 L 240,224" fill="none" stroke="black"></path>
+            <path d="M 96,272 L 168,272" fill="none" stroke="black"></path>
+            <path d="M 224,272 L 280,272" fill="none" stroke="black"></path>
+            <polygon class="arrowhead" points="312,96 300,90.4 300,101.6" fill="black" transform="rotate(180,304,96)"></polygon>
+            <polygon class="arrowhead" points="288,272 276,266.4 276,277.6" fill="black" transform="rotate(0,280,272)"></polygon>
+            <polygon class="arrowhead" points="256,96 244,90.4 244,101.6" fill="black" transform="rotate(180,248,96)"></polygon>
+            <polygon class="arrowhead" points="200,176 188,170.4 188,181.6" fill="black" transform="rotate(90,192,176)"></polygon>
+            <polygon class="arrowhead" points="152,96 140,90.4 140,101.6" fill="black" transform="rotate(0,144,96)"></polygon>
+            <polygon class="arrowhead" points="104,272 92,266.4 92,277.6" fill="black" transform="rotate(180,96,272)"></polygon>
+            <polygon class="arrowhead" points="104,96 92,90.4 92,101.6" fill="black" transform="rotate(0,96,96)"></polygon>
             <g class="text">
-              <text x="124" y="36">Client</text>
-              <text x="316" y="36">Server</text>
-              <text x="208" y="84">CPace</text>
-              <text x="36" y="100">Client's</text>
-              <text x="204" y="100">(Stage</text>
-              <text x="244" y="100">1)</text>
-              <text x="380" y="100">Server's</text>
-              <text x="36" y="116">password</text>
-              <text x="396" y="116">password</text>
-              <text x="208" y="148">|</text>
-              <text x="200" y="164">context=SK1</text>
-              <text x="208" y="180">|</text>
-              <text x="212" y="212">OQUAKE</text>
-              <text x="204" y="228">(Stage</text>
-              <text x="244" y="228">2)</text>
-              <text x="124" y="292">client_key</text>
-              <text x="300" y="292">server_key</text>
+              <text x="108" y="36">Client</text>
+              <text x="300" y="36">Server</text>
+              <text x="192" y="84">CPace</text>
+              <text x="40" y="100">PRS</text>
+              <text x="188" y="100">(Stage</text>
+              <text x="228" y="100">1)</text>
+              <text x="360" y="100">PRS</text>
+              <text x="192" y="132">|</text>
+              <text x="192" y="148">SK1</text>
+              <text x="196" y="196">OQUAKE</text>
+              <text x="188" y="212">(Stage</text>
+              <text x="228" y="212">2)</text>
+              <text x="44" y="276">client_key</text>
+              <text x="332" y="276">server_key</text>
             </g>
           </svg><a href="#section-6-4.1" class="pilcrow">¶</a>
 </div>
@@ -2387,67 +2390,20 @@ OQUAKE using PRS and context=SK1. OQUAKE derives an effective password from
 The CPaceOQUAKE session key is SK2, which transitively depends on SK1
 through the effective password derivation.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
 <p id="section-6.3-5">This is outlined in the diagram below. CPace is initiated by the client, and
-OQUAKE is also initiated by the client after CPace completes. This results
-in a four-message protocol.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
-<div id="section-6.3-6">
-          <div class="alignLeft art-svg artwork" id="section-6.3-6.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="352" width="288" viewBox="0 0 288 352" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-              <path d="M 48,48 L 48,272" fill="none" stroke="black"></path>
-              <path d="M 80,272 L 80,304" fill="none" stroke="black"></path>
-              <path d="M 96,64 L 96,112" fill="none" stroke="black"></path>
-              <path d="M 96,176 L 96,240" fill="none" stroke="black"></path>
-              <path d="M 184,64 L 184,112" fill="none" stroke="black"></path>
-              <path d="M 184,176 L 184,240" fill="none" stroke="black"></path>
-              <path d="M 200,272 L 200,304" fill="none" stroke="black"></path>
-              <path d="M 240,48 L 240,272" fill="none" stroke="black"></path>
-              <path d="M 96,64 L 184,64" fill="none" stroke="black"></path>
-              <path d="M 32,96 L 88,96" fill="none" stroke="black"></path>
-              <path d="M 192,96 L 256,96" fill="none" stroke="black"></path>
-              <path d="M 96,112 L 184,112" fill="none" stroke="black"></path>
-              <path d="M 96,176 L 184,176" fill="none" stroke="black"></path>
-              <path d="M 96,240 L 184,240" fill="none" stroke="black"></path>
-              <path d="M 80,272 L 120,272" fill="none" stroke="black"></path>
-              <path d="M 152,272 L 200,272" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="208,304 196,298.4 196,309.6" fill="black" transform="rotate(90,200,304)"></polygon>
-              <polygon class="arrowhead" points="200,96 188,90.4 188,101.6" fill="black" transform="rotate(180,192,96)"></polygon>
-              <polygon class="arrowhead" points="96,96 84,90.4 84,101.6" fill="black" transform="rotate(0,88,96)"></polygon>
-              <polygon class="arrowhead" points="88,304 76,298.4 76,309.6" fill="black" transform="rotate(90,80,304)"></polygon>
-              <g class="text">
-                <text x="52" y="36">Client</text>
-                <text x="244" y="36">Server</text>
-                <text x="136" y="84">CPace</text>
-                <text x="16" y="100">PRS</text>
-                <text x="132" y="100">(Stage</text>
-                <text x="172" y="100">1)</text>
-                <text x="272" y="100">PRS</text>
-                <text x="136" y="132">|</text>
-                <text x="136" y="148">SK1</text>
-                <text x="136" y="164">|</text>
-                <text x="140" y="196">OQUAKE</text>
-                <text x="132" y="212">(Stage</text>
-                <text x="172" y="212">2)</text>
-                <text x="136" y="228">ctx=SK1</text>
-                <text x="136" y="260">|</text>
-                <text x="136" y="276">SK2</text>
-                <text x="68" y="324">client_key</text>
-                <text x="204" y="324">server_key</text>
-              </g>
-            </svg><a href="#section-6.3-6.1" class="pilcrow">¶</a>
-</div>
-</div>
-<p id="section-6.3-7">Unlike OQUAKE, CPaceOQUAKE does not require a shared session identifier sid, although this
+OQUAKE is also initiated by the client after CPace completes.
+Unlike OQUAKE, CPaceOQUAKE does not require a shared session identifier sid, although this
 is strongly recommended. If no sid is provided, CPace will run without an sid, and OQUAKE
 will use a random string generated with random material provided by both parties. If an
-sid is provided, both CPace and OQUAKE will use this sid.<a href="#section-6.3-7" class="pilcrow">¶</a></p>
-<p id="section-6.3-8">An overview of the protocol flow is shown below. The protocol has five functions. Init,
+sid is provided, both CPace and OQUAKE will use this sid.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
+<p id="section-6.3-6">An overview of the protocol flow is shown below. The protocol has five functions. Init,
 InitiatorContinue, and InitiatorFinish are intended to be called by the client, and Respond
-and ResponderFinish are intended to be called by the server.<a href="#section-6.3-8" class="pilcrow">¶</a></p>
-<div id="section-6.3-9">
-          <div class="alignLeft art-svg artwork" id="section-6.3-9.1">
+and ResponderFinish are intended to be called by the server.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
+<div id="section-6.3-7">
+          <div class="alignLeft art-svg artwork" id="section-6.3-7.1">
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="560" width="440" viewBox="0 0 440 560" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 112,96 L 112,240" fill="none" stroke="black"></path>
               <path d="M 112,304 L 112,464" fill="none" stroke="black"></path>
-              <path d="M 352,96 L 352,144" fill="none" stroke="black"></path>
+              <path d="M 352,56 L 352,144" fill="none" stroke="black"></path>
               <path d="M 352,192 L 352,352" fill="none" stroke="black"></path>
               <path d="M 352,416 L 352,520" fill="none" stroke="black"></path>
               <path d="M 72,48 L 392,48" fill="none" stroke="black"></path>
@@ -2468,9 +2424,7 @@ and ResponderFinish are intended to be called by the server.<a href="#section-6.
                 <text x="60" y="68">ctx,</text>
                 <text x="100" y="68">msg1</text>
                 <text x="128" y="68">=</text>
-                <text x="352" y="68">|</text>
                 <text x="120" y="84">CPaceOQUAKE.Init(PRS,sid,U,S)</text>
-                <text x="344" y="84">|</text>
                 <text x="220" y="116">msg1</text>
                 <text x="276" y="164">ctx,</text>
                 <text x="316" y="164">msg2</text>
@@ -2498,7 +2452,7 @@ and ResponderFinish are intended to be called by the server.<a href="#section-6.
                 <text x="316" y="548">output</text>
                 <text x="388" y="548">server_key</text>
               </g>
-            </svg><a href="#section-6.3-9.1" class="pilcrow">¶</a>
+            </svg><a href="#section-6.3-7.1" class="pilcrow">¶</a>
 </div>
 </div>
 <div id="client-initiation">
@@ -2861,14 +2815,11 @@ the OQUAKE key exchange, then responds to the challenge.<a href="#section-7.2-2"
 <p id="section-7.2-3">A high level overview of this flow is below.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 <div id="section-7.2-4">
           <div class="alignLeft art-svg artwork" id="section-7.2-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="480" viewBox="0 0 480 432" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="464" viewBox="0 0 464 432" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 104,112 L 104,256" fill="none" stroke="black"></path>
-              <path d="M 104,304 L 104,352" fill="none" stroke="black"></path>
-              <path d="M 320,80 L 320,96" fill="none" stroke="black"></path>
-              <path d="M 320,272 L 320,288" fill="none" stroke="black"></path>
-              <path d="M 328,112 L 328,160" fill="none" stroke="black"></path>
-              <path d="M 328,208 L 328,256" fill="none" stroke="black"></path>
-              <path d="M 328,304 L 328,352" fill="none" stroke="black"></path>
+              <path d="M 104,304 L 104,392" fill="none" stroke="black"></path>
+              <path d="M 328,56 L 328,160" fill="none" stroke="black"></path>
+              <path d="M 328,208 L 328,352" fill="none" stroke="black"></path>
               <path d="M 64,48 L 368,48" fill="none" stroke="black"></path>
               <path d="M 112,144 L 320,144" fill="none" stroke="black"></path>
               <path d="M 112,240 L 320,240" fill="none" stroke="black"></path>
@@ -2879,19 +2830,18 @@ the OQUAKE key exchange, then responds to the challenge.<a href="#section-7.2-2"
               <polygon class="arrowhead" points="120,240 108,234.4 108,245.6" fill="black" transform="rotate(180,112,240)"></polygon>
               <g class="text">
                 <text x="32" y="36">Client:</text>
-                <text x="84" y="36">PRS,</text>
-                <text x="128" y="36">seed,</text>
-                <text x="172" y="36">sid,</text>
-                <text x="204" y="36">U,</text>
-                <text x="224" y="36">S</text>
-                <text x="312" y="36">Server:</text>
-                <text x="356" y="36">v,</text>
-                <text x="384" y="36">pk,</text>
-                <text x="420" y="36">sid,</text>
-                <text x="452" y="36">U,</text>
-                <text x="472" y="36">S</text>
+                <text x="76" y="36">v,</text>
+                <text x="112" y="36">seed,</text>
+                <text x="156" y="36">sid,</text>
+                <text x="188" y="36">U,</text>
+                <text x="208" y="36">S</text>
+                <text x="296" y="36">Server:</text>
+                <text x="340" y="36">v,</text>
+                <text x="368" y="36">pk,</text>
+                <text x="404" y="36">sid,</text>
+                <text x="436" y="36">U,</text>
+                <text x="456" y="36">S</text>
                 <text x="104" y="68">|</text>
-                <text x="328" y="68">|</text>
                 <text x="44" y="84">ctx,</text>
                 <text x="84" y="84">msg1</text>
                 <text x="112" y="84">=</text>
@@ -2929,7 +2879,6 @@ the OQUAKE key exchange, then responds to the challenge.<a href="#section-7.2-2"
                 <text x="224" y="372">=</text>
                 <text x="312" y="372">OQUAKE+.Verify(ctx,</text>
                 <text x="416" y="372">msg3)</text>
-                <text x="104" y="388">|</text>
                 <text x="328" y="388">|</text>
                 <text x="44" y="420">output</text>
                 <text x="116" y="420">client_key</text>
@@ -3223,15 +3172,15 @@ by <code>GenVerifierMaterial</code> to prove knowledge of the password. This see
 <p id="section-7.4-3">An overview of the composition is below.<a href="#section-7.4-3" class="pilcrow">¶</a></p>
 <div id="section-7.4-4">
           <div class="alignLeft art-svg artwork" id="section-7.4-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="320" width="440" viewBox="0 0 440 320" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-              <path d="M 112,48 L 112,272" fill="none" stroke="black"></path>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="320" width="432" viewBox="0 0 432 320" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+              <path d="M 112,48 L 112,208" fill="none" stroke="black"></path>
               <path d="M 160,64 L 160,112" fill="none" stroke="black"></path>
               <path d="M 160,176 L 160,240" fill="none" stroke="black"></path>
-              <path d="M 168,248 L 168,272" fill="none" stroke="black"></path>
-              <path d="M 232,248 L 232,272" fill="none" stroke="black"></path>
+              <path d="M 176,248 L 176,288" fill="none" stroke="black"></path>
+              <path d="M 232,248 L 232,288" fill="none" stroke="black"></path>
               <path d="M 248,64 L 248,112" fill="none" stroke="black"></path>
               <path d="M 248,176 L 248,240" fill="none" stroke="black"></path>
-              <path d="M 304,48 L 304,272" fill="none" stroke="black"></path>
+              <path d="M 304,48 L 304,208" fill="none" stroke="black"></path>
               <path d="M 160,64 L 248,64" fill="none" stroke="black"></path>
               <path d="M 72,96 L 152,96" fill="none" stroke="black"></path>
               <path d="M 256,96 L 344,96" fill="none" stroke="black"></path>
@@ -3239,21 +3188,17 @@ by <code>GenVerifierMaterial</code> to prove knowledge of the password. This see
               <path d="M 160,176 L 248,176" fill="none" stroke="black"></path>
               <path d="M 72,208 L 152,208" fill="none" stroke="black"></path>
               <path d="M 256,208 L 344,208" fill="none" stroke="black"></path>
-              <path d="M 64,224 L 104,224" fill="none" stroke="black"></path>
-              <path d="M 312,224 L 344,224" fill="none" stroke="black"></path>
               <path d="M 160,240 L 248,240" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="320,224 308,218.4 308,229.6" fill="black" transform="rotate(180,312,224)"></polygon>
+              <path d="M 104,288 L 176,288" fill="none" stroke="black"></path>
+              <path d="M 232,288 L 288,288" fill="none" stroke="black"></path>
               <polygon class="arrowhead" points="320,208 308,202.4 308,213.6" fill="black" transform="rotate(180,312,208)"></polygon>
               <polygon class="arrowhead" points="320,96 308,90.4 308,101.6" fill="black" transform="rotate(180,312,96)"></polygon>
-              <polygon class="arrowhead" points="312,272 300,266.4 300,277.6" fill="black" transform="rotate(90,304,272)"></polygon>
+              <polygon class="arrowhead" points="296,288 284,282.4 284,293.6" fill="black" transform="rotate(0,288,288)"></polygon>
               <polygon class="arrowhead" points="264,208 252,202.4 252,213.6" fill="black" transform="rotate(180,256,208)"></polygon>
               <polygon class="arrowhead" points="264,96 252,90.4 252,101.6" fill="black" transform="rotate(180,256,96)"></polygon>
-              <polygon class="arrowhead" points="240,272 228,266.4 228,277.6" fill="black" transform="rotate(90,232,272)"></polygon>
-              <polygon class="arrowhead" points="176,272 164,266.4 164,277.6" fill="black" transform="rotate(90,168,272)"></polygon>
               <polygon class="arrowhead" points="160,208 148,202.4 148,213.6" fill="black" transform="rotate(0,152,208)"></polygon>
               <polygon class="arrowhead" points="160,96 148,90.4 148,101.6" fill="black" transform="rotate(0,152,96)"></polygon>
-              <polygon class="arrowhead" points="120,272 108,266.4 108,277.6" fill="black" transform="rotate(90,112,272)"></polygon>
-              <polygon class="arrowhead" points="112,224 100,218.4 100,229.6" fill="black" transform="rotate(0,104,224)"></polygon>
+              <polygon class="arrowhead" points="112,288 100,282.4 100,293.6" fill="black" transform="rotate(180,104,288)"></polygon>
               <polygon class="arrowhead" points="112,208 100,202.4 100,213.6" fill="black" transform="rotate(0,104,208)"></polygon>
               <polygon class="arrowhead" points="112,96 100,90.4 100,101.6" fill="black" transform="rotate(0,104,96)"></polygon>
               <g class="text">
@@ -3273,10 +3218,10 @@ by <code>GenVerifierMaterial</code> to prove knowledge of the password. This see
                 <text x="236" y="212">2)</text>
                 <text x="388" y="212">Verifier</text>
                 <text x="44" y="228">seed</text>
-                <text x="380" y="228">Public</text>
-                <text x="424" y="228">key</text>
-                <text x="116" y="292">client_key</text>
-                <text x="292" y="292">server_key</text>
+                <text x="372" y="228">Public</text>
+                <text x="416" y="228">key</text>
+                <text x="52" y="292">client_key</text>
+                <text x="340" y="292">server_key</text>
               </g>
             </svg><a href="#section-7.4-4.1" class="pilcrow">¶</a>
 </div>

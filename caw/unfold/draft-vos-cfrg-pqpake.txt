@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                               Apple, Inc.
 Intended status: Informational                                S. Jarecki
-Expires: 29 October 2026                University of California, Irvine
+Expires: 13 November 2026               University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                           27 April 2026
+                                                             12 May 2026
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 October 2026.
+   This Internet-Draft will expire on 13 November 2026.
 
 Copyright Notice
 
@@ -242,23 +242,24 @@ Table of Contents
    2.  *OQUAKE*: A new post-quantum symmetric PAKE built from a BUA-
        sKEM; see Section 6.2.
 
-   An abstract overview of CPaceOQUAKE+ is shown in the figure below.
+   An abstract overview of CPaceOQUAKE is shown in the figure below.
 
                Client                  Server
                  |                       |
                  |     +----------+      |
                  |     |  CPace   |      |
-   Password ---->+---->| (Stage 1)|<-----+<---- Password
-                 |     +----------+      |
-                 |          | SK1        |
-                 |          v            |
-                 |     +----------+      |
-                 |     |  OQUAKE  |      |
-                 +     | (Stage 2)|      +
-                 |     +----------+      |
-                 |      |       |        |
-                 v      v       v        v
-             client_key            server_key
+        PRS ---->+---->| (Stage 1)|<-----+<---- PRS
+                       +----------+
+                            |
+                           SK1
+                            |
+                       +----v-----+
+                       |  OQUAKE  |
+                       | (Stage 2)|
+                       +----------+
+                         |      |
+                         |      |
+     client_key <--------+      +------> server_key
 
    Additionally, the document specifies *OQUAKE+*, an augmented variant
    of OQUAKE that adds password confirmation to upgrade the symmetric
@@ -278,18 +279,20 @@ Table of Contents
                Client                  Server
                  |                       |
                  |     +----------+      |
-   Client's      |     |  CPace   |      |
-   password ---->+---->| (Stage 1)|<-----+<---- Verifier
+                 |     |  CPace   |      |
+    Verifier---->+---->| (Stage 1)|<-----+<---- Verifier
                  |     +----------+      |
-                 |          | SK1        |
-                 |          v            |
+                 |          |            |
+                 |    context=SK1        |
+                 |          |            |
                  |     +----------+      |
                  |     | OQUAKE+  |      |
-                 +---->| (Stage 2)|<-----+<---- Public key
-                 |     +----------+      |
-                 |      |       |        |
-                 v      v       v        v
-             client_key            server_key
+    Verifier---->+---->| (Stage 2)|<-----+<---- Verifier
+       seed            |          |            Public key
+                       +----------+
+                         |      |
+                         |      |
+     client_key <--------+      +------> server_key
 
    We note that this standard only specifies the compositions listed
    above.  It is not necessarily true that one can securely compose all
@@ -578,19 +581,18 @@ def Encaps(upk):
                  |                       |
                  |     +----------+      |
                  |     |  CPace   |      |
-   Client's      |     | (Stage 1)|      |    Server's
-   password ---->+---->|          |<-----+<---- password
-                 |     +----------+      |
-                 |          |            |
-                 |    context=SK1        |
-                 |          |            |
-                 |     +----------+      |
-                 |     |  OQUAKE  |      |
-                 +---->| (Stage 2)|<-----+
-                 |     +----------+      |
-                 |          |            |
-                 v          v            v
-             client_key            server_key
+        PRS ---->+---->| (Stage 1)|<-----+<---- PRS
+                       +----------+
+                            |
+                           SK1
+                            |
+                       +----v-----+
+                       |  OQUAKE  |
+                       | (Stage 2)|
+                       +----------+
+                         |      |
+                         |      |
+     client_key <--------+      +------> server_key
 
    CPaceOQUAKE composes CPace and OQUAKE by first running CPace to
    completion between client and server, and then running OQUAKE with
@@ -995,33 +997,12 @@ def Finish(context, resp_msg):
 
    This is outlined in the diagram below.  CPace is initiated by the
    client, and OQUAKE is also initiated by the client after CPace
-   completes.  This results in a four-message protocol.
-
-               Client                  Server
-                 |                       |
-                 |     +----------+      |
-                 |     |  CPace   |      |
-            PRS--+---->| (Stage 1)|<-----+--PRS
-                 |     +----------+      |
-                 |          |            |
-                 |         SK1           |
-                 |          |            |
-                 |     +----------+      |
-                 |     |  OQUAKE  |      |
-                 |     | (Stage 2)|      |
-                 |     | ctx=SK1  |      |
-                 |     +----------+      |
-                 |          |            |
-                 |   +-----SK2------+    |
-                     |              |
-                     v              v
-               client_key       server_key
-
-   Unlike OQUAKE, CPaceOQUAKE does not require a shared session
-   identifier sid, although this is strongly recommended.  If no sid is
-   provided, CPace will run without an sid, and OQUAKE will use a random
-   string generated with random material provided by both parties.  If
-   an sid is provided, both CPace and OQUAKE will use this sid.
+   completes.  Unlike OQUAKE, CPaceOQUAKE does not require a shared
+   session identifier sid, although this is strongly recommended.  If no
+   sid is provided, CPace will run without an sid, and OQUAKE will use a
+   random string generated with random material provided by both
+   parties.  If an sid is provided, both CPace and OQUAKE will use this
+   sid.
 
    An overview of the protocol flow is shown below.  The protocol has
    five functions.  Init, InitiatorContinue, and InitiatorFinish are
@@ -1031,7 +1012,7 @@ def Finish(context, resp_msg):
    Client: PRS,sid,U,S               Server: PRS,sid,U,S
            -----------------------------------------
         ctx, msg1 =                           |
-   CPaceOQUAKE.Init(PRS,sid,U,S)             |
+   CPaceOQUAKE.Init(PRS,sid,U,S)              |
                 |                             |
                 |           msg1              |
                 |---------------------------->|
@@ -1359,11 +1340,11 @@ def GenVerifierMaterial(PRS, salt, U, S):
 
    A high level overview of this flow is below.
 
-   Client: PRS, seed, sid, U, S       Server: v, pk, sid, U, S
+   Client: v, seed, sid, U, S       Server: v, pk, sid, U, S
           ---------------------------------------
                |                           |
-      ctx, msg1 = OQUAKE+.Init(           |
-        v, context, sid, U, S)            |
+      ctx, msg1 = OQUAKE+.Init(            |
+        v, context, sid, U, S)             |
                |                           |
                |         msg1              |
                |-------------------------->|
@@ -1374,13 +1355,13 @@ def GenVerifierMaterial(PRS, salt, U, S):
                |         msg2              |
                |<--------------------------|
                |                           |
-   client_key, msg3 = OQUAKE+.Finish(     |
-     ctx, seed, msg2, sid, U, S)          |
+   client_key, msg3 = OQUAKE+.Finish(      |
+     ctx, seed, msg2, sid, U, S)           |
                |                           |
                |         msg3              |
                |-------------------------->|
                |                           |
-                   server_key = OQUAKE+.Verify(ctx, msg3)
+               |   server_key = OQUAKE+.Verify(ctx, msg3)
                |                           |
           ---------------------------------------
      output client_key            output server_key
@@ -1621,11 +1602,11 @@ def Verify(context, server_confirm_target):
                  |     +----------+      |
                  |     | OQUAKE+  |      |
     Verifier---->+---->| (Stage 2)|<-----+<---- Verifier
-       seed----->+     |          |      +<---- Public key
-                 |     +----------+      |
-                 |      |       |        |
-                 v      v       v        v
-             client_key            server_key
+       seed            |          |            Public key
+                       +----------+
+                         |      |
+                         |      |
+     client_key <--------+      +------> server_key
 
    Upon successful completion of the entire protocol, the client and
    server will share a symmetric key that was authenticated by knowledge
