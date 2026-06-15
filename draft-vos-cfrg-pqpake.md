@@ -722,11 +722,10 @@ Parameters:
 def Init(PRS, context, sid, U, S):
   fullsid = encode_sid(sid, U, S)
 
-  if context is not None:
-    prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
-    effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
-  else:
-    effective_PRS = PRS
+  if context is None:
+    context = b""
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+  effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   seed = random(BUA-sKEM.Nseed)
   (pk, sk) = BUA-sKEM.DeriveKeyPair(seed)
@@ -803,11 +802,10 @@ def Respond(PRS, context, init_msg, sid, U, S):
 
   fullsid = encode_sid(sid, U, S)
 
-  if context is not None:
-    prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
-    effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
-  else:
-    effective_PRS = PRS
+  if context is None:
+    context = b""
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+  effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
@@ -821,7 +819,11 @@ def Respond(PRS, context, init_msg, sid, U, S):
   (ct, k) = BUA-sKEM.Encaps(pk)
 
   prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
-  key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+  intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+
+  transcript = s || T || ⍴ || ct
+  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || transcript)
+  key = KDF.Expand(prk_final, DST || "key", Nkey)
 
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
 
@@ -863,7 +865,11 @@ def Finish(context, resp_msg):
     k = BUA-sKEM.Decaps(sk, ct)
     prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
 
-    key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+    intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+
+    transcript = s || T || ⍴ || c
+    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || transcript)
+    key = KDF.Expand(prk_final, DST || "key", Nkey)
 
     h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
     if h != h_expected:
@@ -1361,7 +1367,9 @@ def Respond(PRS, context, init_msg, pk, sid, U, S):
   r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  confirm_input = encode_sid(sid, U, S) || enc_c
+  # Include OQUAKE transcript in confirmation input
+  oquake_transcript = init_msg || oquake_resp
+  confirm_input = encode_sid(sid, U, S) || enc_c || oquake_transcript
 
   prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
   prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
@@ -1422,6 +1430,9 @@ def Finish(context, seed, resp_msg, sid, U, S):
 
   SK = OQUAKE.Finish(context, oquake_resp)
 
+  # Extract context variables to reconstruct OQUAKE transcript
+  (effective_PRS, sk_oquake, pk_oquake, s, T, fullsid) = context
+
   r = KDF.Expand(SK, DST || "OTP", Nct)
   c = XOR(enc_c, r)
 
@@ -1430,7 +1441,11 @@ def Finish(context, seed, resp_msg, sid, U, S):
   try:
     k = KEM.Decaps(sk, c)
 
-    confirm_input = encode_sid(sid, U, S) || enc_c
+    # Reconstruct OQUAKE transcript from context and response
+    (ut, ⍴) = BUA-sKEM.Split(pk_oquake)
+    oquake_init_msg = s || T || ⍴
+    oquake_transcript = oquake_init_msg || oquake_resp
+    confirm_input = encode_sid(sid, U, S) || enc_c || oquake_transcript
 
     prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
     prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
