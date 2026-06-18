@@ -1367,9 +1367,7 @@ def Respond(PRS, context, init_msg, pk, sid, U, S):
   r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  # Include OQUAKE transcript in confirmation input
-  oquake_transcript = init_msg || oquake_resp
-  confirm_input = encode_sid(sid, U, S) || enc_c || oquake_transcript
+  confirm_input = encode_sid(sid, U, S) || enc_c
 
   prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
   prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
@@ -1430,9 +1428,6 @@ def Finish(state, seed, resp_msg, sid, U, S):
 
   SK = OQUAKE.Finish(state, oquake_resp)
 
-  # Extract state variables to reconstruct OQUAKE transcript
-  (effective_PRS, sk_oquake, pk_oquake, s, T, fullsid, context) = state
-
   r = KDF.Expand(SK, DST || "OTP", Nct)
   c = XOR(enc_c, r)
 
@@ -1441,11 +1436,7 @@ def Finish(state, seed, resp_msg, sid, U, S):
   try:
     k = KEM.Decaps(sk, c)
 
-    # Reconstruct OQUAKE transcript from state and response
-    (ut, ⍴) = BUA-sKEM.Split(pk_oquake)
-    oquake_init_msg = s || T || ⍴
-    oquake_transcript = oquake_init_msg || oquake_resp
-    confirm_input = encode_sid(sid, U, S) || enc_c || oquake_transcript
+    confirm_input = encode_sid(sid, U, S) || enc_c
 
     prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
     prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
