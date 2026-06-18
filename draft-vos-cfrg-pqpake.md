@@ -822,7 +822,7 @@ def Respond(PRS, context, init_msg, sid, U, S):
   intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
   transcript = s || T || ⍴ || ct
-  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || transcript)
+  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
   key = KDF.Expand(prk_final, DST || "key", Nkey)
 
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
@@ -868,7 +868,7 @@ def Finish(context, resp_msg):
     intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
     transcript = s || T || ⍴ || c
-    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || transcript)
+    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
     key = KDF.Expand(prk_final, DST || "key", Nkey)
 
     h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
