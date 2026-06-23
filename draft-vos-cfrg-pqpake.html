@@ -20,21 +20,22 @@ This document also describes standalone OQUAKE+, a post-quantum aPAKE,
 and CPaceOQUAKE, the hybrid symmetric PAKE composed of the CPace and OQUAKE stages.
 This document recommends configurations for CPaceOQUAKE+. 
     " name="description">
-<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="xml2rfc 3.34.0" name="generator">
 <meta content="draft-vos-cfrg-pqpake-latest" name="ietf.draft">
 <!-- Generator version information:
-  xml2rfc 3.33.0
-    Python 3.12.13
-    ConfigArgParse 1.7
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
-    lxml 6.0.2
-    platformdirs 4.9.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.7.0
+    wcwidth 0.8.1
 -->
 <link href="draft-vos-cfrg-pqpake.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -301,16 +302,19 @@ h1, h2, h3, h4, h5, h6 {
   font-size-adjust: 0.5;
   color: var(--title-color);
 }
-h1#title {
-  font-size: 32px;
-  line-height: 40px;
-  clear: both;
-}
-h1#title, h1#rfcnum {
-  margin: 1.5em 0 0.2em;
-}
-h1#rfcnum + h1#title {
-  margin: 0.2em 0;
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
 }
 
 h1, h2, h3 {
@@ -330,10 +334,10 @@ h4, h5, h6 {
 #abstract+p {
   font-size: 18px;
   line-height: 24px;
-}
-#abstract+p code, #abstract+p samp, #abstract+p tt {
-  font-size: 16px;
-  line-height: 0;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
 }
 
 p {
@@ -344,59 +348,59 @@ p {
 div {
   margin: 0;
 }
-.alignRight.art-text {
-  background-color: var(--highlight-color);
-  border: 1px solid var(--line-color);
-  border-radius: 3px;
-  padding: 0.5em 1em 0;
-  margin-bottom: 0.5em;
-}
-.alignRight.art-text pre {
-  padding: 0;
-  width: auto;
-}
 .alignRight {
   margin: 1em 0;
-}
-.alignRight > *:first-child {
-  border: none;
-  margin: 0;
-  float: right;
-  clear: both;
-}
-.alignRight > *:nth-child(2) {
-  clear: both;
-  display: block;
-  border: none;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
 }
 svg {
   display: block;
-}
-/* font-family isn't space-separated, but =~ will have to do */
-svg[font-family~="monospace" i], svg [font-family~="monospace" i] {
-  font-family: var(--font-mono);
-}
-.alignCenter.art-text {
-  background-color: var(--highlight-color);
-  border: 1px solid var(--line-color);
-  border-radius: 3px;
-  padding: 0.5em 1em 0;
-  margin-bottom: 0.5em;
-}
-.alignCenter.art-text pre {
-  padding: 0;
-  width: auto;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
 }
 .alignCenter {
   margin: 1em 0;
-}
-.alignCenter > *:first-child {
-  border: none;
-  /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
-     support flexbox yet.
-  */
-  display: table;
-  margin: 0 auto;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
 }
 
 /* lists */
@@ -434,26 +438,25 @@ dl {
     --indent: 5ch;
     & > dt {
       min-width: calc(var(--indent) - 2ch);
+      float: none;
     }
-  }
-  &.olPercent > dt {
-    float: none;
   }
 
   dl > dd > & {
     margin-top: 0.5em;
     margin-bottom: 0;
   }
-}
-dl:not(.dlNewline) > dt {
-  float: left;
-  margin-right: 2ch;
-  min-width: 8ch;
-}
-dl > dd {
-  margin-bottom: .8em;
-  margin-left: var(--indent) !important; /* stupid element overrides */
-  min-height: 2ex;
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
 }
 :is(dl.compact, .dlCompact) > dd {
   margin-bottom: 0;
@@ -469,20 +472,22 @@ dl > dd {
 }
 
 /* links */
-a, a[href].selfRef:hover {
+a {
   text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
 }
-a[href] {
-  color: var(--link-color);
-}
-a[href].selfRef, .iref + a[href].internal {
+.iref + a[href].internal {
   color: var(--text-color);
-}
-a[href]:hover {
-  text-decoration: underline;
-}
-a[href].selfRef:hover {
-  background-color: var(--highlight-color);
 }
 a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
   white-space: nowrap;
@@ -518,9 +523,9 @@ img {
 figure {
   margin: 0.5em 0;
   padding: 0;
-}
-figure blockquote {
-  margin: 0.8em 0.4em 0.4em;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
 }
 figcaption, caption {
   font-style: italic;
@@ -530,17 +535,19 @@ figcaption, caption {
 }
 @media screen {
   /* Auto-collapse boilerplate. */
-  :is(#status-of-memo, #copyright) p {
-    margin: -2px 0;
-    max-height: 0;
-    transition: max-height 2s ease, margin 0.5s ease 0.5s;
-    overflow: hidden;
-  }
-  :is(#status-of-memo, #copyright):hover p,
-  :is(#status-of-memo, #copyright) h2:target ~ p {
-    margin: 0.5em 0;
-    max-height: 500px;
-    overflow: auto;
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
   }
   pre, svg {
     display: inline-block;
@@ -590,25 +597,17 @@ table {
   max-width: 100%;
   margin: 0 0 1em;
   border-collapse: collapse;
-}
-table.right {
-  margin-left: auto;
-}
-table.center {
-  margin-left: auto;
-  margin-right: auto;
-}
-table.left {
-  margin-right: auto;
-}
-table .text-left {
-  text-align: left;
-}
-table .text-center {
-  text-align: center;
-}
-table .text-right {
-  text-align: right;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
 }
 
 thead, tbody {
@@ -628,13 +627,6 @@ th {
 :is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
   background-color: var(--highlight-color);
 }
-table caption {
-  margin: 0;
-  padding: 3px 0 3px 1em;
-}
-table p {
-  margin: 0;
-}
 
 /* pilcrow */
 a.pilcrow {
@@ -645,18 +637,16 @@ a.pilcrow {
     color: var(--pilcrow-weak);
     &:hover { text-decoration: none; }
   }
-}
-@media not print {
-  :hover > a.pilcrow, a.pilcrow:focus {
-    opacity: 1;
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
   }
-  a.pilcrow[href]:hover {
-    color: var(--pilcrow-strong);
-    background-color: transparent;
-  }
-}
-@media print {
-  a.pilcrow {
+  @media print {
     display: none;
   }
 }
@@ -715,9 +705,9 @@ sub, sup {
   font-size: 0.9em;
   font-style: italic;
   margin-top: 2em;
-}
-.docInfo .prepared {
-  float: right;
+  & .prepared {
+    float: right;
+  }
 }
 
 /* table of contents */
@@ -807,23 +797,27 @@ hr.addr {
   max-width: calc(100% - 16px);
 }
 @media (min-width: 500px) {
-  #authors-addresses > section {
-    column-count: 2;
-    column-gap: 20px;
-  }
-  #authors-addresses > section > h2 {
-    column-span: all;
-  }
-  /* hack for break-inside: avoid-column */
-  #authors-addresses address {
-    display: inline-block;
-    break-inside: avoid-column;
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
   }
 }
 
 /* Comments */
-.rfcEditorRemove p:first-of-type {
-  font-style: italic;
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
 }
 .cref {
   background-color: rgba(249, 232, 105, 0.3);
@@ -834,19 +828,21 @@ hr.addr {
 }
 
 @media screen {
-  #toc nav {
-    font-family: var(--font-title);
-    font-weight: 360;
-    & > ul { margin-bottom: 2em; }
-    & ul {
-      margin: 0 0 0 4px;
-      & :is(p, li) {
-        margin: 2px 0;
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
       }
     }
-  }
-  #toc a.toplink {
-    float: right;
+    & a.toplink {
+      float: right;
+    }
   }
 }
 @media not screen {
@@ -867,54 +863,54 @@ hr.addr {
     margin: 0;
     border-bottom: 1px solid #ccc;
     opacity: 0.6;
-  }
-  #toc h2 {
-    margin: 0;
-    padding: 2px 0 2px 6px;
-    padding-right: 1em;
-    font-size: 18px;
-    line-height: 24px;
-    min-width: 190px;
-    text-align: right;
-    background-color: #444;
-    color: white;
-    cursor: pointer;
-    &::before { /* css hamburger */
-      float: right;
-      position: relative;
-      width: 1em;
-      height: 1px;
-      left: -164px;
-      margin: 8px 0 0 0;
-      background: white none repeat scroll 0 0;
-      box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
-      content: "";
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
     }
-  }
-  #toc nav {
-    display: none;
-    background-color: var(--background-color);
-    padding: 0.5em 1em 1em;
-    overflow: auto;
-    overscroll-behavior: contain;
-    height: calc(100vh - 48px);
-    border-left: 1px solid #ddd;
-  }
-  #toc.active {
-    opacity: 1;
-    & nav { display: block; }
-  }
-  /* Make the collapsed ToC header render white on gray also when it's a link */
-  #toc h2 a,
-  #toc h2 a:is(:link, :focus, :hover),
-  #toc a.toplink,
-  #toc a.toplink:hover {
-    color: white;
-    background-color: #444;
-    text-decoration: none;
-  }
-  #toc a.toplink {
-    margin: 2px 0.5em 0;
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
   }
 }
 
@@ -933,26 +929,26 @@ hr.addr {
     margin: 0;
     padding: 0;
     z-index: 1;
-  }
-  #toc h2 {
-    margin: 0;
-    padding: 0.25em 1em 1em 0;
-  }
-  #toc nav {
-    display: block;
-    height: calc(90vh - 84px);
-    bottom: 0;
-    padding: 0.5em 0 2em;
-    overflow: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
   }
   img { /* future proofing */
     max-width: 100%;
     height: auto;
-  }
-  #toc a.toplink {
-    margin: 8px 0.5em 0;
   }
 }
 
@@ -968,12 +964,13 @@ hr.addr {
   #n-copyright-notice {
     border-bottom: none;
   }
-  #toc, #n-introduction {
-    page-break-before: always;
-  }
   #toc {
+    page-break-before: always;
     border-top: none;
     padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
   }
   figure, pre, .vcard {
     page-break-inside: avoid;
@@ -1035,17 +1032,19 @@ hr.addr {
 }
 
 /* SVG Trick: a prefix match works because only black and white are allowed */
-svg :is([stroke="black"], [stroke^="#000"]) {
-  stroke: var(--text-color);
-}
-svg :is([stroke="white"], [stroke^="#fff"]) {
-  stroke: var(--background-color);
-}
-svg :is([fill="black"], [fill^="#000"], :not([fill])) {
-  fill: var(--text-color);
-}
-svg :is([fill="white"], [fill^="#fff"]) {
-  fill: var(--background-color);
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
 }
 </style>
 
@@ -1055,11 +1054,11 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">Hybrid PQ-PAKE</td>
-<td class="right">May 2026</td>
+<td class="right">June 2026</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 13 November 2026</td>
+<td class="center">Expires 25 December 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1072,12 +1071,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-05-12" class="published">12 May 2026</time>
+<time datetime="2026-06-23" class="published">23 June 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-11-13">13 November 2026</time></dd>
+<dd class="expires"><time datetime="2026-12-25">25 December 2026</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1143,7 +1142,7 @@ This document recommends configurations for CPaceOQUAKE+.<a href="#section-abstr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 13 November 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 25 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2152,7 +2151,7 @@ for more information on the timing attack and this fix.<a href="#section-6.2-8" 
 <a href="#section-6.2.1" class="section-number selfRef">6.2.1. </a><a href="#name-initiation-2" class="section-name selfRef">Initiation</a>
           </h4>
 <p id="section-6.2.1-1">Init takes as input the initiator's PRS, an optional context, an optional session identifier sid, and optional
-client and server identifiers U and S. It produces a context for the initiator to store, as well as a
+client and server identifiers U and S. It produces a state for the initiator to store, as well as a
 protocol message that is sent to the responder. Its implementation is as follows.<a href="#section-6.2.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.2.1-2">
 <pre>
@@ -2165,7 +2164,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -2176,11 +2175,10 @@ Parameters:
 def Init(PRS, context, sid, U, S):
   fullsid = encode_sid(sid, U, S)
 
-  if context is not None:
-    prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
-    effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
-  else:
-    effective_PRS = PRS
+  if context is None:
+    context = b""
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+  effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   seed = random(BUA-sKEM.Nseed)
   (pk, sk) = BUA-sKEM.DeriveKeyPair(seed)
@@ -2200,7 +2198,7 @@ def Init(PRS, context, sid, U, S):
 
   init_msg = s || T || ⍴
 
-  return Context(effective_PRS, sk, pk, s, T, fullsid), init_msg
+  return State(effective_PRS, sk, pk, s, T, fullsid, context), init_msg
 </pre><a href="#section-6.2.1-2" class="pilcrow">¶</a>
 </div>
 <p id="section-6.2.1-3">The encode_sid function is defined below.<a href="#section-6.2.1-3" class="pilcrow">¶</a></p>
@@ -2262,11 +2260,10 @@ def Respond(PRS, context, init_msg, sid, U, S):
 
   fullsid = encode_sid(sid, U, S)
 
-  if context is not None:
-    prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
-    effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
-  else:
-    effective_PRS = PRS
+  if context is None:
+    context = b""
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+  effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
@@ -2280,7 +2277,11 @@ def Respond(PRS, context, init_msg, sid, U, S):
   (ct, k) = BUA-sKEM.Encaps(pk)
 
   prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
-  key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+  intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+
+  transcript = s || T || ⍴ || ct
+  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
+  key = KDF.Expand(prk_final, DST || "key", Nkey)
 
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
 
@@ -2296,7 +2297,7 @@ def Respond(PRS, context, init_msg, sid, U, S):
           <h4 id="name-finish-2">
 <a href="#section-6.2.3" class="section-number selfRef">6.2.3. </a><a href="#name-finish-2" class="section-name selfRef">Finish</a>
           </h4>
-<p id="section-6.2.3-1">Finish takes as input the initiator-created context that is output from Init
+<p id="section-6.2.3-1">Finish takes as input the initiator-created state that is output from Init
 as well as the responder's reply message resp_msg. It produces a symmetric key
 that is output to the initiator. Its implementation
 is as follows.<a href="#section-6.2.3-1" class="pilcrow">¶</a></p>
@@ -2305,7 +2306,7 @@ is as follows.<a href="#section-6.2.3-1" class="pilcrow">¶</a></p>
 OQUAKE.Finish
 
 Input:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - resp_msg, encoded protocol message, a byte string
 
 Output:
@@ -2319,15 +2320,19 @@ Parameters:
 Exceptions:
 - AuthenticationError, raised when the key confirmation fails
 
-def Finish(context, resp_msg):
-  (effective_PRS, sk, pk, s, T, fullsid) = context
+def Finish(state, resp_msg):
+  (effective_PRS, sk, pk, s, T, fullsid, context) = state
   ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
   try:
     k = BUA-sKEM.Decaps(sk, ct)
     prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
 
-    key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+    intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+
+    transcript = s || T || ⍴ || c
+    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
+    key = KDF.Expand(prk_final, DST || "key", Nkey)
 
     h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
     if h != h_expected:
@@ -2461,7 +2466,7 @@ and ResponderFinish are intended to be called by the server.<a href="#section-6.
 <a href="#section-6.3.1" class="section-number selfRef">6.3.1. </a><a href="#name-client-initiation" class="section-name selfRef">Client Initiation</a>
           </h4>
 <p id="section-6.3.1-1">The client initiates a CPace exchange with the server using input PRS, an optional session identifier sid,
-and optional client and server identifiers U and S. The output of this process is some context for
+and optional client and server identifiers U and S. The output of this process is some state for
 completing the protocol and a protocol message. The client sends this message to the server.<a href="#section-6.3.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.3.1-2">
 <pre>
@@ -2473,7 +2478,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -2510,7 +2515,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the responder to store
+- state, opaque state for the responder to store
 - msg, an encoded protocol message for the responder to send to the initiator
 
 Parameters:
@@ -2526,7 +2531,7 @@ def Respond(PRS, init_msg, sid, U, S):
 
   resp_msg = s2 || lv_encode(msg2)
 
-  return Context(s1, s2, key1), resp_msg
+  return State(s1, s2, key1), resp_msg
 </pre><a href="#section-6.3.2-3" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2537,7 +2542,7 @@ def Respond(PRS, init_msg, sid, U, S):
 <a href="#section-6.3.3" class="section-number selfRef">6.3.3. </a><a href="#name-client-continue" class="section-name selfRef">Client Continue</a>
           </h4>
 <p id="section-6.3.3-1">The client finishes CPace (Stage 1) and initiates OQUAKE (Stage 2). The client derives
-the CPace session key, then uses it as context for OQUAKE. The output is a new context
+the CPace session key, then uses it as context for OQUAKE. The output is a new state
 and an OQUAKE init message to send to the server.<a href="#section-6.3.3-1" class="pilcrow">¶</a></p>
 <p id="section-6.3.3-2">The client must ensure that exactly one of (s1, s2) and sid exists.
 The client should abort when the message does not have the correct length.<a href="#section-6.3.3-2" class="pilcrow">¶</a></p>
@@ -2547,13 +2552,13 @@ CPaceOQUAKE.InitiatorContinue
 
 Input:
 - PRS, password-related string, a byte string
-- (ctx1, s1), the context generated by CPaceOQUAKE.Init
+- (ctx1, s1), the state generated by CPaceOQUAKE.Init
 - resp_msg, the message received from the server
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -2592,7 +2597,7 @@ CPaceOQUAKE.ResponderFinish
 
 Input:
 - PRS, password-related string, a byte string
-- ctx, context from the server's Response
+- ctx, state from the server's Response
 - msg3, the message received from the client, a byte string
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
@@ -2630,7 +2635,7 @@ output key is the CPaceOQUAKE session key.<a href="#section-6.3.5-1" class="pilc
 CPaceOQUAKE.InitiatorFinish
 
 Input:
-- ctx, context from OQUAKE.Init (stored by CPaceOQUAKE.InitiatorContinue)
+- ctx, state from OQUAKE.Init (stored by CPaceOQUAKE.InitiatorContinue)
 - msg4, the message received from the server, a byte string
 
 Output:
@@ -2906,7 +2911,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -2928,9 +2933,9 @@ def Init(PRS, context, sid, U, S):
 <p id="section-7.2.2-1">Respond takes as input the PRS, an optional context, the initiator's
 protocol message, the client's registered public key, an optional
 session identifier, and optional client and server identifiers.
-It produces an opaque context and a protocol message that combines
+It produces an opaque state and a protocol message that combines
 the OQUAKE response with a password confirmation challenge.<a href="#section-7.2.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2.2-2">The implementation <span class="bcp14">MUST NOT</span> reveal server_key from the context.<a href="#section-7.2.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2.2-2">The implementation <span class="bcp14">MUST NOT</span> reveal server_key from the state.<a href="#section-7.2.2-2" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-7.2.2-3">
 <pre>
 OQUAKE+.Respond
@@ -2944,7 +2949,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the server to store values to complete the protocol
+- state, opaque state for the server to store values to complete the protocol
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
@@ -2972,7 +2977,7 @@ def Respond(PRS, context, init_msg, pk, sid, U, S):
 
   resp_msg = oquake_resp || enc_c || client_confirm
 
-  return Context(server_confirm, server_key), resp_msg
+  return State(server_confirm, server_key), resp_msg
 </pre><a href="#section-7.2.2-3" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2982,7 +2987,7 @@ def Respond(PRS, context, init_msg, pk, sid, U, S):
           <h4 id="name-finish-3">
 <a href="#section-7.2.3" class="section-number selfRef">7.2.3. </a><a href="#name-finish-3" class="section-name selfRef">Finish</a>
           </h4>
-<p id="section-7.2.3-1">Finish takes as input the initiator-created context from Init, the seed
+<p id="section-7.2.3-1">Finish takes as input the initiator-created state from Init, the seed
 used to derive the KEM key pair during registration, the responder's
 combined reply message, a session identifier, and client and server identifiers.<a href="#section-7.2.3-1" class="pilcrow">¶</a></p>
 <p id="section-7.2.3-2">The client completes the OQUAKE key exchange to recover the shared secret,
@@ -2998,7 +3003,7 @@ value. The client outputs the new shared secret as its output.<a href="#section-
 OQUAKE+.Finish
 
 Input:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - seed, seed used to derive KEM public key
 - resp_msg, encoded protocol message, a byte string
 - sid, session identifier, a byte string
@@ -3017,12 +3022,12 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Finish(context, seed, resp_msg, sid, U, S):
+def Finish(state, seed, resp_msg, sid, U, S):
   oquake_resp = resp_msg[0 : Nct_bua + Nkc]
   enc_c = resp_msg[Nct_bua + Nkc : Nct_bua + Nkc + Nct]
   client_confirm_target = resp_msg[Nct_bua + Nkc + Nct :]
 
-  SK = OQUAKE.Finish(context, oquake_resp)
+  SK = OQUAKE.Finish(state, oquake_resp)
 
   r = KDF.Expand(SK, DST || "OTP", Nct)
   c = XOR(enc_c, r)
@@ -3065,7 +3070,7 @@ Otherwise, the server outputs the new shared secret as its output.<a href="#sect
 OQUAKE+.Verify
 
 Input:
-- context, opaque context produced by Respond
+- state, opaque state produced by Respond
 - server_confirm_target, client's response message, a byte string
 
 Output:
@@ -3076,8 +3081,8 @@ Exceptions:
 
 Parameters:
 
-def Verify(context, server_confirm_target):
-  (server_confirm, server_key) = context
+def Verify(state, server_confirm_target):
+  (server_confirm, server_key) = state
   if server_confirm != server_confirm_target:
     raise AuthenticationError
   return server_key
