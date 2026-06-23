@@ -20,21 +20,22 @@ This document also describes standalone OQUAKE+, a post-quantum aPAKE,
 and CPaceOQUAKE, the hybrid symmetric PAKE composed of the CPace and OQUAKE stages.
 This document recommends configurations for CPaceOQUAKE+. 
     " name="description">
-<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="xml2rfc 3.34.0" name="generator">
 <meta content="draft-vos-cfrg-pqpake-latest" name="ietf.draft">
 <!-- Generator version information:
-  xml2rfc 3.33.0
-    Python 3.12.13
-    ConfigArgParse 1.7
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
-    lxml 6.0.2
-    platformdirs 4.9.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.7.0
+    wcwidth 0.8.1
 -->
 <link href="draft-vos-cfrg-pqpake.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1057,7 +1058,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 17 December 2026</td>
+<td class="center">Expires 25 December 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1070,12 +1071,12 @@ svg {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-06-15" class="published">15 June 2026</time>
+<time datetime="2026-06-23" class="published">23 June 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-12-17">17 December 2026</time></dd>
+<dd class="expires"><time datetime="2026-12-25">25 December 2026</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1142,7 @@ This document recommends configurations for CPaceOQUAKE+.<a href="#section-abstr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 17 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 25 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2150,7 +2151,7 @@ for more information on the timing attack and this fix.<a href="#section-6.2-8" 
 <a href="#section-6.2.1" class="section-number selfRef">6.2.1. </a><a href="#name-initiation-2" class="section-name selfRef">Initiation</a>
           </h4>
 <p id="section-6.2.1-1">Init takes as input the initiator's PRS, an optional context, an optional session identifier sid, and optional
-client and server identifiers U and S. It produces a context for the initiator to store, as well as a
+client and server identifiers U and S. It produces a state for the initiator to store, as well as a
 protocol message that is sent to the responder. Its implementation is as follows.<a href="#section-6.2.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.2.1-2">
 <pre>
@@ -2163,7 +2164,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -2197,7 +2198,7 @@ def Init(PRS, context, sid, U, S):
 
   init_msg = s || T || ⍴
 
-  return Context(effective_PRS, sk, pk, s, T, fullsid), init_msg
+  return State(effective_PRS, sk, pk, s, T, fullsid, context), init_msg
 </pre><a href="#section-6.2.1-2" class="pilcrow">¶</a>
 </div>
 <p id="section-6.2.1-3">The encode_sid function is defined below.<a href="#section-6.2.1-3" class="pilcrow">¶</a></p>
@@ -2279,7 +2280,7 @@ def Respond(PRS, context, init_msg, sid, U, S):
   intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
   transcript = s || T || ⍴ || ct
-  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || transcript)
+  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
   key = KDF.Expand(prk_final, DST || "key", Nkey)
 
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
@@ -2296,7 +2297,7 @@ def Respond(PRS, context, init_msg, sid, U, S):
           <h4 id="name-finish-2">
 <a href="#section-6.2.3" class="section-number selfRef">6.2.3. </a><a href="#name-finish-2" class="section-name selfRef">Finish</a>
           </h4>
-<p id="section-6.2.3-1">Finish takes as input the initiator-created context that is output from Init
+<p id="section-6.2.3-1">Finish takes as input the initiator-created state that is output from Init
 as well as the responder's reply message resp_msg. It produces a symmetric key
 that is output to the initiator. Its implementation
 is as follows.<a href="#section-6.2.3-1" class="pilcrow">¶</a></p>
@@ -2305,7 +2306,7 @@ is as follows.<a href="#section-6.2.3-1" class="pilcrow">¶</a></p>
 OQUAKE.Finish
 
 Input:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - resp_msg, encoded protocol message, a byte string
 
 Output:
@@ -2319,8 +2320,8 @@ Parameters:
 Exceptions:
 - AuthenticationError, raised when the key confirmation fails
 
-def Finish(context, resp_msg):
-  (effective_PRS, sk, pk, s, T, fullsid) = context
+def Finish(state, resp_msg):
+  (effective_PRS, sk, pk, s, T, fullsid, context) = state
   ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
   try:
@@ -2330,7 +2331,7 @@ def Finish(context, resp_msg):
     intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
     transcript = s || T || ⍴ || c
-    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || transcript)
+    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
     key = KDF.Expand(prk_final, DST || "key", Nkey)
 
     h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
@@ -2465,7 +2466,7 @@ and ResponderFinish are intended to be called by the server.<a href="#section-6.
 <a href="#section-6.3.1" class="section-number selfRef">6.3.1. </a><a href="#name-client-initiation" class="section-name selfRef">Client Initiation</a>
           </h4>
 <p id="section-6.3.1-1">The client initiates a CPace exchange with the server using input PRS, an optional session identifier sid,
-and optional client and server identifiers U and S. The output of this process is some context for
+and optional client and server identifiers U and S. The output of this process is some state for
 completing the protocol and a protocol message. The client sends this message to the server.<a href="#section-6.3.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.3.1-2">
 <pre>
@@ -2477,7 +2478,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -2514,7 +2515,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the responder to store
+- state, opaque state for the responder to store
 - msg, an encoded protocol message for the responder to send to the initiator
 
 Parameters:
@@ -2530,7 +2531,7 @@ def Respond(PRS, init_msg, sid, U, S):
 
   resp_msg = s2 || lv_encode(msg2)
 
-  return Context(s1, s2, key1), resp_msg
+  return State(s1, s2, key1), resp_msg
 </pre><a href="#section-6.3.2-3" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2541,7 +2542,7 @@ def Respond(PRS, init_msg, sid, U, S):
 <a href="#section-6.3.3" class="section-number selfRef">6.3.3. </a><a href="#name-client-continue" class="section-name selfRef">Client Continue</a>
           </h4>
 <p id="section-6.3.3-1">The client finishes CPace (Stage 1) and initiates OQUAKE (Stage 2). The client derives
-the CPace session key, then uses it as context for OQUAKE. The output is a new context
+the CPace session key, then uses it as context for OQUAKE. The output is a new state
 and an OQUAKE init message to send to the server.<a href="#section-6.3.3-1" class="pilcrow">¶</a></p>
 <p id="section-6.3.3-2">The client must ensure that exactly one of (s1, s2) and sid exists.
 The client should abort when the message does not have the correct length.<a href="#section-6.3.3-2" class="pilcrow">¶</a></p>
@@ -2551,13 +2552,13 @@ CPaceOQUAKE.InitiatorContinue
 
 Input:
 - PRS, password-related string, a byte string
-- (ctx1, s1), the context generated by CPaceOQUAKE.Init
+- (ctx1, s1), the state generated by CPaceOQUAKE.Init
 - resp_msg, the message received from the server
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -2596,7 +2597,7 @@ CPaceOQUAKE.ResponderFinish
 
 Input:
 - PRS, password-related string, a byte string
-- ctx, context from the server's Response
+- ctx, state from the server's Response
 - msg3, the message received from the client, a byte string
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
@@ -2634,7 +2635,7 @@ output key is the CPaceOQUAKE session key.<a href="#section-6.3.5-1" class="pilc
 CPaceOQUAKE.InitiatorFinish
 
 Input:
-- ctx, context from OQUAKE.Init (stored by CPaceOQUAKE.InitiatorContinue)
+- ctx, state from OQUAKE.Init (stored by CPaceOQUAKE.InitiatorContinue)
 - msg4, the message received from the server, a byte string
 
 Output:
@@ -2910,7 +2911,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -2932,9 +2933,9 @@ def Init(PRS, context, sid, U, S):
 <p id="section-7.2.2-1">Respond takes as input the PRS, an optional context, the initiator's
 protocol message, the client's registered public key, an optional
 session identifier, and optional client and server identifiers.
-It produces an opaque context and a protocol message that combines
+It produces an opaque state and a protocol message that combines
 the OQUAKE response with a password confirmation challenge.<a href="#section-7.2.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2.2-2">The implementation <span class="bcp14">MUST NOT</span> reveal server_key from the context.<a href="#section-7.2.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2.2-2">The implementation <span class="bcp14">MUST NOT</span> reveal server_key from the state.<a href="#section-7.2.2-2" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-7.2.2-3">
 <pre>
 OQUAKE+.Respond
@@ -2948,7 +2949,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the server to store values to complete the protocol
+- state, opaque state for the server to store values to complete the protocol
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
@@ -2964,9 +2965,7 @@ def Respond(PRS, context, init_msg, pk, sid, U, S):
   r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  # Include OQUAKE transcript in confirmation input
-  oquake_transcript = init_msg || oquake_resp
-  confirm_input = encode_sid(sid, U, S) || enc_c || oquake_transcript
+  confirm_input = encode_sid(sid, U, S) || enc_c
 
   prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
   prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
@@ -2978,7 +2977,7 @@ def Respond(PRS, context, init_msg, pk, sid, U, S):
 
   resp_msg = oquake_resp || enc_c || client_confirm
 
-  return Context(server_confirm, server_key), resp_msg
+  return State(server_confirm, server_key), resp_msg
 </pre><a href="#section-7.2.2-3" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2988,7 +2987,7 @@ def Respond(PRS, context, init_msg, pk, sid, U, S):
           <h4 id="name-finish-3">
 <a href="#section-7.2.3" class="section-number selfRef">7.2.3. </a><a href="#name-finish-3" class="section-name selfRef">Finish</a>
           </h4>
-<p id="section-7.2.3-1">Finish takes as input the initiator-created context from Init, the seed
+<p id="section-7.2.3-1">Finish takes as input the initiator-created state from Init, the seed
 used to derive the KEM key pair during registration, the responder's
 combined reply message, a session identifier, and client and server identifiers.<a href="#section-7.2.3-1" class="pilcrow">¶</a></p>
 <p id="section-7.2.3-2">The client completes the OQUAKE key exchange to recover the shared secret,
@@ -3004,7 +3003,7 @@ value. The client outputs the new shared secret as its output.<a href="#section-
 OQUAKE+.Finish
 
 Input:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - seed, seed used to derive KEM public key
 - resp_msg, encoded protocol message, a byte string
 - sid, session identifier, a byte string
@@ -3023,15 +3022,12 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Finish(context, seed, resp_msg, sid, U, S):
+def Finish(state, seed, resp_msg, sid, U, S):
   oquake_resp = resp_msg[0 : Nct_bua + Nkc]
   enc_c = resp_msg[Nct_bua + Nkc : Nct_bua + Nkc + Nct]
   client_confirm_target = resp_msg[Nct_bua + Nkc + Nct :]
 
-  SK = OQUAKE.Finish(context, oquake_resp)
-
-  # Extract context variables to reconstruct OQUAKE transcript
-  (effective_PRS, sk_oquake, pk_oquake, s, T, fullsid) = context
+  SK = OQUAKE.Finish(state, oquake_resp)
 
   r = KDF.Expand(SK, DST || "OTP", Nct)
   c = XOR(enc_c, r)
@@ -3041,11 +3037,7 @@ def Finish(context, seed, resp_msg, sid, U, S):
   try:
     k = KEM.Decaps(sk, c)
 
-    # Reconstruct OQUAKE transcript from context and response
-    (ut, ⍴) = BUA-sKEM.Split(pk_oquake)
-    oquake_init_msg = s || T || ⍴
-    oquake_transcript = oquake_init_msg || oquake_resp
-    confirm_input = encode_sid(sid, U, S) || enc_c || oquake_transcript
+    confirm_input = encode_sid(sid, U, S) || enc_c
 
     prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
     prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
@@ -3078,7 +3070,7 @@ Otherwise, the server outputs the new shared secret as its output.<a href="#sect
 OQUAKE+.Verify
 
 Input:
-- context, opaque context produced by Respond
+- state, opaque state produced by Respond
 - server_confirm_target, client's response message, a byte string
 
 Output:
@@ -3089,8 +3081,8 @@ Exceptions:
 
 Parameters:
 
-def Verify(context, server_confirm_target):
-  (server_confirm, server_key) = context
+def Verify(state, server_confirm_target):
+  (server_confirm, server_key) = state
   if server_confirm != server_confirm_target:
     raise AuthenticationError
   return server_key
