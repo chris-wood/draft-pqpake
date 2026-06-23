@@ -698,7 +698,7 @@ for more information on the timing attack and this fix.
 ### Initiation
 
 Init takes as input the initiator's PRS, an optional context, an optional session identifier sid, and optional
-client and server identifiers U and S. It produces a context for the initiator to store, as well as a
+client and server identifiers U and S. It produces a state for the initiator to store, as well as a
 protocol message that is sent to the responder. Its implementation is as follows.
 
 ~~~
@@ -711,7 +711,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -722,11 +722,10 @@ Parameters:
 def Init(PRS, context, sid, U, S):
   fullsid = encode_sid(sid, U, S)
 
-  if context is not None:
-    prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
-    effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
-  else:
-    effective_PRS = PRS
+  if context is None:
+    context = b""
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+  effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   seed = random(BUA-sKEM.Nseed)
   (pk, sk) = BUA-sKEM.DeriveKeyPair(seed)
@@ -746,7 +745,7 @@ def Init(PRS, context, sid, U, S):
 
   init_msg = s || T || ⍴
 
-  return Context(effective_PRS, sk, pk, s, T, fullsid), init_msg
+  return State(effective_PRS, sk, pk, s, T, fullsid, context), init_msg
 ~~~
 
 The encode_sid function is defined below.
@@ -803,11 +802,10 @@ def Respond(PRS, context, init_msg, sid, U, S):
 
   fullsid = encode_sid(sid, U, S)
 
-  if context is not None:
-    prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
-    effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
-  else:
-    effective_PRS = PRS
+  if context is None:
+    context = b""
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+  effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
@@ -821,7 +819,11 @@ def Respond(PRS, context, init_msg, sid, U, S):
   (ct, k) = BUA-sKEM.Encaps(pk)
 
   prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
-  key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+  intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+
+  transcript = s || T || ⍴ || ct
+  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
+  key = KDF.Expand(prk_final, DST || "key", Nkey)
 
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
 
@@ -832,7 +834,7 @@ def Respond(PRS, context, init_msg, sid, U, S):
 
 ### Finish {#quake-finish}
 
-Finish takes as input the initiator-created context that is output from Init
+Finish takes as input the initiator-created state that is output from Init
 as well as the responder's reply message resp\_msg. It produces a symmetric key
 that is output to the initiator. Its implementation
 is as follows.
@@ -841,7 +843,7 @@ is as follows.
 OQUAKE.Finish
 
 Input:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - resp_msg, encoded protocol message, a byte string
 
 Output:
@@ -855,15 +857,19 @@ Parameters:
 Exceptions:
 - AuthenticationError, raised when the key confirmation fails
 
-def Finish(context, resp_msg):
-  (effective_PRS, sk, pk, s, T, fullsid) = context
+def Finish(state, resp_msg):
+  (effective_PRS, sk, pk, s, T, fullsid, context) = state
   ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
   try:
     k = BUA-sKEM.Decaps(sk, ct)
     prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
 
-    key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+    intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
+
+    transcript = s || T || ⍴ || c
+    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
+    key = KDF.Expand(prk_final, DST || "key", Nkey)
 
     h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
     if h != h_expected:
@@ -973,7 +979,7 @@ CPaceOQUAKE.InitiatorFinish(ctx,msg4)      |
 ### Client Initiation
 
 The client initiates a CPace exchange with the server using input PRS, an optional session identifier sid,
-and optional client and server identifiers U and S. The output of this process is some context for
+and optional client and server identifiers U and S. The output of this process is some state for
 completing the protocol and a protocol message. The client sends this message to the server.
 
 ~~~
@@ -985,7 +991,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -1019,7 +1025,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the responder to store
+- state, opaque state for the responder to store
 - msg, an encoded protocol message for the responder to send to the initiator
 
 Parameters:
@@ -1035,13 +1041,13 @@ def Respond(PRS, init_msg, sid, U, S):
 
   resp_msg = s2 || lv_encode(msg2)
 
-  return Context(s1, s2, key1), resp_msg
+  return State(s1, s2, key1), resp_msg
 ~~~
 
 ### Client Continue
 
 The client finishes CPace (Stage 1) and initiates OQUAKE (Stage 2). The client derives
-the CPace session key, then uses it as context for OQUAKE. The output is a new context
+the CPace session key, then uses it as context for OQUAKE. The output is a new state
 and an OQUAKE init message to send to the server.
 
 The client must ensure that exactly one of (s1, s2) and sid exists.
@@ -1052,13 +1058,13 @@ CPaceOQUAKE.InitiatorContinue
 
 Input:
 - PRS, password-related string, a byte string
-- (ctx1, s1), the context generated by CPaceOQUAKE.Init
+- (ctx1, s1), the state generated by CPaceOQUAKE.Init
 - resp_msg, the message received from the server
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -1093,7 +1099,7 @@ CPaceOQUAKE.ResponderFinish
 
 Input:
 - PRS, password-related string, a byte string
-- ctx, context from the server's Response
+- ctx, state from the server's Response
 - msg3, the message received from the client, a byte string
 - sid, session identifier, a byte string
 - U and S, client and server identifiers
@@ -1126,7 +1132,7 @@ output key is the CPaceOQUAKE session key.
 CPaceOQUAKE.InitiatorFinish
 
 Input:
-- ctx, context from OQUAKE.Init (stored by CPaceOQUAKE.InitiatorContinue)
+- ctx, state from OQUAKE.Init (stored by CPaceOQUAKE.InitiatorContinue)
 - msg4, the message received from the server, a byte string
 
 Output:
@@ -1311,7 +1317,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - msg, an encoded protocol message for the initiator to send to the responder
 
 Parameters:
@@ -1328,10 +1334,10 @@ def Init(PRS, context, sid, U, S):
 Respond takes as input the PRS, an optional context, the initiator's
 protocol message, the client's registered public key, an optional
 session identifier, and optional client and server identifiers.
-It produces an opaque context and a protocol message that combines
+It produces an opaque state and a protocol message that combines
 the OQUAKE response with a password confirmation challenge.
 
-The implementation MUST NOT reveal server_key from the context.
+The implementation MUST NOT reveal server_key from the state.
 
 ~~~
 OQUAKE+.Respond
@@ -1345,7 +1351,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- context, opaque state for the server to store values to complete the protocol
+- state, opaque state for the server to store values to complete the protocol
 - resp_msg, encoded protocol message, a byte string
 
 Parameters:
@@ -1373,12 +1379,12 @@ def Respond(PRS, context, init_msg, pk, sid, U, S):
 
   resp_msg = oquake_resp || enc_c || client_confirm
 
-  return Context(server_confirm, server_key), resp_msg
+  return State(server_confirm, server_key), resp_msg
 ~~~
 
 ### Finish {#oquakeplus-finish}
 
-Finish takes as input the initiator-created context from Init, the seed
+Finish takes as input the initiator-created state from Init, the seed
 used to derive the KEM key pair during registration, the responder's
 combined reply message, a session identifier, and client and server identifiers.
 
@@ -1396,7 +1402,7 @@ value. The client outputs the new shared secret as its output.
 OQUAKE+.Finish
 
 Input:
-- context, opaque state for the initiator to store
+- state, opaque state for the initiator to store
 - seed, seed used to derive KEM public key
 - resp_msg, encoded protocol message, a byte string
 - sid, session identifier, a byte string
@@ -1415,12 +1421,12 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Finish(context, seed, resp_msg, sid, U, S):
+def Finish(state, seed, resp_msg, sid, U, S):
   oquake_resp = resp_msg[0 : Nct_bua + Nkc]
   enc_c = resp_msg[Nct_bua + Nkc : Nct_bua + Nkc + Nct]
   client_confirm_target = resp_msg[Nct_bua + Nkc + Nct :]
 
-  SK = OQUAKE.Finish(context, oquake_resp)
+  SK = OQUAKE.Finish(state, oquake_resp)
 
   r = KDF.Expand(SK, DST || "OTP", Nct)
   c = XOR(enc_c, r)
@@ -1458,7 +1464,7 @@ Otherwise, the server outputs the new shared secret as its output.
 OQUAKE+.Verify
 
 Input:
-- context, opaque context produced by Respond
+- state, opaque state produced by Respond
 - server_confirm_target, client's response message, a byte string
 
 Output:
@@ -1469,8 +1475,8 @@ Exceptions:
 
 Parameters:
 
-def Verify(context, server_confirm_target):
-  (server_confirm, server_key) = context
+def Verify(state, server_confirm_target):
+  (server_confirm, server_key) = state
   if server_confirm != server_confirm_target:
     raise AuthenticationError
   return server_key
