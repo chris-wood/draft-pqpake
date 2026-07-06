@@ -128,7 +128,7 @@ password-authenticated key exchange (aPAKE) that supports mutual
 authentication in a client-server setting secure against
 quantum-capable attackers. CPaceOQUAKE+ is composed of two stages
 — CPace and OQUAKE+ — that run sequentially,
-with the output of CPace feeding as context into OQUAKE+. OQUAKE+ is an
+with the output of CPace feeding as the secret_context into OQUAKE+. OQUAKE+ is an
 augmented variant of OQUAKE that adds password confirmation.
 This document also describes standalone OQUAKE+, a post-quantum aPAKE,
 and CPaceOQUAKE, the hybrid symmetric PAKE composed of the CPace and OQUAKE stages.
@@ -263,7 +263,7 @@ An abstract overview of CPaceOQUAKE+ is shown in the figure below.
  Verifier---->+---->| (Stage 1)|<-----+<---- Verifier
               |     +----------+      |
               |          |            |
-              |    context=SK1        |
+              |    sec_ctx=SK1        |
               |          |            |
               |     +----------+      |
               |     | OQUAKE+  |      |
@@ -539,13 +539,44 @@ This is summarized in the diagram below.
 
 CPaceOQUAKE composes CPace and OQUAKE by first running CPace to completion
 between client and server, and then running OQUAKE with the CPace session
-key provided as context. We explain the composition in more detail in
+key provided as the secret_context. We explain the composition in more detail in
 {{!cpacequake-composition}}.
 
-As describes in {{cpace}} and {{quake}}, both CPace and OQUAKE take
-as input optional client and server identifiers, denoted U and S,
-respectively. See {{identities}} for more discussion about these
-identities and how they are chosen in practice.
+All PAKEs in this document share a common interface. Each takes as input a
+password-related string PRS (or a verifier derived from it), a public_context,
+and a secret_context. The public_context binds public session information that
+both parties agree on, such as an optional session identifier sid and optional
+client and server identifiers U and S (e.g., a device identifier, an IP address,
+or a URL). The secret_context binds confidential information shared by both
+parties, such as the session key of a preceding protocol stage; it is never sent
+on the wire. Both the public_context and the secret_context are optional; a party
+that does not use one passes the empty string b"" (equivalently, None). Two parties
+obtain matching session keys only if their PRS, public_context, and secret_context
+match. See {{identities}} for more discussion about the identities and how they are
+chosen in practice.
+
+The public_context is constructed from the optional sid, U, and S using the
+following utility function. Each of sid, U, and S is optional and defaults to the
+empty string b"". Applications MAY include additional public information by
+prepending or appending it to the returned value.
+
+~~~
+EncodePublicContext
+
+Input:
+- sid, session identifier, a byte string
+- U and S, client and server identifiers
+
+Output:
+- public_context, the encoded public context, a byte string
+
+def EncodePublicContext(sid, U, S):
+  public_context =
+    bytes_to_int(len(sid), 4) || sid ||
+    bytes_to_int(len(U), 4) || U ||
+    bytes_to_int(len(S), 4) || S
+  return public_context
+~~~
 
 ## CPace Specification {#cpace}
 
@@ -555,27 +586,27 @@ In other words, the responder only starts executing the protocol after it receiv
 
 The flow of the protocol consists of two messages sent between initiator and responder, produced by the functions
 Init, Respond, and Finish, described below. Both parties take as input a password-related
-string PRS, an optional unique shared session identifier sid, and an optional client identifier
-U and server identifier S (e.g., a device identifier, an IP address, or URL pertaining to the
-client and server). Upon completion, both parties obtain matching session keys if their PRS, sid, key
-length (specified by N), and client and server identifiers match. Otherwise, they obtain random keys.
-In exceptional cases, the protocol aborts.
+string PRS, a public_context, and a secret_context (see {{CPaceOQUAKE}}). Upon completion, both parties
+obtain matching session keys if their PRS, public_context, secret_context, and key length (specified by N)
+match. Otherwise, they obtain random keys. In exceptional cases, the protocol aborts.
+
+CPace derives its generator from PRS, a channel identifier (CI), and a session identifier (sid);
+CI may carry confidential information and is never sent on the wire, whereas sid is public and is
+additionally bound into the session key. Accordingly, CPace uses the secret_context as its CI and the
+public_context as its sid.
 
 ### Initiation
 
-The initiator starts the protocol using its password-related string PRS.
-Additionally, it may bind the session to an existing shared session identifier sid.
-CPace also allows to bind the session to an existing channel identifier.
-To remain consistent with the other PAKEs in this specification, the channel identifier is the concatenation
-of optional client and server identifiers.
+The initiator starts the protocol using its password-related string PRS, binding the session to the
+public_context and secret_context.
 
 ~~~
 CPace.Init
 
 Input:
 - PRS, password-related string, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 
 Output:
 - ya, discrete logarithm intended to be stored in secret until the protocol finishes
@@ -584,8 +615,8 @@ Output:
 Parameters:
 - G, a group environment as specified in CPace
 
-def Init(PRS, sid, U, S):
-  g = G.calculate_generator(H, PRS, U || S, sid)
+def Init(PRS, public_context, secret_context):
+  g = G.calculate_generator(H, PRS, secret_context, public_context)
   ya = G.sample_scalar()
   Ya = G.scalar_mult(ya, g)
   return ya, Ya
@@ -602,9 +633,9 @@ CPace.Respond
 
 Input:
 - PRS, password-related string, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - Ya, public point, received from the initiator
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - ISK, the established shared secret
@@ -617,15 +648,15 @@ Parameters:
 Exceptions:
 - CPaceError, raised when an invalid value was encountered in CPace
 
-def Respond(PRS, Ya, sid, U, S):
-  g = G.calculate_generator(H, PRS, U || S, sid)
+def Respond(PRS, public_context, secret_context, Ya):
+  g = G.calculate_generator(H, PRS, secret_context, public_context)
   yb = G.sample_scalar()
   Yb = G.scalar_mult(yb, g)
 
   K = G.scalar_mult_vfy(yb, Ya)
   If K = G.I, raise CPaceError
 
-  ISK = H.hash(lv_cat(G.DSI || b"_ISK", sid, K) || transcript(Ya, Yb))
+  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript(Ya, Yb))
 
   return ISK, Yb
 ~~~
@@ -642,8 +673,8 @@ CPace.Finish
 
 Input:
 - ya, discrete logarithm that was generated using CPace.Init
+- public_context, optional public context, a byte string
 - Yb, public point, received from the responder
-- sid, session identifier, a byte string
 
 Output:
 - ISK, the established shared secret
@@ -655,11 +686,11 @@ Parameters:
 Exceptions:
 - CPaceError, raised when an invalid value was encountered in CPace
 
-def Finish(ya, Yb, sid):
+def Finish(ya, public_context, Yb):
   K = G.scalar_mult_vfy(ya, Yb)
   If K = G.I, raise CPaceError
 
-  ISK = H.hash(lv_cat(G.DSI || b"_ISK", sid, K) || transcript(Ya, Yb))
+  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript(Ya, Yb))
 
   return ISK
 ~~~
@@ -669,16 +700,16 @@ def Finish(ya, Yb, sid):
 OQUAKE is a PAKE built on a BUA-sKEM and KDF.  If the BUA-sKEM provides security against quantum-enabled attacks,
 then so does OQUAKE. It consists of two messages sent between initiator and responder, produced by
 the functions Init, Respond, and Finish, described below. Both parties take as input a password-related
-string PRS, an optional application-provided context, an optional session identifier sid, and an optional
-client identifier U and server identifier S. Upon completion, both parties obtain matching session keys if
-their PRS, context, sid, key length (specified by N), and client and server identifiers match. Otherwise,
+string PRS, a public_context, and a secret_context. Upon completion, both parties obtain matching session keys if
+their PRS, public_context, secret_context, and key length (specified by N) match. Otherwise,
 they obtain random session keys.
 
-When a context is provided, OQUAKE derives an effective password from (PRS, context) and uses it in place
+When a secret_context is provided, OQUAKE derives an effective password from (PRS, secret_context) and uses it in place
 of PRS throughout the protocol. This allows OQUAKE to be securely composed with a preceding protocol
-stage whose output key is provided as context.
+stage whose output key is provided as the secret_context.
 
-The shared session identifier has the following requirements. If a client and server identifier are provided:
+The public_context (see {{CPaceOQUAKE}}) typically encodes a session identifier sid and client and
+server identifiers U and S. It has the following requirements. If a client and server identifier are provided:
 
 - The session identifier must match between the client and server
 - This session identifier has not been used before in a session between the client and server
@@ -697,8 +728,8 @@ for more information on the timing attack and this fix.
 
 ### Initiation
 
-Init takes as input the initiator's PRS, an optional context, an optional session identifier sid, and optional
-client and server identifiers U and S. It produces a state for the initiator to store, as well as a
+Init takes as input the initiator's PRS, a public_context, and a secret_context.
+It produces a state for the initiator to store, as well as a
 protocol message that is sent to the responder. Its implementation is as follows.
 
 ~~~
@@ -706,9 +737,8 @@ OQUAKE.Init
 
 Input:
 - PRS, password-related string, a byte string
-- context, optional application-provided context, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 
 Output:
 - state, opaque state for the initiator to store
@@ -719,12 +749,10 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Init(PRS, context, sid, U, S):
-  fullsid = encode_sid(sid, U, S)
-
-  if context is None:
-    context = b""
-  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+def Init(PRS, public_context, secret_context):
+  if secret_context is None:
+    secret_context = b""
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || public_context || secret_context)
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   seed = random(BUA-sKEM.Nseed)
@@ -733,48 +761,24 @@ def Init(PRS, context, sid, U, S):
 
   r = random(3 * Nsec)
 
-  // T = XOR(t, H(fullsid, effective_PRS, ⍴, r))
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  // T = XOR(t, H(public_context, effective_PRS, ⍴, r))
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   T = XOR(ut, T_pad)
 
-  // s = XOR(r, H(fullsid, effective_PRS, ⍴, T))
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
+  // s = XOR(r, H(public_context, effective_PRS, ⍴, T))
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
   init_msg = s || T || ⍴
 
-  return State(effective_PRS, sk, pk, s, T, fullsid, context), init_msg
-~~~
-
-The encode_sid function is defined below.
-
-~~~
-encode_sid
-
-Input:
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
-
-Output:
-- fullsid, a byte string
-
-Parameters:
-- BUA-sKEM, a BUA-sKEM instance
-- KDF, a KDF instance
-
-def encode_sid(sid, U, S):
-  fullsid =
-    bytes_to_int(len(sid), 4) || sid ||
-    bytes_to_int(len(U), 4) || U ||
-    bytes_to_int(len(S), 4) || S
-  return fullsid
+  return State(effective_PRS, sk, pk, s, T, public_context, secret_context), init_msg
 ~~~
 
 ### Response
 
-Respond takes as input the PRS, an optional context, the initiator's protocol message, an optional session identifier, and optional client and server identifiers.
+Respond takes as input the PRS, a public_context, a secret_context, and the initiator's protocol message.
 It produces a 32-byte symmetric key and a protocol message intended to be sent to the initiator. Its implementation
 is as follows.
 
@@ -783,10 +787,9 @@ OQUAKE.Respond
 
 Input:
 - PRS, password-related string, a byte string
-- context, optional application-provided context, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - init_msg, encoded protocol message, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - ss, output shared secret, a byte string of 32 bytes
@@ -797,32 +800,30 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Respond(PRS, context, init_msg, sid, U, S):
+def Respond(PRS, public_context, secret_context, init_msg):
   (s, T, ⍴) = init_msg[0 : (3 * Nsec)], init_msg[(3 * Nsec) : (6 * Nsec)], init_msg[(6 * Nsec) : (6 * Nsec) + N⍴]
 
-  fullsid = encode_sid(sid, U, S)
-
-  if context is None:
-    context = b""
-  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+  if secret_context is None:
+    secret_context = b""
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || public_context || secret_context)
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   ut = XOR(T, T_pad)
 
   pk = BUA-sKEM.Combine(ut, ⍴)
   (ct, k) = BUA-sKEM.Encaps(pk)
 
-  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
+  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || s || T || pk || ct || k)
   intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
   transcript = s || T || ⍴ || ct
-  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
+  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || public_context || secret_context || transcript)
   key = KDF.Expand(prk_final, DST || "key", Nkey)
 
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
@@ -858,17 +859,17 @@ Exceptions:
 - AuthenticationError, raised when the key confirmation fails
 
 def Finish(state, resp_msg):
-  (effective_PRS, sk, pk, s, T, fullsid, context) = state
+  (effective_PRS, sk, pk, s, T, public_context, secret_context) = state
   ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
   try:
     k = BUA-sKEM.Decaps(sk, ct)
-    prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
+    prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || s || T || pk || ct || k)
 
     intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
     transcript = s || T || ⍴ || c
-    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
+    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || public_context || secret_context || transcript)
     key = KDF.Expand(prk_final, DST || "key", Nkey)
 
     h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
@@ -913,7 +914,7 @@ security guarantee.
 
 The sequential combiner overcomes this limitation. Instead of running OQUAKE
 on the original password-related string PRS, CPaceOQUAKE feeds the CPace
-session key to OQUAKE as context, which binds the original PRS to the CPace
+session key to OQUAKE as the secret_context, which binds the original PRS to the CPace
 session key. Even if an attacker breaks D-MLWE and can distinguish OQUAKE
 public keys and ciphertexts, offline dictionary attacks against the original
 PRS are infeasible because the CPace-derived session key material is
@@ -923,7 +924,7 @@ and a close variant is analyzed in {{LL24}}.
 
 To be precise, CPaceOQUAKE first runs CPace to completion using
 password-related string PRS, establishing a session key SK1. It then runs
-OQUAKE using PRS and context=SK1. OQUAKE derives an effective password from
+OQUAKE using PRS and secret_context=SK1. OQUAKE derives an effective password from
 (PRS, SK1) and uses it throughout the protocol, producing session key SK2.
 The CPaceOQUAKE session key is SK2, which transitively depends on SK1
 through the effective password derivation.
@@ -940,30 +941,30 @@ InitiatorContinue, and InitiatorFinish are intended to be called by the client, 
 and ResponderFinish are intended to be called by the server.
 
 ~~~aasvg
-Client: PRS,sid,U,S               Server: PRS,sid,U,S
+Client: PRS,pub_ctx,sec_ctx        Server: PRS,pub_ctx,sec_ctx
         -----------------------------------------
      ctx, msg1 =                           |
-CPaceOQUAKE.Init(PRS,sid,U,S)              |
+CPaceOQUAKE.Init(PRS,pub_ctx,sec_ctx)      |
              |                             |
              |           msg1              |
              |---------------------------->|
              |                             |
              |                  ctx, msg2 =
-             |   CPaceOQUAKE.Respond(PRS,msg1,sid,U,S)
+             |   CPaceOQUAKE.Respond(PRS,pub_ctx,sec_ctx,msg1)
              |                             |
              |           msg2              |
              |<----------------------------|
              |                             |
      ctx, msg3 =                           |
 CPaceOQUAKE.InitiatorContinue(             |
-  PRS,ctx,msg2,sid,U,S)                    |
+  PRS,pub_ctx,sec_ctx,ctx,msg2)            |
              |                             |
              |           msg3              |
              |---------------------------->|
              |                             |
              |           server_key, msg4 =
              |     CPaceOQUAKE.ResponderFinish(
-             |       PRS,ctx,msg3,sid,U,S)
+             |       PRS,pub_ctx,sec_ctx,ctx,msg3)
              |                             |
              |           msg4              |
              |<----------------------------|
@@ -978,8 +979,8 @@ CPaceOQUAKE.InitiatorFinish(ctx,msg4)      |
 
 ### Client Initiation
 
-The client initiates a CPace exchange with the server using input PRS, an optional session identifier sid,
-and optional client and server identifiers U and S. The output of this process is some state for
+The client initiates a CPace exchange with the server using input PRS, a public_context,
+and a secret_context. The output of this process is some state for
 completing the protocol and a protocol message. The client sends this message to the server.
 
 ~~~
@@ -987,8 +988,8 @@ CPaceOQUAKE.Init
 
 Input:
 - PRS, password-related string, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 
 Output:
 - state, opaque state for the initiator to store
@@ -997,8 +998,8 @@ Output:
 Parameters:
 - CPace, parameterized instance of CPace
 
-def Init(PRS, sid, U, S):
-  ctx1, msg1 = CPace.Init(PRS, sid, U, S)
+def Init(PRS, public_context, secret_context):
+  ctx1, msg1 = CPace.Init(PRS, public_context, secret_context)
   s1 = random(32)
   init_msg = s1 || lv_encode(msg1)
 
@@ -1008,11 +1009,11 @@ def Init(PRS, sid, U, S):
 
 ### Server Response
 
-The server processes the client message using its input PRS, an optional session identifier sid, and
-optional client and server identifiers U and S. The server responds to the CPace session
+The server processes the client message using its input PRS, a public_context, and
+a secret_context. The server responds to the CPace session
 that the client initiated, completing Stage 1.
 
-The server MUST ensure that exactly one of `s1` and `sid` exists. It MUST abort if the message does
+The server MUST ensure that exactly one of `s1` and a sid in the public_context exists. It MUST abort if the message does
 not have the correct length.
 
 ~~~
@@ -1020,9 +1021,9 @@ CPaceOQUAKE.Respond
 
 Input:
 - PRS, password-related string, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - init_msg, the message received from the client
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - state, opaque state for the responder to store
@@ -1032,10 +1033,10 @@ Parameters:
 - CPace, parameterized instance of CPace
 - DST, domain separation tag, a byte string
 
-def Respond(PRS, init_msg, sid, U, S):
+def Respond(PRS, public_context, secret_context, init_msg):
   s1, msg1 = init_msg[0..32], lv_decode(init_msg[32..])
 
-  key1, msg2 = CPace.Respond(PRS, msg1, sid, U, S)
+  key1, msg2 = CPace.Respond(PRS, public_context, secret_context, msg1)
 
   s2 = random(32)
 
@@ -1047,10 +1048,10 @@ def Respond(PRS, init_msg, sid, U, S):
 ### Client Continue
 
 The client finishes CPace (Stage 1) and initiates OQUAKE (Stage 2). The client derives
-the CPace session key, then uses it as context for OQUAKE. The output is a new state
+the CPace session key, then uses it as the secret_context for OQUAKE. The output is a new state
 and an OQUAKE init message to send to the server.
 
-The client must ensure that exactly one of (s1, s2) and sid exists.
+The client must ensure that exactly one of (s1, s2) and a sid in the public_context exists.
 The client should abort when the message does not have the correct length.
 
 ~~~
@@ -1058,10 +1059,10 @@ CPaceOQUAKE.InitiatorContinue
 
 Input:
 - PRS, password-related string, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - (ctx1, s1), the state generated by CPaceOQUAKE.Init
 - resp_msg, the message received from the server
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - state, opaque state for the initiator to store
@@ -1072,16 +1073,16 @@ Parameters:
 - OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
-def InitiatorContinue(PRS, (ctx1, s1), resp_msg, sid, U, S):
+def InitiatorContinue(PRS, public_context, secret_context, (ctx1, s1), resp_msg):
   s2 = resp_msg[0..32]
   msg2 = lv_decode(resp_msg[32..])
 
-  key1 = CPace.Finish(ctx1, msg2, sid)
+  key1 = CPace.Finish(ctx1, public_context, msg2)
 
   prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
   extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
 
-  ctx2, msg3 = OQUAKE.Init(PRS, key1, extended_sid, U, S)
+  ctx2, msg3 = OQUAKE.Init(PRS, extended_sid || public_context, key1)
 
   return ctx2, msg3
 ~~~
@@ -1089,7 +1090,7 @@ def InitiatorContinue(PRS, (ctx1, s1), resp_msg, sid, U, S):
 ### Server Finish
 
 The server completes the protocol by responding to the OQUAKE session (Stage 2).
-The server uses the CPace session key from Stage 1 as context for OQUAKE.
+The server uses the CPace session key from Stage 1 as the secret_context for OQUAKE.
 The OQUAKE output key is the CPaceOQUAKE session key.
 
 The server should abort when the message does not have the correct length.
@@ -1099,10 +1100,10 @@ CPaceOQUAKE.ResponderFinish
 
 Input:
 - PRS, password-related string, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - ctx, state from the server's Response
 - msg3, the message received from the client, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - key, an N-byte shared secret
@@ -1112,13 +1113,13 @@ Parameters:
 - OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
-def ResponderFinish(PRS, ctx, msg3, sid, U, S):
+def ResponderFinish(PRS, public_context, secret_context, ctx, msg3):
   (s1, s2, key1) = ctx
 
   prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
   extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
 
-  resp_msg, server_key = OQUAKE.Respond(PRS, key1, msg3, extended_sid, U, S)
+  resp_msg, server_key = OQUAKE.Respond(PRS, extended_sid || public_context, key1, msg3)
 
   return server_key, resp_msg
 ~~~
@@ -1275,23 +1276,23 @@ the OQUAKE key exchange, then responds to the challenge.
 A high level overview of this flow is below.
 
 ~~~aasvg
-Client: v, seed, sid, U, S       Server: v, pk, sid, U, S
+Client: v, seed, pub_ctx         Server: v, pk, pub_ctx
        ---------------------------------------
             |                           |
    ctx, msg1 = OQUAKE+.Init(            |
-     v, context, sid, U, S)             |
+     v, pub_ctx, sec_ctx)               |
             |                           |
             |         msg1              |
             |-------------------------->|
             |                           |
             |    ctx, msg2 = OQUAKE+.Respond(
-            |      v, context, msg1, pk, sid, U, S)
+            |      v, pub_ctx, sec_ctx, msg1, pk)
             |                           |
             |         msg2              |
             |<--------------------------|
             |                           |
 client_key, msg3 = OQUAKE+.Finish(      |
-  ctx, seed, msg2, sid, U, S)           |
+  ctx, seed, msg2, pub_ctx)             |
             |                           |
             |         msg3              |
             |-------------------------->|
@@ -1312,9 +1313,8 @@ OQUAKE+.Init
 
 Input:
 - PRS, password-related string, a byte string
-- context, optional application-provided context, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 
 Output:
 - state, opaque state for the initiator to store
@@ -1325,15 +1325,14 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Init(PRS, context, sid, U, S):
-  return OQUAKE.Init(PRS, context, sid, U, S)
+def Init(PRS, public_context, secret_context):
+  return OQUAKE.Init(PRS, public_context, secret_context)
 ~~~
 
 ### Response
 
-Respond takes as input the PRS, an optional context, the initiator's
-protocol message, the client's registered public key, an optional
-session identifier, and optional client and server identifiers.
+Respond takes as input the PRS, a public_context, a secret_context, the initiator's
+protocol message, and the client's registered public key.
 It produces an opaque state and a protocol message that combines
 the OQUAKE response with a password confirmation challenge.
 
@@ -1344,11 +1343,10 @@ OQUAKE+.Respond
 
 Input:
 - PRS, password-related string, a byte string
-- context, optional application-provided context, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - init_msg, encoded protocol message, a byte string
 - pk, client-registered public key, a KEM public key
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - state, opaque state for the server to store values to complete the protocol
@@ -1360,14 +1358,14 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Respond(PRS, context, init_msg, pk, sid, U, S):
-  oquake_resp, SK = OQUAKE.Respond(PRS, context, init_msg, sid, U, S)
+def Respond(PRS, public_context, secret_context, init_msg, pk):
+  oquake_resp, SK = OQUAKE.Respond(PRS, public_context, secret_context, init_msg)
 
   (c, k) = KEM.Encaps(pk)
   r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  confirm_input = encode_sid(sid, U, S) || enc_c
+  confirm_input = public_context || enc_c
 
   prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
   prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
@@ -1386,7 +1384,7 @@ def Respond(PRS, context, init_msg, pk, sid, U, S):
 
 Finish takes as input the initiator-created state from Init, the seed
 used to derive the KEM key pair during registration, the responder's
-combined reply message, a session identifier, and client and server identifiers.
+combined reply message, and the public_context.
 
 The client completes the OQUAKE key exchange to recover the shared secret,
 then uses it to decrypt the password confirmation challenge. The client
@@ -1405,8 +1403,7 @@ Input:
 - state, opaque state for the initiator to store
 - seed, seed used to derive KEM public key
 - resp_msg, encoded protocol message, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
+- public_context, optional public context, a byte string
 
 Output:
 - client_key, a 32-byte string
@@ -1421,7 +1418,7 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Finish(state, seed, resp_msg, sid, U, S):
+def Finish(state, seed, resp_msg, public_context):
   oquake_resp = resp_msg[0 : Nct_bua + Nkc]
   enc_c = resp_msg[Nct_bua + Nkc : Nct_bua + Nkc + Nct]
   client_confirm_target = resp_msg[Nct_bua + Nkc + Nct :]
@@ -1436,7 +1433,7 @@ def Finish(state, seed, resp_msg, sid, U, S):
   try:
     k = KEM.Decaps(sk, c)
 
-    confirm_input = encode_sid(sid, U, S) || enc_c
+    confirm_input = public_context || enc_c
 
     prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
     prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
@@ -1495,17 +1492,18 @@ Standalone OQUAKE+ consists of three messages:
 Client: PRS,salt,U,S,sid          Server: v,pk,U,S,sid
           ----------------------------------------
 (v, seed) = GenVerifierMaterial(PRS,salt,U,S)  |
+pub_ctx = EncodePublicContext(sid,U,S)         |
             |                                  |
-ctx, msg1 = OQUAKE+.Init(v,None,sid,U,S)       |
+ctx, msg1 = OQUAKE+.Init(v,pub_ctx,None)       |
             |               msg1               |
             |--------------------------------->|
             |                                  |
-            |  ctx, msg2 = OQUAKE+.Respond(v,None,msg1,pk,sid,U,S)
+            |  ctx, msg2 = OQUAKE+.Respond(v,pub_ctx,None,msg1,pk)
             |                                  |
             |               msg2               |
             |<---------------------------------|
             |                                  |
-client_key, msg3 = OQUAKE+.Finish(ctx,seed,msg2,sid,U,S)
+client_key, msg3 = OQUAKE+.Finish(ctx,seed,msg2,pub_ctx)
             |                                  |
             |               msg3               |
             |--------------------------------->|
@@ -1543,7 +1541,7 @@ An overview of the composition is below.
  Verifier---->+---->| (Stage 1)|<-----+<---- Verifier
               |     +----------+      |
               |          |            |
-              |    context=SK1        |
+              |    sec_ctx=SK1        |
               |          |            |
               |     +----------+      |
               |     | OQUAKE+  |      |
@@ -1565,14 +1563,15 @@ it to the client before the protocol starts, which it can do in plain text.
 Client: PRS,salt,U,S,sid          Server: v,pk,U,S,sid
           ----------------------------------------
 (v, seed) = GenVerifierMaterial(PRS,salt,U,S)  |
+pub_ctx = EncodePublicContext(sid,U,S)         |
             |                                  |
    Stage 1: CPace                              |
             |                                  |
-ctx, msg1 = CPaceOQUAKE+.Init(v,sid,U,S)       |
+ctx, msg1 = CPaceOQUAKE+.Init(v,pub_ctx,None)  |
             |               msg1               |
             |--------------------------------->|
             |                                  |
-            |   ctx, msg2 = CPaceOQUAKE+.Respond(v,msg1,sid,U,S)
+            |   ctx, msg2 = CPaceOQUAKE+.Respond(v,pub_ctx,None,msg1)
             |                                  |
             |               msg2               |
             |<---------------------------------|
@@ -1580,18 +1579,18 @@ ctx, msg1 = CPaceOQUAKE+.Init(v,sid,U,S)       |
    Stage 2: OQUAKE+                            |
             |                                  |
 ctx, msg3 = CPaceOQUAKE+.InitiatorContinue(    |
-   v,ctx,msg2,sid,U,S)                         |
+   v,pub_ctx,None,ctx,msg2)                    |
             |               msg3               |
             |--------------------------------->|
             |                                  |
             |  ctx, msg4 = CPaceOQUAKE+.ResponderContinue(
-            |    v,ctx,msg3,pk,sid,U,S)        |
+            |    v,pub_ctx,None,ctx,msg3,pk)   |
             |                                  |
             |               msg4               |
             |<---------------------------------|
             |                                  |
 client_key, msg5 = CPaceOQUAKE+.InitiatorFinish(
-   ctx,seed,msg4,sid,U,S)                      |
+   ctx,seed,msg4,pub_ctx)                      |
             |                                  |
             |               msg5               |
             |--------------------------------->|
@@ -1690,7 +1689,7 @@ if one PAKE is not unconditionally password hiding, breaking its underlying
 assumption can yield the password, and learning the password is sufficient to
 also break the other PAKE. In contrast, the sequential hybrid variants do not
 suffer from the same weakness: the input to OQUAKE is an effective password,
-derived from (PRS, context) where context is the CPace session key, not the
+derived from (PRS, secret_context) where the secret_context is the CPace session key, not the
 original PRS. Performing an offline dictionary attack against the original PRS
 would require the attacker to also guess the CPace-derived key, which is
 computationally indistinguishable from a random value under the gap
