@@ -157,12 +157,18 @@ are two examples of specified aPAKE protocols. These protocols provide
 security in classical threat models. However, in the presence
 of a quantum-capable attacker, both OPAQUE and SPAKE2+ fail to provide the
 desired level of security. Both protocols are vulnerable to a Harvest Now, Decrypt
-Later attack executed by a quantum-capable attacker, in which the attacker learns the shared secret and uses it
-to compromise application traffic. Upgrading both protocols to provide
-post-quantum security is non-trivial, especially as there are no known efficient
-constructions for certain building blocks used in these protocols (such as the OPRF
-used in OPAQUE-3DH). As the threat of quantum-capable attackers looms, the
-viability of existing aPAKE protocols in practice diminishes in time.
+Later (HNDL) attack executed by a quantum-capable attacker, in which the attacker learns the shared secret and uses it
+to compromise application traffic. For a password-authenticated protocol, this HNDL threat is
+more severe than for plain (unauthenticated) key exchange: breaking underlying classical
+assumption of a PAKE that is not unconditionally password hiding does not merely
+disclose the traffic of one harvested session, but can retroactively recover the password itself
+from the harvested transcript. Since passwords are long-lived credentials, this grants a
+quantum-capable attacker indefinite impersonation capability rather than a one-time confidentiality
+loss; see {{retroactive-recovery}} for a detailed treatment of this attack.
+Upgrading both protocols to provide post-quantum security is non-trivial, especially as
+there are no known efficient constructions for certain building blocks used in these
+protocols (such as the OPRF used in OPAQUE-3DH). As the threat of quantum-capable
+attackers looms, the viability of existing aPAKE protocols in practice diminishes in time.
 
 This document describes the CPaceOQUAKE+ protocol, an aPAKE that supports mutual
 authentication in a client-server setting secure against
@@ -172,7 +178,106 @@ The design securely composes multiple existing primitives {{VJWYMS25}}.
 
 This document fully specifies CPaceOQUAKE+ and all dependencies necessary
 to implement it. {{configurations}} provides recommended configurations.
-<!-- and {{test-vectors}} provides test vectors to assist in checking implementation correctness. -->
+
+# Use Cases {#use-cases}
+
+PAKE deployments vary along two largely independent dimensions: how long a password is used
+for, and what role the PAKE plays in the surrounding protocol. A password can be an ephemeral,
+high-entropy, one-time secret (e.g., a pairing code shown on a screen), or a long-lived,
+human-memorable credential that is reused across many protocol runs. Independently, the PAKE can
+be the mechanism that establishes the resulting secure channel, or it can run over a channel that
+is already secure for other reasons, in which case the PAKE serves only to confirm knowledge of
+the password over that channel. Crossing these two dimensions gives four cases, which helps
+clarify which deployments motivate a post-quantum aPAKE such as CPaceOQUAKE+, and which do not.
+
+1. Device pairing (ephemeral password; PAKE establishes the channel). Two devices bootstrap a
+   secure channel using a short-lived, high-entropy, one-time password or PIN, e.g., displayed on
+   one device and typed into the other. A quantum-capable attacker is only relevant here if a
+   post-quantum threat model is assumed at all, and even then this is a comparatively weak
+   motivating example for a PQ-PAKE: because the password is used exactly once, retroactively
+   recovering it (see {{retroactive-recovery}}) has little value to an attacker, as there is no
+   future session to impersonate. HNDL against the resulting channel's *traffic* remains a
+   legitimate concern, but that concern is the same one that motivates post-quantum key exchange
+   generally and is not specific to the PAKE.
+2. Password confirmation over an already-secure channel (long-lived password; PAKE does not
+   establish the channel). The channel's confidentiality and post-quantum security come from
+   elsewhere, e.g., a hybrid KEM used in the surrounding transport protocol, and the PAKE is used
+   only to bind knowledge of a long-lived password to that channel. The full machinery of a
+   PQ aPAKE is not required to realize this case in isolation. Notably, this document's own
+   OQUAKE+ design internally contains a version of this case: the password-confirmation (PC)
+   sub-stage described in {{oquakeplus-finish}} confirms the password over a channel already
+   established by the preceding KEM-based exchange, layered on top of case 3 below.
+3. Long-lived-password pairing (long-lived password; PAKE establishes the channel). This is
+   the classic aPAKE deployment, e.g., a client authenticating to a server with an account
+   password. It is also the case where retroactive password recovery is most damaging: because the
+   password is reused indefinitely, recovering it does not merely disclose one harvested session's
+   traffic, it lets the attacker impersonate the client in every future session until the password
+   is changed. This is the primary use case targeted by CPaceOQUAKE+.
+4. Degenerate case (ephemeral password; PAKE does not establish the channel). Included only
+   for completeness of the taxonomy above; it is not a realistic deployment, since there is little
+   reason to spend a one-time password confirming a channel that the password neither secures nor
+   will be reused for.
+
+A PQ PAKE -- and a hybrid PQ PAKE in particular -- helps address cases 1 and 3, closing
+the gap on this protocol needed for such use cases in practice.
+
+# Related Work {#related-work}
+
+This section relates CPaceOQUAKE+ to existing standardized PAKEs and to the broader post-quantum
+PAKE research literature, and addresses why this problem is not already solved, why it remains an
+active research problem, and why the state of the art is nonetheless mature enough for CFRG to
+engage with it.
+
+## Existing Solutions and Their Gaps
+
+OPAQUE-3DH and SPAKE2+ are standardized aPAKEs, and CPace {{!CPACE=I-D.irtf-cfrg-cpace}} is an
+emerging symmetric PAKE, but all three are purely classical constructions: none provide
+security against a quantum-capable attacker. NIST's post-quantum cryptography standardization
+effort has, to date, produced key encapsulation mechanisms {{FIPS203}} and signature schemes, but
+no PAKE. A seemingly obvious fix is to run an existing classical PAKE inside, or alongside, a
+post-quantum or hybrid KEM already deployed at the transport layer (e.g., hybrid key exchange in
+TLS 1.3). This does not solve the PAKE-specific problem: it protects the resulting session key
+against a future quantum-capable attacker, but does nothing for the classical PAKE's own handshake
+transcript. If that classical PAKE's underlying hard problem is later broken, the *password*
+itself becomes retroactively recoverable from the harvested transcript, as detailed in
+{{retroactive-recovery}}, independent of whatever post-quantum protection was applied to the
+surrounding transport. This is the concrete gap that simply layering a post-quantum KEM around an
+existing classical PAKE does not close, and it is the gap this document addresses directly.
+
+## Ongoing Research
+
+[[EDITOR'S NOTE: remove in the final version of this document]]
+
+The compiler techniques underlying this document's design are recent and remain under active
+development. The KEM-to-PAKE compiler underlying OQUAKE {{ABJ25}}, the timing side-channel fix
+required to use it safely with ML-KEM {{TEMPO}}, the PAKE combiners used to hybridize it with
+CPace {{HR24}}{{LL24}}, and closely related asymmetric PAKE compilers {{Gu24}}{{LLH24}} were all
+published in 2024 and 2025. The security analysis backing this document's specific composition
+{{VJWYMS25}} is similarly new. Concretely, {{TEMPO}} identifies and fixes a timing side channel in
+OQUAKE's ML-KEM key-generation step (see {{timing-and-tempo}}) that was only discovered in 2025,
+after OQUAKE's core compiler had already been analyzed, illustrating that this design space is
+still being hardened rather than settled. Likewise, this document currently carries an open issue
+regarding whether OQUAKE's proof of security extends to the UC bare PAKE model without requiring
+party or session identifiers (see {{symmetric-identities}}); this extension is believed to hold on
+the basis of the existing NoIC/OQUAKE analysis in {{ABJ25}} but has not yet been published. Finally,
+no single compiler approach
+has yet converged as the preferred solution across the range of use cases in {{use-cases}}: designs
+optimized for case 3 (this document's target) make different tradeoffs than designs optimized for,
+e.g., case 1 or case 2.
+
+## Readiness for CFRG Engagement
+
+[[EDITOR'S NOTE: remove in the final version of this document]]
+
+Despite being new, the core sequential-composition design in this document has already been
+independently analyzed by at least three different groups (see {{hybrid-design}}), which
+substantially increases confidence in the design beyond what a single analysis would provide.
+This document's source also includes concrete test vectors for each protocol it specifies, to
+support independent implementation and verification. The remaining gaps identified above, most
+notably the unpublished bare-PAKE proof
+extension and the open question of identity requirements, are well-scoped and do not call the core
+design into question; they are the kind of item best resolved through the scrutiny that CFRG
+engagement itself provides, rather than a prerequisite to starting that engagement.
 
 # Conventions and Definitions
 
@@ -1670,7 +1775,7 @@ implementation might run out of memory.
 This section discusses security considerations for the protocols specified in
 this document.
 
-## Hybrid Design
+## Hybrid Design {#hybrid-design}
 
 CPaceOQUAKE and CPaceOQUAKE+ are hybrid PAKE protocols, meaning that the overall
 protocol remains secure so long as either the classical assumptions underlying
@@ -1700,25 +1805,72 @@ complexity. From a protocol perspective, beyond two independent PAKEs treated
 nearly as black boxes, additional protocol logic is needed to combine the PAKEs
 together and produce a shared secret based on both PAKEs. From a round
 perspective, the hybrid PAKE introduces additional round trips, complicating
-integration into higher-level protocols like TLS. Specifically, integrating
-CPaceOQUAKE+ into TLS would require five messages:
+integration into higher-level protocols like TLS. Finally, the hybrid protocol
+is comparatively new and has not yet received significant peer review
+(compared to the non-hybrid PAKEs). However, the backing analysis has been
+independently analyzed by at least three different groups, improving
+overall confidence in the design.
 
-* Client -> Server: ClientHello carrying msg1 (CPace init)
-* Server -> Client: ServerHello carrying msg2 (CPace resp)
-* Client -> Server: msg3 (OQUAKE+ init)
-* Server -> Client: msg4 (OQUAKE+ resp + PC challenge)
-* Client -> Server: msg5 (PC response)
+## Retroactive Password and Session Key Recovery {#retroactive-recovery}
 
-Compared to the basic TLS handshake, which has three messages:
+A PAKE is unconditionally password hiding if its protocol messages remain statistically
+independent of the password even when every computational assumption underlying the PAKE fails.
+Few efficient PAKEs achieve this: as discussed in {{cpacequake-composition}}, CPace does, but
+OQUAKE does not, and this is true of PAKEs generally, not just the ones specified in this document.
+This property is what makes CPace safe to use as the first stage of a sequential combiner: its
+output key is never subjected to a verification check on its own, so an attacker who breaks the
+Diffie-Hellman assumption learns nothing from the CPace messages alone. It does not, by itself,
+mean that a session key derived by CPace stays safe once it *is* checked against something -- e.g.,
+confirmed directly, or used to encrypt subsequent traffic, as happens in an ordinary standalone
+deployment. This section generalizes that latter observation into a broader principle and uses it
+to answer two concrete questions: which classical PAKEs allow a quantum-capable attacker to
+retroactively recover a session when deployed this ordinary way, and does the same hold for
+EKE-style PAKEs.
 
-* Client -> Server: ClientHello
-* Server -> Client: ServerHello...Finished
-* Client -> Server: Finished
+The general principle is this: for any PAKE that is not unconditionally password hiding, breaking
+its underlying computational assumption -- whether that happens contemporaneously or, as with a
+future quantum computer, retroactively against a transcript recorded today -- allows an attacker
+to mount an offline dictionary attack against that transcript, provided the attacker also has some
+way to check a candidate password against it. In practice that check comes for free: an explicit
+password-confirmation message, present in most aPAKEs, serves directly as the check, and even
+without one, any subsequent application traffic encrypted under the resulting session key serves
+the same purpose. Once the attacker recovers the password this way, two consequences follow. First,
+the attacker can derive the session key of the harvested session and decrypt its traffic, exactly
+as in ordinary Harvest Now, Decrypt Later against unauthenticated key exchange. Second, and unlike
+that ordinary case, the attacker also now holds a long-lived credential: they can impersonate the
+client in every future session until the password is changed. Retroactive password recovery is
+therefore strictly worse for a PAKE than HNDL is for plain key exchange, which is why deploying a
+post-quantum KEM only at the transport layer, as discussed in {{related-work}}, does not address
+the risk that a classical PAKE poses on its own.
 
-Finally, the hybrid protocol is comparatively new and has not yet received significant
-peer review (compared to the non-hybrid PAKEs). However, the backing analysis has
-been independently analyzed by at least three different groups, improving overall confidence
-in the design.
+This principle applies directly to classical Diffie-Hellman-based PAKEs, including CPace, SPAKE2,
+and SPAKE2+, when deployed in the ordinary way, i.e., with the resulting session key confirmed or
+used directly, rather than fed onward as an opaque input to a second PAKE stage as in
+{{cpacequake-composition}}: their protocol messages are deterministic functions of a
+password-derived generator and per-session exponents, so a quantum-capable attacker able to solve
+the discrete logarithm or Diffie-Hellman problem can, for each candidate password, recompute the
+generator, recompute the candidate shared secret from the recorded messages, and check it against
+the verification signal described above. SPAKE2+ is a sharper case:
+its password-derived offset is applied to fixed, standardized constant
+points (commonly written M and N) shared by every server and session on a given group, rather than
+to a fresh per-session generator as in CPace. Solving a single discrete logarithm instance for that
+group -- e.g., the discrete log of M or N, using a quantum computer, even a slow one -- therefore
+yields a capability reusable against any server using that group: a single live exchange with the
+server, plus a confirmation or subsequent-traffic verification signal, is then enough to
+brute-force the password offline with classical computation alone.
+
+This principle applies equally to EKE-style PAKEs, including KEM-based
+compilers such as OQUAKE (see {{ABJ25}}): the first protocol flow is, conceptually, a
+password-encrypted public key or ciphertext, so an attacker who recovers the password by breaking
+the KEM's hardness assumption (D-MLWE, for the ML-KEM-based instantiation in this document) can
+decrypt that flow and derive the identical session key an honest party would. The password-hiding
+failure of OQUAKE described in {{cpacequake-composition}} and {{hybrid-design}} is the concrete
+instance of this general EKE-style argument for the specific construction used in this document.
+
+This is precisely why the sequential hybrid composition specified in this document is valuable:
+an attacker must break both a classical and a post-quantum hard problem simultaneously to
+retroactively recover the password protected by CPaceOQUAKE(+), a strictly stronger guarantee than
+any single-primitive PAKE, classical or post-quantum alone, can offer.
 
 ## Identities {#identities}
 
