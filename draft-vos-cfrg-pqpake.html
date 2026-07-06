@@ -14,7 +14,7 @@ password-authenticated key exchange (aPAKE) that supports mutual
 authentication in a client-server setting secure against
 quantum-capable attackers. CPaceOQUAKE+ is composed of two stages
 — CPace and OQUAKE+ — that run sequentially,
-with the output of CPace feeding as context into OQUAKE+. OQUAKE+ is an
+with the output of CPace feeding as the secret_context into OQUAKE+. OQUAKE+ is an
 augmented variant of OQUAKE that adds password confirmation.
 This document also describes standalone OQUAKE+, a post-quantum aPAKE,
 and CPaceOQUAKE, the hybrid symmetric PAKE composed of the CPace and OQUAKE stages.
@@ -35,7 +35,7 @@ This document recommends configurations for CPaceOQUAKE+.
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.8.1
+    wcwidth 0.8.2
 -->
 <link href="draft-vos-cfrg-pqpake.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1054,11 +1054,11 @@ svg {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">Hybrid PQ-PAKE</td>
-<td class="right">June 2026</td>
+<td class="right">July 2026</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 25 December 2026</td>
+<td class="center">Expires 7 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1071,12 +1071,12 @@ svg {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-06-23" class="published">23 June 2026</time>
+<time datetime="2026-07-06" class="published">6 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-12-25">25 December 2026</time></dd>
+<dd class="expires"><time datetime="2027-01-07">7 January 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1102,7 +1102,7 @@ password-authenticated key exchange (aPAKE) that supports mutual
 authentication in a client-server setting secure against
 quantum-capable attackers. CPaceOQUAKE+ is composed of two stages
 — CPace and OQUAKE+ — that run sequentially,
-with the output of CPace feeding as context into OQUAKE+. OQUAKE+ is an
+with the output of CPace feeding as the secret_context into OQUAKE+. OQUAKE+ is an
 augmented variant of OQUAKE that adds password confirmation.
 This document also describes standalone OQUAKE+, a post-quantum aPAKE,
 and CPaceOQUAKE, the hybrid symmetric PAKE composed of the CPace and OQUAKE stages.
@@ -1142,7 +1142,7 @@ This document recommends configurations for CPaceOQUAKE+.<a href="#section-abstr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 7 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1589,7 +1589,7 @@ adds password confirmation to upgrade the symmetric PAKE to an asymmetric PAKE; 
               <text x="236" y="100">1)</text>
               <text x="388" y="100">Verifier</text>
               <text x="200" y="132">|</text>
-              <text x="192" y="148">context=SK1</text>
+              <text x="192" y="148">sec_ctx=SK1</text>
               <text x="200" y="164">|</text>
               <text x="200" y="196">OQUAKE+</text>
               <text x="36" y="212">Verifier</text>
@@ -1967,12 +1967,43 @@ This is summarized in the diagram below.<a href="#section-6-3" class="pilcrow">�
 </div>
 <p id="section-6-5">CPaceOQUAKE composes CPace and OQUAKE by first running CPace to completion
 between client and server, and then running OQUAKE with the CPace session
-key provided as context. We explain the composition in more detail in
+key provided as the secret_context. We explain the composition in more detail in
 <a href="#cpacequake-composition" class="auto internal xref">Section 6.3</a>.<a href="#section-6-5" class="pilcrow">¶</a></p>
-<p id="section-6-6">As describes in <a href="#cpace" class="auto internal xref">Section 6.1</a> and <a href="#quake" class="auto internal xref">Section 6.2</a>, both CPace and OQUAKE take
-as input optional client and server identifiers, denoted U and S,
-respectively. See <a href="#identities" class="auto internal xref">Section 10.2</a> for more discussion about these
-identities and how they are chosen in practice.<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-6">All PAKEs in this document share a common interface. Each takes as input a
+password-related string PRS (or a verifier derived from it), a public_context,
+and a secret_context. The public_context binds public session information that
+both parties agree on, such as an optional session identifier sid and optional
+client and server identifiers U and S (e.g., a device identifier, an IP address,
+or a URL). The secret_context binds confidential information shared by both
+parties, such as the session key of a preceding protocol stage; it is never sent
+on the wire. Both the public_context and the secret_context are optional; a party
+that does not use one passes the empty string b"" (equivalently, None). Two parties
+obtain matching session keys only if their PRS, public_context, and secret_context
+match. See <a href="#identities" class="auto internal xref">Section 10.2</a> for more discussion about the identities and how they are
+chosen in practice.<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">The public_context is constructed from the optional sid, U, and S using the
+following utility function. Each of sid, U, and S is optional and defaults to the
+empty string b"". Applications <span class="bcp14">MAY</span> include additional public information by
+prepending or appending it to the returned value.<a href="#section-6-7" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-6-8">
+<pre>
+EncodePublicContext
+
+Input:
+- sid, session identifier, a byte string
+- U and S, client and server identifiers
+
+Output:
+- public_context, the encoded public context, a byte string
+
+def EncodePublicContext(sid, U, S):
+  public_context =
+    bytes_to_int(len(sid), 4) || sid ||
+    bytes_to_int(len(U), 4) || U ||
+    bytes_to_int(len(S), 4) || S
+  return public_context
+</pre><a href="#section-6-8" class="pilcrow">¶</a>
+</div>
 <div id="cpace">
 <section id="section-6.1">
         <h3 id="name-cpace-specification">
@@ -1983,29 +2014,28 @@ We use an interactive version of CPace that takes two rounds, in which there is 
 In other words, the responder only starts executing the protocol after it received the first message from the initiator.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <p id="section-6.1-2">The flow of the protocol consists of two messages sent between initiator and responder, produced by the functions
 Init, Respond, and Finish, described below. Both parties take as input a password-related
-string PRS, an optional unique shared session identifier sid, and an optional client identifier
-U and server identifier S (e.g., a device identifier, an IP address, or URL pertaining to the
-client and server). Upon completion, both parties obtain matching session keys if their PRS, sid, key
-length (specified by N), and client and server identifiers match. Otherwise, they obtain random keys.
-In exceptional cases, the protocol aborts.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+string PRS, a public_context, and a secret_context (see <a href="#CPaceOQUAKE" class="auto internal xref">Section 6</a>). Upon completion, both parties
+obtain matching session keys if their PRS, public_context, secret_context, and key length (specified by N)
+match. Otherwise, they obtain random keys. In exceptional cases, the protocol aborts.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">CPace derives its generator from PRS, a channel identifier (CI), and a session identifier (sid);
+CI may carry confidential information and is never sent on the wire, whereas sid is public and is
+additionally bound into the session key. Accordingly, CPace uses the secret_context as its CI and the
+public_context as its sid.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 <div id="initiation">
 <section id="section-6.1.1">
           <h4 id="name-initiation">
 <a href="#section-6.1.1" class="section-number selfRef">6.1.1. </a><a href="#name-initiation" class="section-name selfRef">Initiation</a>
           </h4>
-<p id="section-6.1.1-1">The initiator starts the protocol using its password-related string PRS.
-Additionally, it may bind the session to an existing shared session identifier sid.
-CPace also allows to bind the session to an existing channel identifier.
-To remain consistent with the other PAKEs in this specification, the channel identifier is the concatenation
-of optional client and server identifiers.<a href="#section-6.1.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1.1-1">The initiator starts the protocol using its password-related string PRS, binding the session to the
+public_context and secret_context.<a href="#section-6.1.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.1.1-2">
 <pre>
 CPace.Init
 
 Input:
 - PRS, password-related string, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 
 Output:
 - ya, discrete logarithm intended to be stored in secret until the protocol finishes
@@ -2014,8 +2044,8 @@ Output:
 Parameters:
 - G, a group environment as specified in CPace
 
-def Init(PRS, sid, U, S):
-  g = G.calculate_generator(H, PRS, U || S, sid)
+def Init(PRS, public_context, secret_context):
+  g = G.calculate_generator(H, PRS, secret_context, public_context)
   ya = G.sample_scalar()
   Ya = G.scalar_mult(ya, g)
   return ya, Ya
@@ -2037,9 +2067,9 @@ CPace.Respond
 
 Input:
 - PRS, password-related string, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - Ya, public point, received from the initiator
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - ISK, the established shared secret
@@ -2052,15 +2082,15 @@ Parameters:
 Exceptions:
 - CPaceError, raised when an invalid value was encountered in CPace
 
-def Respond(PRS, Ya, sid, U, S):
-  g = G.calculate_generator(H, PRS, U || S, sid)
+def Respond(PRS, public_context, secret_context, Ya):
+  g = G.calculate_generator(H, PRS, secret_context, public_context)
   yb = G.sample_scalar()
   Yb = G.scalar_mult(yb, g)
 
   K = G.scalar_mult_vfy(yb, Ya)
   If K = G.I, raise CPaceError
 
-  ISK = H.hash(lv_cat(G.DSI || b"_ISK", sid, K) || transcript(Ya, Yb))
+  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript(Ya, Yb))
 
   return ISK, Yb
 </pre><a href="#section-6.1.2-2" class="pilcrow">¶</a>
@@ -2081,8 +2111,8 @@ CPace.Finish
 
 Input:
 - ya, discrete logarithm that was generated using CPace.Init
+- public_context, optional public context, a byte string
 - Yb, public point, received from the responder
-- sid, session identifier, a byte string
 
 Output:
 - ISK, the established shared secret
@@ -2094,11 +2124,11 @@ Parameters:
 Exceptions:
 - CPaceError, raised when an invalid value was encountered in CPace
 
-def Finish(ya, Yb, sid):
+def Finish(ya, public_context, Yb):
   K = G.scalar_mult_vfy(ya, Yb)
   If K = G.I, raise CPaceError
 
-  ISK = H.hash(lv_cat(G.DSI || b"_ISK", sid, K) || transcript(Ya, Yb))
+  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript(Ya, Yb))
 
   return ISK
 </pre><a href="#section-6.1.3-2" class="pilcrow">¶</a>
@@ -2115,14 +2145,14 @@ def Finish(ya, Yb, sid):
 <p id="section-6.2-1">OQUAKE is a PAKE built on a BUA-sKEM and KDF.  If the BUA-sKEM provides security against quantum-enabled attacks,
 then so does OQUAKE. It consists of two messages sent between initiator and responder, produced by
 the functions Init, Respond, and Finish, described below. Both parties take as input a password-related
-string PRS, an optional application-provided context, an optional session identifier sid, and an optional
-client identifier U and server identifier S. Upon completion, both parties obtain matching session keys if
-their PRS, context, sid, key length (specified by N), and client and server identifiers match. Otherwise,
+string PRS, a public_context, and a secret_context. Upon completion, both parties obtain matching session keys if
+their PRS, public_context, secret_context, and key length (specified by N) match. Otherwise,
 they obtain random session keys.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
-<p id="section-6.2-2">When a context is provided, OQUAKE derives an effective password from (PRS, context) and uses it in place
+<p id="section-6.2-2">When a secret_context is provided, OQUAKE derives an effective password from (PRS, secret_context) and uses it in place
 of PRS throughout the protocol. This allows OQUAKE to be securely composed with a preceding protocol
-stage whose output key is provided as context.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
-<p id="section-6.2-3">The shared session identifier has the following requirements. If a client and server identifier are provided:<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+stage whose output key is provided as the secret_context.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-3">The public_context (see <a href="#CPaceOQUAKE" class="auto internal xref">Section 6</a>) typically encodes a session identifier sid and client and
+server identifiers U and S. It has the following requirements. If a client and server identifier are provided:<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.2-4.1">
             <p id="section-6.2-4.1.1">The session identifier must match between the client and server<a href="#section-6.2-4.1.1" class="pilcrow">¶</a></p>
@@ -2150,8 +2180,8 @@ for more information on the timing attack and this fix.<a href="#section-6.2-8" 
           <h4 id="name-initiation-2">
 <a href="#section-6.2.1" class="section-number selfRef">6.2.1. </a><a href="#name-initiation-2" class="section-name selfRef">Initiation</a>
           </h4>
-<p id="section-6.2.1-1">Init takes as input the initiator's PRS, an optional context, an optional session identifier sid, and optional
-client and server identifiers U and S. It produces a state for the initiator to store, as well as a
+<p id="section-6.2.1-1">Init takes as input the initiator's PRS, a public_context, and a secret_context.
+It produces a state for the initiator to store, as well as a
 protocol message that is sent to the responder. Its implementation is as follows.<a href="#section-6.2.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.2.1-2">
 <pre>
@@ -2159,9 +2189,8 @@ OQUAKE.Init
 
 Input:
 - PRS, password-related string, a byte string
-- context, optional application-provided context, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 
 Output:
 - state, opaque state for the initiator to store
@@ -2172,12 +2201,10 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Init(PRS, context, sid, U, S):
-  fullsid = encode_sid(sid, U, S)
-
-  if context is None:
-    context = b""
-  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+def Init(PRS, public_context, secret_context):
+  if secret_context is None:
+    secret_context = b""
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || public_context || secret_context)
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   seed = random(BUA-sKEM.Nseed)
@@ -2186,44 +2213,20 @@ def Init(PRS, context, sid, U, S):
 
   r = random(3 * Nsec)
 
-  // T = XOR(t, H(fullsid, effective_PRS, ⍴, r))
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  // T = XOR(t, H(public_context, effective_PRS, ⍴, r))
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   T = XOR(ut, T_pad)
 
-  // s = XOR(r, H(fullsid, effective_PRS, ⍴, T))
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
+  // s = XOR(r, H(public_context, effective_PRS, ⍴, T))
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
   init_msg = s || T || ⍴
 
-  return State(effective_PRS, sk, pk, s, T, fullsid, context), init_msg
+  return State(effective_PRS, sk, pk, s, T, public_context, secret_context), init_msg
 </pre><a href="#section-6.2.1-2" class="pilcrow">¶</a>
-</div>
-<p id="section-6.2.1-3">The encode_sid function is defined below.<a href="#section-6.2.1-3" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-6.2.1-4">
-<pre>
-encode_sid
-
-Input:
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
-
-Output:
-- fullsid, a byte string
-
-Parameters:
-- BUA-sKEM, a BUA-sKEM instance
-- KDF, a KDF instance
-
-def encode_sid(sid, U, S):
-  fullsid =
-    bytes_to_int(len(sid), 4) || sid ||
-    bytes_to_int(len(U), 4) || U ||
-    bytes_to_int(len(S), 4) || S
-  return fullsid
-</pre><a href="#section-6.2.1-4" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -2232,7 +2235,7 @@ def encode_sid(sid, U, S):
           <h4 id="name-response-2">
 <a href="#section-6.2.2" class="section-number selfRef">6.2.2. </a><a href="#name-response-2" class="section-name selfRef">Response</a>
           </h4>
-<p id="section-6.2.2-1">Respond takes as input the PRS, an optional context, the initiator's protocol message, an optional session identifier, and optional client and server identifiers.
+<p id="section-6.2.2-1">Respond takes as input the PRS, a public_context, a secret_context, and the initiator's protocol message.
 It produces a 32-byte symmetric key and a protocol message intended to be sent to the initiator. Its implementation
 is as follows.<a href="#section-6.2.2-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.2.2-2">
@@ -2241,10 +2244,9 @@ OQUAKE.Respond
 
 Input:
 - PRS, password-related string, a byte string
-- context, optional application-provided context, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - init_msg, encoded protocol message, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - ss, output shared secret, a byte string of 32 bytes
@@ -2255,32 +2257,30 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Respond(PRS, context, init_msg, sid, U, S):
+def Respond(PRS, public_context, secret_context, init_msg):
   (s, T, ⍴) = init_msg[0 : (3 * Nsec)], init_msg[(3 * Nsec) : (6 * Nsec)], init_msg[(6 * Nsec) : (6 * Nsec) + N⍴]
 
-  fullsid = encode_sid(sid, U, S)
-
-  if context is None:
-    context = b""
-  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || fullsid || context)
+  if secret_context is None:
+    secret_context = b""
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || public_context || secret_context)
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || T)
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || ⍴ || r)
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   ut = XOR(T, T_pad)
 
   pk = BUA-sKEM.Combine(ut, ⍴)
   (ct, k) = BUA-sKEM.Encaps(pk)
 
-  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
+  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || s || T || pk || ct || k)
   intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
   transcript = s || T || ⍴ || ct
-  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
+  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || public_context || secret_context || transcript)
   key = KDF.Expand(prk_final, DST || "key", Nkey)
 
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
@@ -2321,17 +2321,17 @@ Exceptions:
 - AuthenticationError, raised when the key confirmation fails
 
 def Finish(state, resp_msg):
-  (effective_PRS, sk, pk, s, T, fullsid, context) = state
+  (effective_PRS, sk, pk, s, T, public_context, secret_context) = state
   ct, h = resp_msg[0..Nct], resp_msg[Nct..]
 
   try:
     k = BUA-sKEM.Decaps(sk, ct)
-    prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || fullsid || s || T || pk || ct || k)
+    prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || s || T || pk || ct || k)
 
     intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
 
     transcript = s || T || ⍴ || c
-    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || fullsid || context || transcript)
+    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || public_context || secret_context || transcript)
     key = KDF.Expand(prk_final, DST || "key", Nkey)
 
     h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
@@ -2381,7 +2381,7 @@ password hiding, a parallel combiner cannot provide the desired hybrid
 security guarantee.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
 <p id="section-6.3-3">The sequential combiner overcomes this limitation. Instead of running OQUAKE
 on the original password-related string PRS, CPaceOQUAKE feeds the CPace
-session key to OQUAKE as context, which binds the original PRS to the CPace
+session key to OQUAKE as the secret_context, which binds the original PRS to the CPace
 session key. Even if an attacker breaks D-MLWE and can distinguish OQUAKE
 public keys and ciphertexts, offline dictionary attacks against the original
 PRS are infeasible because the CPace-derived session key material is
@@ -2390,7 +2390,7 @@ Diffie-Hellman assumption). The sequential composition is analyzed in <span>[<a 
 and a close variant is analyzed in <span>[<a href="#LL24" class="cite xref">LL24</a>]</span>.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
 <p id="section-6.3-4">To be precise, CPaceOQUAKE first runs CPace to completion using
 password-related string PRS, establishing a session key SK1. It then runs
-OQUAKE using PRS and context=SK1. OQUAKE derives an effective password from
+OQUAKE using PRS and secret_context=SK1. OQUAKE derives an effective password from
 (PRS, SK1) and uses it throughout the protocol, producing session key SK2.
 The CPaceOQUAKE session key is SK2, which transitively depends on SK1
 through the effective password derivation.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
@@ -2405,11 +2405,11 @@ InitiatorContinue, and InitiatorFinish are intended to be called by the client, 
 and ResponderFinish are intended to be called by the server.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
 <div id="section-6.3-7">
           <div class="alignLeft art-svg artwork" id="section-6.3-7.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="560" width="440" viewBox="0 0 440 560" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="560" width="504" viewBox="0 0 504 560" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 112,96 L 112,240" fill="none" stroke="black"></path>
-              <path d="M 112,304 L 112,464" fill="none" stroke="black"></path>
+              <path d="M 112,288 L 112,464" fill="none" stroke="black"></path>
               <path d="M 352,56 L 352,144" fill="none" stroke="black"></path>
-              <path d="M 352,192 L 352,352" fill="none" stroke="black"></path>
+              <path d="M 352,184 L 352,352" fill="none" stroke="black"></path>
               <path d="M 352,416 L 352,520" fill="none" stroke="black"></path>
               <path d="M 72,48 L 392,48" fill="none" stroke="black"></path>
               <path d="M 120,128 L 344,128" fill="none" stroke="black"></path>
@@ -2423,30 +2423,31 @@ and ResponderFinish are intended to be called by the server.<a href="#section-6.
               <polygon class="arrowhead" points="128,224 116,218.4 116,229.6" fill="black" transform="rotate(180,120,224)"></polygon>
               <g class="text">
                 <text x="32" y="36">Client:</text>
-                <text x="112" y="36">PRS,sid,U,S</text>
-                <text x="304" y="36">Server:</text>
-                <text x="384" y="36">PRS,sid,U,S</text>
+                <text x="144" y="36">PRS,pub_ctx,sec_ctx</text>
+                <text x="312" y="36">Server:</text>
+                <text x="424" y="36">PRS,pub_ctx,sec_ctx</text>
                 <text x="60" y="68">ctx,</text>
                 <text x="100" y="68">msg1</text>
                 <text x="128" y="68">=</text>
-                <text x="120" y="84">CPaceOQUAKE.Init(PRS,sid,U,S)</text>
+                <text x="152" y="84">CPaceOQUAKE.Init(PRS,pub_ctx,sec_ctx)</text>
                 <text x="220" y="116">msg1</text>
                 <text x="276" y="164">ctx,</text>
                 <text x="316" y="164">msg2</text>
                 <text x="344" y="164">=</text>
-                <text x="288" y="180">CPaceOQUAKE.Respond(PRS,msg1,sid,U,S)</text>
+                <text x="320" y="180">CPaceOQUAKE.Respond(PRS,pub_ctx,sec_ctx,msg1)</text>
                 <text x="220" y="212">msg2</text>
                 <text x="60" y="260">ctx,</text>
                 <text x="100" y="260">msg3</text>
                 <text x="128" y="260">=</text>
                 <text x="124" y="276">CPaceOQUAKE.InitiatorContinue(</text>
-                <text x="104" y="292">PRS,ctx,msg2,sid,U,S)</text>
+                <text x="64" y="292">PRS,pub_ctx</text>
+                <text x="184" y="292">sec_ctx,ctx,msg2)</text>
                 <text x="220" y="324">msg3</text>
                 <text x="248" y="372">server_key,</text>
                 <text x="316" y="372">msg4</text>
                 <text x="344" y="372">=</text>
                 <text x="268" y="388">CPaceOQUAKE.ResponderFinish(</text>
-                <text x="256" y="404">PRS,ctx,msg3,sid,U,S)</text>
+                <text x="288" y="404">PRS,pub_ctx,sec_ctx,ctx,msg3)</text>
                 <text x="220" y="436">msg4</text>
                 <text x="84" y="484">client_key</text>
                 <text x="136" y="484">=</text>
@@ -2465,8 +2466,8 @@ and ResponderFinish are intended to be called by the server.<a href="#section-6.
           <h4 id="name-client-initiation">
 <a href="#section-6.3.1" class="section-number selfRef">6.3.1. </a><a href="#name-client-initiation" class="section-name selfRef">Client Initiation</a>
           </h4>
-<p id="section-6.3.1-1">The client initiates a CPace exchange with the server using input PRS, an optional session identifier sid,
-and optional client and server identifiers U and S. The output of this process is some state for
+<p id="section-6.3.1-1">The client initiates a CPace exchange with the server using input PRS, a public_context,
+and a secret_context. The output of this process is some state for
 completing the protocol and a protocol message. The client sends this message to the server.<a href="#section-6.3.1-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.3.1-2">
 <pre>
@@ -2474,8 +2475,8 @@ CPaceOQUAKE.Init
 
 Input:
 - PRS, password-related string, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 
 Output:
 - state, opaque state for the initiator to store
@@ -2484,8 +2485,8 @@ Output:
 Parameters:
 - CPace, parameterized instance of CPace
 
-def Init(PRS, sid, U, S):
-  ctx1, msg1 = CPace.Init(PRS, sid, U, S)
+def Init(PRS, public_context, secret_context):
+  ctx1, msg1 = CPace.Init(PRS, public_context, secret_context)
   s1 = random(32)
   init_msg = s1 || lv_encode(msg1)
 
@@ -2499,10 +2500,10 @@ def Init(PRS, sid, U, S):
           <h4 id="name-server-response">
 <a href="#section-6.3.2" class="section-number selfRef">6.3.2. </a><a href="#name-server-response" class="section-name selfRef">Server Response</a>
           </h4>
-<p id="section-6.3.2-1">The server processes the client message using its input PRS, an optional session identifier sid, and
-optional client and server identifiers U and S. The server responds to the CPace session
+<p id="section-6.3.2-1">The server processes the client message using its input PRS, a public_context, and
+a secret_context. The server responds to the CPace session
 that the client initiated, completing Stage 1.<a href="#section-6.3.2-1" class="pilcrow">¶</a></p>
-<p id="section-6.3.2-2">The server <span class="bcp14">MUST</span> ensure that exactly one of <code>s1</code> and <code>sid</code> exists. It <span class="bcp14">MUST</span> abort if the message does
+<p id="section-6.3.2-2">The server <span class="bcp14">MUST</span> ensure that exactly one of <code>s1</code> and a sid in the public_context exists. It <span class="bcp14">MUST</span> abort if the message does
 not have the correct length.<a href="#section-6.3.2-2" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.3.2-3">
 <pre>
@@ -2510,9 +2511,9 @@ CPaceOQUAKE.Respond
 
 Input:
 - PRS, password-related string, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - init_msg, the message received from the client
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - state, opaque state for the responder to store
@@ -2522,10 +2523,10 @@ Parameters:
 - CPace, parameterized instance of CPace
 - DST, domain separation tag, a byte string
 
-def Respond(PRS, init_msg, sid, U, S):
+def Respond(PRS, public_context, secret_context, init_msg):
   s1, msg1 = init_msg[0..32], lv_decode(init_msg[32..])
 
-  key1, msg2 = CPace.Respond(PRS, msg1, sid, U, S)
+  key1, msg2 = CPace.Respond(PRS, public_context, secret_context, msg1)
 
   s2 = random(32)
 
@@ -2542,9 +2543,9 @@ def Respond(PRS, init_msg, sid, U, S):
 <a href="#section-6.3.3" class="section-number selfRef">6.3.3. </a><a href="#name-client-continue" class="section-name selfRef">Client Continue</a>
           </h4>
 <p id="section-6.3.3-1">The client finishes CPace (Stage 1) and initiates OQUAKE (Stage 2). The client derives
-the CPace session key, then uses it as context for OQUAKE. The output is a new state
+the CPace session key, then uses it as the secret_context for OQUAKE. The output is a new state
 and an OQUAKE init message to send to the server.<a href="#section-6.3.3-1" class="pilcrow">¶</a></p>
-<p id="section-6.3.3-2">The client must ensure that exactly one of (s1, s2) and sid exists.
+<p id="section-6.3.3-2">The client must ensure that exactly one of (s1, s2) and a sid in the public_context exists.
 The client should abort when the message does not have the correct length.<a href="#section-6.3.3-2" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.3.3-3">
 <pre>
@@ -2552,10 +2553,10 @@ CPaceOQUAKE.InitiatorContinue
 
 Input:
 - PRS, password-related string, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - (ctx1, s1), the state generated by CPaceOQUAKE.Init
 - resp_msg, the message received from the server
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - state, opaque state for the initiator to store
@@ -2566,16 +2567,16 @@ Parameters:
 - OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
-def InitiatorContinue(PRS, (ctx1, s1), resp_msg, sid, U, S):
+def InitiatorContinue(PRS, public_context, secret_context, (ctx1, s1), resp_msg):
   s2 = resp_msg[0..32]
   msg2 = lv_decode(resp_msg[32..])
 
-  key1 = CPace.Finish(ctx1, msg2, sid)
+  key1 = CPace.Finish(ctx1, public_context, msg2)
 
   prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
   extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
 
-  ctx2, msg3 = OQUAKE.Init(PRS, key1, extended_sid, U, S)
+  ctx2, msg3 = OQUAKE.Init(PRS, extended_sid || public_context, key1)
 
   return ctx2, msg3
 </pre><a href="#section-6.3.3-3" class="pilcrow">¶</a>
@@ -2588,7 +2589,7 @@ def InitiatorContinue(PRS, (ctx1, s1), resp_msg, sid, U, S):
 <a href="#section-6.3.4" class="section-number selfRef">6.3.4. </a><a href="#name-server-finish" class="section-name selfRef">Server Finish</a>
           </h4>
 <p id="section-6.3.4-1">The server completes the protocol by responding to the OQUAKE session (Stage 2).
-The server uses the CPace session key from Stage 1 as context for OQUAKE.
+The server uses the CPace session key from Stage 1 as the secret_context for OQUAKE.
 The OQUAKE output key is the CPaceOQUAKE session key.<a href="#section-6.3.4-1" class="pilcrow">¶</a></p>
 <p id="section-6.3.4-2">The server should abort when the message does not have the correct length.<a href="#section-6.3.4-2" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-6.3.4-3">
@@ -2597,10 +2598,10 @@ CPaceOQUAKE.ResponderFinish
 
 Input:
 - PRS, password-related string, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - ctx, state from the server's Response
 - msg3, the message received from the client, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - key, an N-byte shared secret
@@ -2610,13 +2611,13 @@ Parameters:
 - OQUAKE, parameterized instance of OQUAKE
 - DST, domain separation tag, a byte string
 
-def ResponderFinish(PRS, ctx, msg3, sid, U, S):
+def ResponderFinish(PRS, public_context, secret_context, ctx, msg3):
   (s1, s2, key1) = ctx
 
   prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
   extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
 
-  resp_msg, server_key = OQUAKE.Respond(PRS, key1, msg3, extended_sid, U, S)
+  resp_msg, server_key = OQUAKE.Respond(PRS, extended_sid || public_context, key1, msg3)
 
   return server_key, resp_msg
 </pre><a href="#section-6.3.4-3" class="pilcrow">¶</a>
@@ -2820,8 +2821,8 @@ the OQUAKE key exchange, then responds to the challenge.<a href="#section-7.2-2"
 <p id="section-7.2-3">A high level overview of this flow is below.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 <div id="section-7.2-4">
           <div class="alignLeft art-svg artwork" id="section-7.2-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="464" viewBox="0 0 464 432" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-              <path d="M 104,112 L 104,256" fill="none" stroke="black"></path>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="448" viewBox="0 0 448 432" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+              <path d="M 104,104 L 104,256" fill="none" stroke="black"></path>
               <path d="M 104,304 L 104,392" fill="none" stroke="black"></path>
               <path d="M 328,56 L 328,160" fill="none" stroke="black"></path>
               <path d="M 328,208 L 328,352" fill="none" stroke="black"></path>
@@ -2837,37 +2838,29 @@ the OQUAKE key exchange, then responds to the challenge.<a href="#section-7.2-2"
                 <text x="32" y="36">Client:</text>
                 <text x="76" y="36">v,</text>
                 <text x="112" y="36">seed,</text>
-                <text x="156" y="36">sid,</text>
-                <text x="188" y="36">U,</text>
-                <text x="208" y="36">S</text>
+                <text x="168" y="36">pub_ctx</text>
                 <text x="296" y="36">Server:</text>
                 <text x="340" y="36">v,</text>
                 <text x="368" y="36">pk,</text>
-                <text x="404" y="36">sid,</text>
-                <text x="436" y="36">U,</text>
-                <text x="456" y="36">S</text>
+                <text x="416" y="36">pub_ctx</text>
                 <text x="104" y="68">|</text>
                 <text x="44" y="84">ctx,</text>
                 <text x="84" y="84">msg1</text>
                 <text x="112" y="84">=</text>
                 <text x="176" y="84">OQUAKE+.Init(</text>
                 <text x="52" y="100">v,</text>
-                <text x="100" y="100">context,</text>
-                <text x="156" y="100">sid,</text>
-                <text x="188" y="100">U,</text>
-                <text x="212" y="100">S)</text>
+                <text x="100" y="100">pub_ctx,</text>
+                <text x="172" y="100">sec_ctx)</text>
                 <text x="196" y="132">msg1</text>
                 <text x="156" y="180">ctx,</text>
                 <text x="196" y="180">msg2</text>
                 <text x="224" y="180">=</text>
                 <text x="300" y="180">OQUAKE+.Respond(</text>
                 <text x="164" y="196">v,</text>
-                <text x="212" y="196">context,</text>
-                <text x="272" y="196">msg1,</text>
-                <text x="312" y="196">pk,</text>
-                <text x="348" y="196">sid,</text>
-                <text x="380" y="196">U,</text>
-                <text x="404" y="196">S)</text>
+                <text x="212" y="196">pub_ctx,</text>
+                <text x="284" y="196">sec_ctx,</text>
+                <text x="344" y="196">msg1,</text>
+                <text x="384" y="196">pk)</text>
                 <text x="196" y="228">msg2</text>
                 <text x="48" y="276">client_key,</text>
                 <text x="116" y="276">msg3</text>
@@ -2876,9 +2869,7 @@ the OQUAKE key exchange, then responds to the challenge.<a href="#section-7.2-2"
                 <text x="36" y="292">ctx,</text>
                 <text x="80" y="292">seed,</text>
                 <text x="128" y="292">msg2,</text>
-                <text x="172" y="292">sid,</text>
-                <text x="204" y="292">U,</text>
-                <text x="228" y="292">S)</text>
+                <text x="188" y="292">pub_ctx)</text>
                 <text x="196" y="324">msg3</text>
                 <text x="172" y="372">server_key</text>
                 <text x="224" y="372">=</text>
@@ -2906,9 +2897,8 @@ OQUAKE+.Init
 
 Input:
 - PRS, password-related string, a byte string
-- context, optional application-provided context, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 
 Output:
 - state, opaque state for the initiator to store
@@ -2919,8 +2909,8 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Init(PRS, context, sid, U, S):
-  return OQUAKE.Init(PRS, context, sid, U, S)
+def Init(PRS, public_context, secret_context):
+  return OQUAKE.Init(PRS, public_context, secret_context)
 </pre><a href="#section-7.2.1-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2930,9 +2920,8 @@ def Init(PRS, context, sid, U, S):
           <h4 id="name-response-3">
 <a href="#section-7.2.2" class="section-number selfRef">7.2.2. </a><a href="#name-response-3" class="section-name selfRef">Response</a>
           </h4>
-<p id="section-7.2.2-1">Respond takes as input the PRS, an optional context, the initiator's
-protocol message, the client's registered public key, an optional
-session identifier, and optional client and server identifiers.
+<p id="section-7.2.2-1">Respond takes as input the PRS, a public_context, a secret_context, the initiator's
+protocol message, and the client's registered public key.
 It produces an opaque state and a protocol message that combines
 the OQUAKE response with a password confirmation challenge.<a href="#section-7.2.2-1" class="pilcrow">¶</a></p>
 <p id="section-7.2.2-2">The implementation <span class="bcp14">MUST NOT</span> reveal server_key from the state.<a href="#section-7.2.2-2" class="pilcrow">¶</a></p>
@@ -2942,11 +2931,10 @@ OQUAKE+.Respond
 
 Input:
 - PRS, password-related string, a byte string
-- context, optional application-provided context, a byte string
+- public_context, optional public context, a byte string
+- secret_context, optional secret context, a byte string
 - init_msg, encoded protocol message, a byte string
 - pk, client-registered public key, a KEM public key
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
 
 Output:
 - state, opaque state for the server to store values to complete the protocol
@@ -2958,14 +2946,14 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Respond(PRS, context, init_msg, pk, sid, U, S):
-  oquake_resp, SK = OQUAKE.Respond(PRS, context, init_msg, sid, U, S)
+def Respond(PRS, public_context, secret_context, init_msg, pk):
+  oquake_resp, SK = OQUAKE.Respond(PRS, public_context, secret_context, init_msg)
 
   (c, k) = KEM.Encaps(pk)
   r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  confirm_input = encode_sid(sid, U, S) || enc_c
+  confirm_input = public_context || enc_c
 
   prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
   prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
@@ -2989,7 +2977,7 @@ def Respond(PRS, context, init_msg, pk, sid, U, S):
           </h4>
 <p id="section-7.2.3-1">Finish takes as input the initiator-created state from Init, the seed
 used to derive the KEM key pair during registration, the responder's
-combined reply message, a session identifier, and client and server identifiers.<a href="#section-7.2.3-1" class="pilcrow">¶</a></p>
+combined reply message, and the public_context.<a href="#section-7.2.3-1" class="pilcrow">¶</a></p>
 <p id="section-7.2.3-2">The client completes the OQUAKE key exchange to recover the shared secret,
 then uses it to decrypt the password confirmation challenge. The client
 re-derives the KEM key pair from the seed and decapsulates the KEM
@@ -3006,8 +2994,7 @@ Input:
 - state, opaque state for the initiator to store
 - seed, seed used to derive KEM public key
 - resp_msg, encoded protocol message, a byte string
-- sid, session identifier, a byte string
-- U and S, client and server identifiers
+- public_context, optional public context, a byte string
 
 Output:
 - client_key, a 32-byte string
@@ -3022,7 +3009,7 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Finish(state, seed, resp_msg, sid, U, S):
+def Finish(state, seed, resp_msg, public_context):
   oquake_resp = resp_msg[0 : Nct_bua + Nkc]
   enc_c = resp_msg[Nct_bua + Nkc : Nct_bua + Nkc + Nct]
   client_confirm_target = resp_msg[Nct_bua + Nkc + Nct :]
@@ -3037,7 +3024,7 @@ def Finish(state, seed, resp_msg, sid, U, S):
   try:
     k = KEM.Decaps(sk, c)
 
-    confirm_input = encode_sid(sid, U, S) || enc_c
+    confirm_input = public_context || enc_c
 
     prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
     prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
@@ -3104,19 +3091,19 @@ password confirmation challenge.<a href="#section-7.3-1" class="pilcrow">¶</a><
 <p id="section-7.3-2">Standalone OQUAKE+ consists of three messages:<a href="#section-7.3-2" class="pilcrow">¶</a></p>
 <div id="section-7.3-3">
           <div class="alignLeft art-svg artwork" id="section-7.3-3.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="384" width="536" viewBox="0 0 536 384" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-              <path d="M 104,112 L 104,224" fill="none" stroke="black"></path>
-              <path d="M 104,256 L 104,344" fill="none" stroke="black"></path>
-              <path d="M 384,56 L 384,144" fill="none" stroke="black"></path>
-              <path d="M 384,176 L 384,304" fill="none" stroke="black"></path>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="400" width="536" viewBox="0 0 536 400" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+              <path d="M 104,128 L 104,240" fill="none" stroke="black"></path>
+              <path d="M 104,272 L 104,360" fill="none" stroke="black"></path>
+              <path d="M 384,56 L 384,160" fill="none" stroke="black"></path>
+              <path d="M 384,184 L 384,320" fill="none" stroke="black"></path>
               <path d="M 88,48 L 400,48" fill="none" stroke="black"></path>
-              <path d="M 112,128 L 376,128" fill="none" stroke="black"></path>
-              <path d="M 112,208 L 376,208" fill="none" stroke="black"></path>
-              <path d="M 112,288 L 376,288" fill="none" stroke="black"></path>
-              <path d="M 88,352 L 400,352" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="384,288 372,282.4 372,293.6" fill="black" transform="rotate(0,376,288)"></polygon>
-              <polygon class="arrowhead" points="384,128 372,122.4 372,133.6" fill="black" transform="rotate(0,376,128)"></polygon>
-              <polygon class="arrowhead" points="120,208 108,202.4 108,213.6" fill="black" transform="rotate(180,112,208)"></polygon>
+              <path d="M 112,144 L 376,144" fill="none" stroke="black"></path>
+              <path d="M 112,224 L 376,224" fill="none" stroke="black"></path>
+              <path d="M 112,304 L 376,304" fill="none" stroke="black"></path>
+              <path d="M 88,368 L 400,368" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="384,304 372,298.4 372,309.6" fill="black" transform="rotate(0,376,304)"></polygon>
+              <polygon class="arrowhead" points="384,144 372,138.4 372,149.6" fill="black" transform="rotate(0,376,144)"></polygon>
+              <polygon class="arrowhead" points="120,224 108,218.4 108,229.6" fill="black" transform="rotate(180,112,224)"></polygon>
               <g class="text">
                 <text x="32" y="36">Client:</text>
                 <text x="132" y="36">PRS,salt,U,S,sid</text>
@@ -3126,31 +3113,34 @@ password confirmation challenge.<a href="#section-7.3-1" class="pilcrow">¶</a><
                 <text x="56" y="68">seed)</text>
                 <text x="88" y="68">=</text>
                 <text x="232" y="68">GenVerifierMaterial(PRS,salt,U,S)</text>
-                <text x="104" y="84">|</text>
-                <text x="20" y="100">ctx,</text>
-                <text x="60" y="100">msg1</text>
-                <text x="88" y="100">=</text>
-                <text x="212" y="100">OQUAKE+.Init(v,None,sid,U,S)</text>
-                <text x="244" y="116">msg1</text>
-                <text x="140" y="164">ctx,</text>
-                <text x="180" y="164">msg2</text>
-                <text x="208" y="164">=</text>
-                <text x="376" y="164">OQUAKE+.Respond(v,None,msg1,pk,sid,U,S)</text>
-                <text x="244" y="196">msg2</text>
-                <text x="48" y="244">client_key,</text>
-                <text x="116" y="244">msg3</text>
-                <text x="144" y="244">=</text>
-                <text x="268" y="244">OQUAKE+.Finish(ctx,seed,msg2</text>
-                <text x="420" y="244">sid,U,S)</text>
-                <text x="244" y="276">msg3</text>
-                <text x="212" y="324">server_key</text>
-                <text x="264" y="324">=</text>
-                <text x="372" y="324">OQUAKE+.Verify(ctx,msg3)</text>
-                <text x="384" y="340">|</text>
-                <text x="76" y="372">output</text>
-                <text x="148" y="372">client_key</text>
-                <text x="348" y="372">output</text>
-                <text x="420" y="372">server_key</text>
+                <text x="32" y="84">pub_ctx</text>
+                <text x="72" y="84">=</text>
+                <text x="196" y="84">EncodePublicContext(sid,U,S)</text>
+                <text x="104" y="100">|</text>
+                <text x="20" y="116">ctx,</text>
+                <text x="60" y="116">msg1</text>
+                <text x="88" y="116">=</text>
+                <text x="212" y="116">OQUAKE+.Init(v,pub_ctx,None)</text>
+                <text x="244" y="132">msg1</text>
+                <text x="140" y="180">ctx,</text>
+                <text x="180" y="180">msg2</text>
+                <text x="208" y="180">=</text>
+                <text x="376" y="180">OQUAKE+.Respond(v,pub_ctx,None,msg1,pk)</text>
+                <text x="244" y="212">msg2</text>
+                <text x="48" y="260">client_key,</text>
+                <text x="116" y="260">msg3</text>
+                <text x="144" y="260">=</text>
+                <text x="268" y="260">OQUAKE+.Finish(ctx,seed,msg2</text>
+                <text x="420" y="260">pub_ctx)</text>
+                <text x="244" y="292">msg3</text>
+                <text x="212" y="340">server_key</text>
+                <text x="264" y="340">=</text>
+                <text x="372" y="340">OQUAKE+.Verify(ctx,msg3)</text>
+                <text x="384" y="356">|</text>
+                <text x="76" y="388">output</text>
+                <text x="148" y="388">client_key</text>
+                <text x="348" y="388">output</text>
+                <text x="420" y="388">server_key</text>
               </g>
             </svg><a href="#section-7.3-3.1" class="pilcrow">¶</a>
 </div>
@@ -3215,7 +3205,7 @@ by <code>GenVerifierMaterial</code> to prove knowledge of the password. This see
                 <text x="236" y="100">1)</text>
                 <text x="388" y="100">Verifier</text>
                 <text x="200" y="132">|</text>
-                <text x="192" y="148">context=SK1</text>
+                <text x="192" y="148">sec_ctx=SK1</text>
                 <text x="200" y="164">|</text>
                 <text x="200" y="196">OQUAKE+</text>
                 <text x="36" y="212">Verifier</text>
@@ -3238,28 +3228,27 @@ Note here that if the client does not know the salt, the server must send
 it to the client before the protocol starts, which it can do in plain text.<a href="#section-7.4-5" class="pilcrow">¶</a></p>
 <div id="section-7.4-6">
           <div class="alignLeft art-svg artwork" id="section-7.4-6.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="640" width="536" viewBox="0 0 536 640" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
-              <path d="M 104,144 L 104,256" fill="none" stroke="black"></path>
-              <path d="M 104,336 L 104,464" fill="none" stroke="black"></path>
-              <path d="M 104,512 L 104,600" fill="none" stroke="black"></path>
-              <path d="M 312,384 L 312,392" fill="none" stroke="black"></path>
-              <path d="M 384,56 L 384,176" fill="none" stroke="black"></path>
-              <path d="M 384,208 L 384,368" fill="none" stroke="black"></path>
-              <path d="M 384,400 L 384,472" fill="none" stroke="black"></path>
-              <path d="M 384,488 L 384,560" fill="none" stroke="black"></path>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="656" width="560" viewBox="0 0 560 656" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+              <path d="M 104,160 L 104,272" fill="none" stroke="black"></path>
+              <path d="M 104,336 L 104,480" fill="none" stroke="black"></path>
+              <path d="M 104,528 L 104,616" fill="none" stroke="black"></path>
+              <path d="M 384,56 L 384,192" fill="none" stroke="black"></path>
+              <path d="M 384,224 L 384,384" fill="none" stroke="black"></path>
+              <path d="M 384,416 L 384,488" fill="none" stroke="black"></path>
+              <path d="M 384,504 L 384,576" fill="none" stroke="black"></path>
               <path d="M 88,48 L 400,48" fill="none" stroke="black"></path>
-              <path d="M 112,160 L 376,160" fill="none" stroke="black"></path>
-              <path d="M 112,240 L 376,240" fill="none" stroke="black"></path>
-              <path d="M 112,352 L 376,352" fill="none" stroke="black"></path>
-              <path d="M 112,448 L 376,448" fill="none" stroke="black"></path>
-              <path d="M 112,544 L 376,544" fill="none" stroke="black"></path>
-              <path d="M 88,608 L 400,608" fill="none" stroke="black"></path>
-              <path class="jump" d="M 384,488 C 378,488 378,472 384,472" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="384,544 372,538.4 372,549.6" fill="black" transform="rotate(0,376,544)"></polygon>
-              <polygon class="arrowhead" points="384,352 372,346.4 372,357.6" fill="black" transform="rotate(0,376,352)"></polygon>
-              <polygon class="arrowhead" points="384,160 372,154.4 372,165.6" fill="black" transform="rotate(0,376,160)"></polygon>
-              <polygon class="arrowhead" points="120,448 108,442.4 108,453.6" fill="black" transform="rotate(180,112,448)"></polygon>
-              <polygon class="arrowhead" points="120,240 108,234.4 108,245.6" fill="black" transform="rotate(180,112,240)"></polygon>
+              <path d="M 112,176 L 376,176" fill="none" stroke="black"></path>
+              <path d="M 112,256 L 376,256" fill="none" stroke="black"></path>
+              <path d="M 112,368 L 376,368" fill="none" stroke="black"></path>
+              <path d="M 112,464 L 376,464" fill="none" stroke="black"></path>
+              <path d="M 112,560 L 376,560" fill="none" stroke="black"></path>
+              <path d="M 88,624 L 400,624" fill="none" stroke="black"></path>
+              <path class="jump" d="M 384,504 C 378,504 378,488 384,488" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="384,560 372,554.4 372,565.6" fill="black" transform="rotate(0,376,560)"></polygon>
+              <polygon class="arrowhead" points="384,368 372,362.4 372,373.6" fill="black" transform="rotate(0,376,368)"></polygon>
+              <polygon class="arrowhead" points="384,176 372,170.4 372,181.6" fill="black" transform="rotate(0,376,176)"></polygon>
+              <polygon class="arrowhead" points="120,464 108,458.4 108,469.6" fill="black" transform="rotate(180,112,464)"></polygon>
+              <polygon class="arrowhead" points="120,256 108,250.4 108,261.6" fill="black" transform="rotate(180,112,256)"></polygon>
               <g class="text">
                 <text x="32" y="36">Client:</text>
                 <text x="132" y="36">PRS,salt,U,S,sid</text>
@@ -3269,52 +3258,55 @@ it to the client before the protocol starts, which it can do in plain text.<a hr
                 <text x="56" y="68">seed)</text>
                 <text x="88" y="68">=</text>
                 <text x="232" y="68">GenVerifierMaterial(PRS,salt,U,S)</text>
-                <text x="104" y="84">|</text>
-                <text x="48" y="100">Stage</text>
-                <text x="84" y="100">1:</text>
-                <text x="120" y="100">CPace</text>
-                <text x="104" y="116">|</text>
-                <text x="20" y="132">ctx,</text>
-                <text x="60" y="132">msg1</text>
-                <text x="88" y="132">=</text>
-                <text x="212" y="132">CPaceOQUAKE+.Init(v,sid,U,S)</text>
-                <text x="244" y="148">msg1</text>
-                <text x="148" y="196">ctx,</text>
-                <text x="188" y="196">msg2</text>
-                <text x="216" y="196">=</text>
-                <text x="372" y="196">CPaceOQUAKE+.Respond(v,msg1,sid,U,S)</text>
-                <text x="244" y="228">msg2</text>
-                <text x="48" y="276">Stage</text>
-                <text x="84" y="276">2:</text>
-                <text x="128" y="276">OQUAKE+</text>
-                <text x="104" y="292">|</text>
-                <text x="20" y="308">ctx,</text>
-                <text x="60" y="308">msg3</text>
-                <text x="88" y="308">=</text>
-                <text x="224" y="308">CPaceOQUAKE+.InitiatorContinue(</text>
-                <text x="104" y="324">v,ctx,msg2,sid,U,S)</text>
-                <text x="244" y="340">msg3</text>
-                <text x="140" y="388">ctx,</text>
-                <text x="180" y="388">msg4</text>
-                <text x="208" y="388">=</text>
-                <text x="264" y="388">CPaceOQUAKE</text>
-                <text x="392" y="388">.ResponderContinue(</text>
-                <text x="228" y="404">v,ctx,msg3,pk,sid,U,S)</text>
-                <text x="244" y="436">msg4</text>
-                <text x="48" y="484">client_key,</text>
-                <text x="116" y="484">msg5</text>
-                <text x="144" y="484">=</text>
-                <text x="268" y="484">CPaceOQUAKE+.InitiatorFinish</text>
-                <text x="116" y="500">ctx,seed,msg4,sid,U,S)</text>
-                <text x="244" y="532">msg5</text>
-                <text x="164" y="580">server_key</text>
-                <text x="216" y="580">=</text>
-                <text x="380" y="580">CPaceOQUAKE+.ResponderFinish(ctx,msg5)</text>
-                <text x="384" y="596">|</text>
-                <text x="76" y="628">output</text>
-                <text x="148" y="628">client_key</text>
-                <text x="348" y="628">output</text>
-                <text x="420" y="628">server_key</text>
+                <text x="32" y="84">pub_ctx</text>
+                <text x="72" y="84">=</text>
+                <text x="196" y="84">EncodePublicContext(sid,U,S)</text>
+                <text x="104" y="100">|</text>
+                <text x="48" y="116">Stage</text>
+                <text x="84" y="116">1:</text>
+                <text x="120" y="116">CPace</text>
+                <text x="104" y="132">|</text>
+                <text x="20" y="148">ctx,</text>
+                <text x="60" y="148">msg1</text>
+                <text x="88" y="148">=</text>
+                <text x="232" y="148">CPaceOQUAKE+.Init(v,pub_ctx,None)</text>
+                <text x="244" y="164">msg1</text>
+                <text x="148" y="212">ctx,</text>
+                <text x="188" y="212">msg2</text>
+                <text x="216" y="212">=</text>
+                <text x="392" y="212">CPaceOQUAKE+.Respond(v,pub_ctx,None,msg1)</text>
+                <text x="244" y="244">msg2</text>
+                <text x="48" y="292">Stage</text>
+                <text x="84" y="292">2:</text>
+                <text x="128" y="292">OQUAKE+</text>
+                <text x="104" y="308">|</text>
+                <text x="20" y="324">ctx,</text>
+                <text x="60" y="324">msg3</text>
+                <text x="88" y="324">=</text>
+                <text x="224" y="324">CPaceOQUAKE+.InitiatorContinue(</text>
+                <text x="64" y="340">v,pub_ctx</text>
+                <text x="164" y="340">None,ctx,msg2)</text>
+                <text x="244" y="356">msg3</text>
+                <text x="140" y="404">ctx,</text>
+                <text x="180" y="404">msg4</text>
+                <text x="208" y="404">=</text>
+                <text x="344" y="404">CPaceOQUAKE+.ResponderContinue(</text>
+                <text x="248" y="420">v,pub_ctx,None,ctx,msg3,pk)</text>
+                <text x="244" y="452">msg4</text>
+                <text x="48" y="500">client_key,</text>
+                <text x="116" y="500">msg5</text>
+                <text x="144" y="500">=</text>
+                <text x="268" y="500">CPaceOQUAKE+.InitiatorFinish</text>
+                <text x="116" y="516">ctx,seed,msg4,pub_ctx)</text>
+                <text x="244" y="548">msg5</text>
+                <text x="164" y="596">server_key</text>
+                <text x="216" y="596">=</text>
+                <text x="380" y="596">CPaceOQUAKE+.ResponderFinish(ctx,msg5)</text>
+                <text x="384" y="612">|</text>
+                <text x="76" y="644">output</text>
+                <text x="148" y="644">client_key</text>
+                <text x="348" y="644">output</text>
+                <text x="420" y="644">server_key</text>
               </g>
             </svg><a href="#section-7.4-6.1" class="pilcrow">¶</a>
 </div>
@@ -3471,7 +3463,7 @@ if one PAKE is not unconditionally password hiding, breaking its underlying
 assumption can yield the password, and learning the password is sufficient to
 also break the other PAKE. In contrast, the sequential hybrid variants do not
 suffer from the same weakness: the input to OQUAKE is an effective password,
-derived from (PRS, context) where context is the CPace session key, not the
+derived from (PRS, secret_context) where the secret_context is the CPace session key, not the
 original PRS. Performing an offline dictionary attack against the original PRS
 would require the attacker to also guess the CPace-derived key, which is
 computationally indistinguishable from a random value under the gap
