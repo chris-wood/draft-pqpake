@@ -2167,7 +2167,11 @@ def Verify(state, server_confirm_target):
               Standard", August 2024,
               <https://csrc.nist.gov/pubs/fips/203/final>.
 
-   [KEMELEON] "*** BROKEN REFERENCE ***".
+   [KEMELEON] Günther, F., Stebila, D., and S. Veitch, "Kemeleon
+              Encodings", Work in Progress, Internet-Draft, draft-irtf-
+              cfrg-kemeleon-02, 3 July 2026,
+              <https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-
+              kemeleon-02>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
