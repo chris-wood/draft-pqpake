@@ -445,7 +445,7 @@ In this specification, we also require a third property: the KEM must be splitta
 
 In the remainder of this specification, we abbreviate 'splittable binary UPK-ANO-KEM' as BUA-sKEM.
 This specification uses a variant of ML-KEM1024 {{FIPS203}}, which we therefore denote by ML-BUA-sKEM1024. It is specified in {{ML-BUA-sKEM}}.
-This is instantiated with "KemeleonNR - ML-KEM1024" {{!KEMELEON=I-D.irtf-cfrg-kemeleon}}. Note that, while
+This is instantiated with "Kemeleon - ML-KEM1024" {{!KEMELEON=I-D.irtf-cfrg-kemeleon}}. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
 require uniform enoding for public keys. Future specifications can replace ML-BUA-sKEM1024 with another splittable binary UPK-ANO-KEM that is more efficient if one becomes available.
 
