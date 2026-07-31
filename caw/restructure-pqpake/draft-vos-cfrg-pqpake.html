@@ -3521,7 +3521,7 @@ was encountered in the CPace stage; <a href="#cpace" class="auto internal xref">
 <p id="section-9-3">Note that a decapsulation failure inside OQUAKE.Finish (<a href="#quake-finish" class="auto internal xref">Section 6.1.3</a>) is not
 surfaced as a DecapsError. As described in <a href="#quake-finish" class="auto internal xref">Section 6.1.3</a>, OQUAKE.Finish returns
 a random key in that case so that a failure is indistinguishable from a mismatched
-password. Implementations <span class="bcp14">MUST NOT</span> convert this into a distinguishable error, as
+password. Implementations <span class="bcp14">SHOULD NOT</span> convert this into a distinguishable error, as
 doing so would leak whether the peer holds the correct PRS.<a href="#section-9-3" class="pilcrow">¶</a></p>
 <p id="section-9-4">Beyond these explicit errors, CPaceOQUAKE+ implementations can produce implicit errors.
 For example, if protocol messages sent between client and server do not match
