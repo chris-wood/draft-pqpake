@@ -1018,7 +1018,7 @@ PAKE is not unconditionally password hiding, an attacker that breaks its
 computational assumptions can recover the password, and knowing the password
 is sufficient to then defeat the other PAKE as well.
 
-The sequential combiner overcomes this limitation. Instead of running Stage 2 on
+The sequential combiner overcomes this limitation: it only requires Stage 1's PAKE to unconditionally hide the password. Instead of running Stage 2 on
 the original password-related string PRS, the combiner first runs Stage 1 to
 completion using PRS, establishing a session key SK1, and then runs Stage 2 using
 PRS with secret_context=SK1. The Stage 2 PAKE derives an effective password from
