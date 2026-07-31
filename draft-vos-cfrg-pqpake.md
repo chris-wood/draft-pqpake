@@ -1326,7 +1326,7 @@ post-quantum key exchange and password confirmation in a single stage. To ensure
 that the client does indeed know the password pertaining to that verifier,
 the OQUAKE+ stage uses a seed derived from the password. Both the verifier and
 the seed are derived from the password using a key stretching function
-({{gen-verifiers}}). The seed is later used to derive a KEM public key. We refer
+({{gen-verifiers}}). The seed is later used to derive a KEM public key with hybrid post-quantum security. We refer
 to the collection of the verifier and this public key as 'the verifiers'.
 (The CPaceOQUAKE+ protocol can be seen as a close variant (and a specific
 instance) of the `augmented PAKE' construction presented in {{LLH24}} and in {{Gu24}}.)
