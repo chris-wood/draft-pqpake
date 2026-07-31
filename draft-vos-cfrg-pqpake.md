@@ -1068,7 +1068,7 @@ PAKE, the client and server have different inputs to the protocol.
               |          |           |
               |     +---------+      |
               |     | Stage 2 |      |
- Verifier---->+---->|   PAKE  |<-----+<---- Verifier
+ Verifier---->+---->|  aPAKE  |<-----+<---- Verifier
     seed            |         |            Public key
                     +---------+
                       |      |
