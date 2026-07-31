@@ -1712,7 +1712,7 @@ are as follows:
 Note that a decapsulation failure inside OQUAKE.Finish ({{quake-finish}}) is not
 surfaced as a DecapsError. As described in {{quake-finish}}, OQUAKE.Finish returns
 a random key in that case so that a failure is indistinguishable from a mismatched
-password. Implementations MUST NOT convert this into a distinguishable error, as
+password. Implementations SHOULD NOT convert this into a distinguishable error, as
 doing so would leak whether the peer holds the correct PRS.
 
 Beyond these explicit errors, CPaceOQUAKE+ implementations can produce implicit errors.
