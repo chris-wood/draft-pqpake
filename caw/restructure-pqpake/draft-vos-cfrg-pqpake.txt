@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                               Apple, Inc.
 Intended status: Informational                                S. Jarecki
-Expires: 30 January 2027                University of California, Irvine
+Expires: 1 February 2027                University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                            29 July 2026
+                                                            31 July 2026
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 30 January 2027.
+   This Internet-Draft will expire on 1 February 2027.
 
 Copyright Notice
 
@@ -1117,7 +1117,8 @@ def Verify(state, server_confirm_target):
    recover the password, and knowing the password is sufficient to then
    defeat the other PAKE as well.
 
-   The sequential combiner overcomes this limitation.  Instead of
+   The sequential combiner overcomes this limitation: it only requires
+   Stage 1's PAKE to unconditionally hide the password.  Instead of
    running Stage 2 on the original password-related string PRS, the
    combiner first runs Stage 1 to completion using PRS, establishing a
    session key SK1, and then runs Stage 2 using PRS with
