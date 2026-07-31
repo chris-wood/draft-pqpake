@@ -1168,7 +1168,7 @@ def Verify(state, server_confirm_target):
                  |          |           |
                  |     +---------+      |
                  |     | Stage 2 |      |
-    Verifier---->+---->|   PAKE  |<-----+<---- Verifier
+    Verifier---->+---->|  aPAKE  |<-----+<---- Verifier
        seed            |         |            Public key
                        +---------+
                          |      |
