@@ -118,6 +118,18 @@ informative:
         name: Steve Myers
       -
         name: Yannick Sierra
+  GRSV25:
+    title: "Hybrid Obfuscated Key Exchange and KEMs"
+    target: https://eprint.iacr.org/2025/408
+    author:
+      -
+        name: Felix Günther
+      -
+        name: Michael Rosenberg
+      -
+        name: Douglas Stebila
+      -
+        name: Shannon Veitch
 
 
 --- abstract
@@ -284,7 +296,9 @@ derivation from a seed. It consists of the following syntax.
 - Nct: The length in bytes of an encapsulated key produced by this KEM.
 - Npk: The length in bytes of a public key for this KEM.
 
-This specification uses X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}.
+This KEM is used for password confirmation in OQUAKE+ and CPaceOQUAKE+. This specification
+uses ML-KEM-768 {{FIPS203}} for OQUAKE+ and X-Wing {{!XWING=I-D.connolly-cfrg-xwing-kem}}
+for CPaceOQUAKE+.
 
 ## Splittable binary KEM {#deps-BUA-sKEM}
 
@@ -307,11 +321,11 @@ and/or no anonymous ciphertexts in place of a UPK-ANO-KEM.
 In this specification, we also require a third property: the KEM must be splittable. A splittable KEM (sKEM) implements the `Split(pk) -> (t, ⍴)` function and its inverse, which takes a public key and splits it into a part `⍴` that is independent of the KEM's secret key and can therefore be made public, and a part `t` that does depend on the secret key. This property allows parties to perform variable-time operations on `⍴` without revealing information about the secret key. We use N⍴ to denote the byte-length of ⍴ and Nt to denote the byte-length of t. We use `Combine(t, ⍴) -> pk` to refer to the inverse operation of `Split`.
 
 In the remainder of this specification, we abbreviate 'splittable binary UPK-ANO-KEM' as BUA-sKEM.
-This specification uses a variant of ML-KEM1024 {{FIPS203}}, which we therefore denote by ML-BUA-sKEM1024.
+This specification uses a variant of ML-KEM-1024 {{FIPS203}}, which we therefore denote by ML-BUA-sKEM-1024.
 It is specified in {{ML-BUA-sKEM}}.
-This is instantiated with "Kemeleon - ML-KEM1024" {{!KEMELEON=I-D.irtf-cfrg-kemeleon}}. Note that, while
+This is instantiated with "Kemeleon - ML-KEM-1024" {{!KEMELEON=I-D.irtf-cfrg-kemeleon}}. Note that, while
 Kemeleon provides uniform encoding for KEM ciphertexts and public keys, we only
-require uniform encoding for public keys. Future specifications can replace ML-BUA-sKEM1024
+require uniform encoding for public keys. Future specifications can replace ML-BUA-sKEM-1024
 with another splittable binary UPK-ANO-KEM that is more efficient if one becomes available.
 
 ### ML-BUA-sKEM {#ML-BUA-sKEM}
@@ -1597,7 +1611,8 @@ This section gives a RECOMMENDED configuration for each of the four protocols
 specified in this document. The configurations are nested in the same way as the
 protocols themselves. Moreover, each names only the components its protocol actually
 uses, and a protocol that runs another as a stage inherits that stage's entries. As a
-result, {{config-cpaceoquakeplus}} is the union of all four.
+result, {{config-cpaceoquakeplus}} is the union of all four, with X-Wing in place of
+ML-KEM-768 as the password confirmation KEM.
 
 The parameters in {{config-params}} are common to all four configurations.
 
@@ -1626,7 +1641,7 @@ OQUAKE ({{oquake}}) is a symmetric PAKE, so it requires neither a verifier-deriv
 KSF nor the KEM used for password confirmation. Because only one KDF is present,
 no prefix is needed.
 
-- BUA-sKEM: ML-BUA-sKEM1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
+- BUA-sKEM: ML-BUA-sKEM-1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
 - KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "1a79cc540de75c41a0b6bb4c83cc38d0121954823848d17272957b3b9724a5ab" (a randomly generated 32-byte string)
@@ -1639,9 +1654,9 @@ derive the verifier and seed at registration. It therefore extends
 {{config-oquake}} with the "PC-" entries, and the OQUAKE KDF takes the "PAKE-"
 prefix to distinguish it from the password confirmation KDF.
 
-- BUA-sKEM: ML-BUA-sKEM1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
+- BUA-sKEM: ML-BUA-sKEM-1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
 - PAKE-KDF: HKDF-SHA-256
-- KEM: X-Wing {{XWING}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
+- KEM: ML-KEM-768 {{FIPS203}}, where Nseed = 64, Nct = 1088, and Npk = 1184.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nverifier + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
 - H: SHA256
@@ -1654,7 +1669,7 @@ extends {{config-oquake}} with the CPace group and hash.
 
 - CPace-Group: CPACE-RISTR255-SHA512 {{Section 4 of CPACE}}
 - CPace-Hash: SHA-512
-- BUA-sKEM: ML-BUA-sKEM1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
+- BUA-sKEM: ML-BUA-sKEM-1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
 - PAKE-KDF: HKDF-SHA-256
 - H: SHA256
 - DST: "f6b86c2506db08800872a1b3fb9584a79f34b51226d441a83d7a07fa2e9d6078" (a randomly generated 32-byte string)
@@ -1662,12 +1677,13 @@ extends {{config-oquake}} with the CPace group and hash.
 ## CPaceOQUAKE+ {#config-cpaceoquakeplus}
 
 CPaceOQUAKE+ ({{CPaceOQUAKEplus}}) runs CPace as Stage 1 and OQUAKE+ as Stage 2,
-and so uses every component named above. This is the configuration to which the
+and so uses every component named above, with X-Wing in place of ML-KEM-768 as the
+password confirmation KEM, since it targets hybrid security. This is the configuration to which the
 test vectors in this document correspond.
 
 - CPace-Group: CPACE-RISTR255-SHA512 {{Section 4 of CPACE}}
 - CPace-Hash: SHA-512
-- BUA-sKEM: ML-BUA-sKEM1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
+- BUA-sKEM: ML-BUA-sKEM-1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
 - PAKE-KDF: HKDF-SHA-256
 - KEM: X-Wing {{XWING}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
@@ -1679,7 +1695,7 @@ test vectors in this document correspond.
 
 Other documents can define configurations as needed for their use case, subject to the following requirements:
 
-1. KEM MUST be a hybrid KEM, i.e., one that achieves both classical and post-quantum security.
+1. When targeting hybrid security, KEM MUST be a hybrid KEM, i.e., one that achieves both classical and post-quantum security.
 2. The parameters must be chosen so they correspond with this KEM. E.g., Nseed must have the correct length.
 3. A configuration MUST specify every component used by the protocol it configures,
    as listed in the corresponding subsection above.
@@ -1805,9 +1821,9 @@ yields a capability reusable against any server using that group: a single live 
 server, plus a confirmation or subsequent-traffic verification signal, is then enough to
 brute-force the password offline with classical computation alone.
 
-This principle applies equally to EKE-style PAKEs, including KEM-based
-compilers such as OQUAKE (see {{ABJ25}}): the first protocol flow is, conceptually, a
-password-encrypted public key or ciphertext, so an attacker who recovers the password by breaking
+This principle applies equally to EKE-style PAKEs, including one-encryption (OEKE)
+variants such as the KEM-based compiler OQUAKE: the first protocol flow
+is a password-encrypted public key, so an attacker who recovers the password by breaking
 the KEM's hardness assumption (D-MLWE, for the ML-KEM-based instantiation in this document) can
 decrypt that flow and derive the identical session key an honest party would. The password-hiding
 failure of OQUAKE described in {{CPaceOQUAKE}} and {{hybrid-design}} is the concrete
@@ -1936,7 +1952,9 @@ The compiler techniques underlying this document's design are recent and remain 
 development. The KEM-to-PAKE compiler underlying OQUAKE {{ABJ25}}, the timing side-channel fix
 required to use it safely with ML-KEM {{TEMPO}}, the PAKE combiners used to hybridize it with
 CPace {{HR24}}{{LL24}}, and closely related asymmetric PAKE compilers {{Gu24}}{{LLH24}} were all
-published in 2024 and 2025. The security analysis backing this document's specific composition
+published in 2024 and 2025. {{GRSV25}} takes a different approach, constructing a hybrid PAKE
+from a combiner of obfuscated KEMs; this relies on a non-standard KEM with larger public keys and
+ciphertexts. The security analysis backing this document's specific composition
 {{VJWYMS25}} is similarly new. Concretely, {{TEMPO}} identifies and fixes a timing side channel in
 OQUAKE's ML-KEM key-generation step (see {{timing-and-tempo}}) that was only discovered in 2025,
 after OQUAKE's core compiler had already been analyzed, illustrating that this design space is
@@ -1988,11 +2006,11 @@ We have the following requirements:
 
 For ML-BUA-sKEM, if we set Kemeleon.sec_param to 256, it is as hard or harder to break public key and ciphertext uniformity as it is to break indistinguishability, so we discuss all three properties at once.
 
-For ML-BUA-sKEM1024, the resistance to classical attacks is approximately `253 - qq` bits of security. So for qq = 64, classical hardness is approximately 189 bits of security. The resistance to quantum attacks is approximately `230 - qq` bits of security. So for qq = 64, quantum hardness is approximately 166 bits of security.
+For ML-BUA-sKEM-1024, the resistance to classical attacks is approximately `253 - qq` bits of security. So for qq = 64, classical hardness is approximately 189 bits of security. The resistance to quantum attacks is approximately `230 - qq` bits of security. So for qq = 64, quantum hardness is approximately 166 bits of security.
 
 The ML-BUA-sKEM key is 32 bytes, so this satisfies the requirements.
 
-ML-BUA-sKEM1024 is built on ML-KEM1024, whose failure probability is 2^-175.2. This is slightly too large, but we deem it acceptable: the chance that an adversary encounters a failure is purely statistical and very small.
+ML-BUA-sKEM-1024 is built on ML-KEM-1024, whose failure probability is 2^-175.2. This is slightly too large, but we deem it acceptable: the chance that an adversary encounters a failure is purely statistical and very small.
 
 
 ## Parameters for OQUAKE+ {#params-oquakeplus}
@@ -2010,7 +2028,7 @@ the requirements in {{params-oquake}}, we have:
 
 Here Nseed refers to KEM.Nseed, the seed length of the KEM used for password
 confirmation, and not to BUA-sKEM.Nseed. For the KEM in {{config-oquakeplus}} we
-have Nseed = 32.
+have Nseed = 64, and for the KEM in {{config-cpaceoquakeplus}} we have Nseed = 32.
 For consistency, the spec uses Nverifier = 32.
 We ignore the KEM failure following the same reasoning as in {{params-oquake}}.
 
@@ -2370,8 +2388,8 @@ that keep each PDU within the limit, rather than expecting a net saving.
 
 The following table gives the size in octets of each protocol message under the
 RECOMMENDED configuration in {{config-cpaceoquakeplus}}, excluding any framing
-added by the transport. Sizes for the other configurations follow from the same
-field lengths.
+added by the transport. Sizes for the other configurations follow from their
+respective field lengths.
 
 | Message | Fields | Octets |
 |---|---|---|
