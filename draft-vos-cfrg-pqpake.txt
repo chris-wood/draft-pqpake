@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                               Apple, Inc.
 Intended status: Informational                                S. Jarecki
-Expires: 29 March 2027                  University of California, Irvine
+Expires: 1 April 2027                   University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                       25 September 2026
+                                                       28 September 2026
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 March 2027.
+   This Internet-Draft will expire on 1 April 2027.
 
 Copyright Notice
 
@@ -306,6 +306,10 @@ Table of Contents
       bytes[l..] refers to the slice of the byte array bytes starting at
       l until the end of bytes, i.e., bytes[l..] = bytes[l..len(bytes)].
 
+   *  The value None denotes an optional input that is not provided.
+      Wherever such an input is used as a byte string, e.g., in a
+      concatenation, it is equivalent to the empty string b"".
+
    All algorithms and procedures described in this document are laid out
    in a Python-like pseudocode.  Each function takes a set of inputs and
    parameters and produces a set of output values.  Parameters become
@@ -364,9 +368,12 @@ Table of Contents
 
 4.2.  Splittable binary KEM
 
+   A KEM is binary if every byte string of length Npk is a valid public
+   key, i.e., Encaps accepts any such string.
+
    A binary KEM with uniform public keys and anonymous ciphertexts,
-   denoted a UPK-ANO-KEM, supports the same functions as defined above
-   for a KEM, and it must also be IND-CCA secure, but it must also
+   denoted a binary UPK-ANO-KEM, supports the same functions as defined
+   above for a KEM, and it must also be IND-CCA secure, but it must also
    achieve two additional security properties.  Namely, in addition to
    IND-CCA security, a binary UPK-ANO-KEM requires that:
 
@@ -522,6 +529,11 @@ def Encaps(upk):
 
    *  Nx: The output size of the Extract() function in bytes.
 
+   The security analysis of the protocols in this document models the
+   KDF as a random oracle.  The KDF MUST therefore be one that is
+   reasonably modeled as a random oracle, such as HKDF [RFC5869]
+   instantiated with SHA-256.
+
 4.4.  Key Stretching Function
 
    This specification makes use of a Key Stretching Function (KSF),
@@ -632,7 +644,9 @@ def Encaps(upk):
    Init takes as input the initiator's PRS, a public_context, and a
    secret_context.  It produces a state for the initiator to store, as
    well as a protocol message that is sent to the responder.  Its
-   implementation is as follows.
+   implementation is as follows.  In the comments, H denotes the random
+   oracle of the protocol's security analysis, which this document
+   instantiates with the KDF (Section 4.3).
 
 OQUAKE.Init
 
@@ -662,7 +676,7 @@ def Init(PRS, public_context, secret_context):
 
   r = random(3 * Nsec)
 
-  // T = XOR(t, H(public_context, effective_PRS, ⍴, r))
+  // T = XOR(ut, H(public_context, effective_PRS, ⍴, r))
   prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   T = XOR(ut, T_pad)
@@ -1137,19 +1151,19 @@ def Verify(state, server_confirm_target):
    For symmetric PAKEs adhering to the interface described in Section 5,
    the combiner works as follows.
 
-               Client                  Server
-                 |                       |
-                 |     +----------+      |
-                 |     | Stage 1  |      |
-        PRS ---->+---->|   PAKE   |<-----+<---- PRS
-                       +----------+
-                            |
-                           SK1
-                            |
-                       +----v-----+
-                       | Stage 2  |
-                       |   PAKE   |
-                       +----------+
+               Client                 Server
+                 |                      |
+                 |     +---------+      |
+                 |     | Stage 1 |      |
+        PRS ---->+---->|  PAKE   |<-----+<---- PRS
+                 |     +---------+      |
+                 |          |           |
+                 |    sec_ctx=SK1       |
+                 |          |           |
+                 |     +---------+      |
+                 |     | Stage 2 |      |
+        PRS ---->+---->|  PAKE   |<-----+<---- PRS
+                       +---------+
                          |      |
                          |      |
      client_key <--------+      +------> server_key
@@ -1717,9 +1731,6 @@ def ResponderFinish(ctx, msg5):
 
    *  Nkey = 32
 
-   For the CPace-based configurations, Nkey = 32 is achieved by choosing
-   H in CPace with H.bmax_in_bytes = 32.
-
 8.2.  OQUAKE
 
    OQUAKE (Section 6.1) is a symmetric PAKE, so it requires neither a
@@ -1730,8 +1741,6 @@ def ResponderFinish(ctx, msg5):
       256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
 
    *  KDF: HKDF-SHA-256
-
-   *  H: SHA256
 
    *  DST:
       "1a79cc540de75c41a0b6bb4c83cc38d0121954823848d17272957b3b9724a5ab"
@@ -1759,8 +1768,6 @@ def ResponderFinish(ctx, msg5):
    *  PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nverifier + KEM.Nseed,
       m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) [ARGON2]
 
-   *  H: SHA256
-
    *  DST:
       "72bc7dff23f85f771e1475165f32387db27f5082d49bdb79a2abb29623a9f3e8"
       (a randomly generated 32-byte string)
@@ -1770,7 +1777,7 @@ def ResponderFinish(ctx, msg5):
    CPaceOQUAKE (Section 7.1) runs CPace as Stage 1 and OQUAKE as Stage
    2, so it extends Section 8.2 with the CPace group and hash.
 
-   *  CPace-Group: CPACE-RISTR255-SHA512 Section 4 of [CPACE]
+   *  CPace-Group: CPACE-RISTR255-SHA512 Section 5 of [CPACE]
 
    *  CPace-Hash: SHA-512
 
@@ -1778,8 +1785,6 @@ def ResponderFinish(ctx, msg5):
       256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
 
    *  PAKE-KDF: HKDF-SHA-256
-
-   *  H: SHA256
 
    *  DST:
       "f6b86c2506db08800872a1b3fb9584a79f34b51226d441a83d7a07fa2e9d6078"
@@ -1793,7 +1798,7 @@ def ResponderFinish(ctx, msg5):
    security.  This is the configuration to which the test vectors in
    this document correspond.
 
-   *  CPace-Group: CPACE-RISTR255-SHA512 Section 4 of [CPACE]
+   *  CPace-Group: CPACE-RISTR255-SHA512 Section 5 of [CPACE]
 
    *  CPace-Hash: SHA-512
 
@@ -1808,8 +1813,6 @@ def ResponderFinish(ctx, msg5):
 
    *  PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nverifier + KEM.Nseed,
       m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) [ARGON2]
-
-   *  H: SHA256
 
    *  DST:
       "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672"
@@ -1837,7 +1840,7 @@ def ResponderFinish(ctx, msg5):
    and the KSF with scrypt, leaving every other entry in Section 8.5
    unchanged:
 
-   *  CPace-Group: CPACE-P256_XMD:SHA-256_SSWU_NU_-SHA256 Section 4 of
+   *  CPace-Group: CPACE-P256_XMD:SHA-256_SSWU_NU_-SHA256 Section 5 of
       [CPACE]
 
    *  CPace-Hash: SHA-256
@@ -2215,6 +2218,11 @@ def ResponderFinish(ctx, msg5):
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
 
+   [RFC5869]  Krawczyk, H. and P. Eronen, "HMAC-based Extract-and-Expand
+              Key Derivation Function (HKDF)", RFC 5869,
+              DOI 10.17487/RFC5869, May 2010,
+              <https://www.rfc-editor.org/rfc/rfc5869>.
+
    [RFC8017]  Moriarty, K., Ed., Kaliski, B., Jonsson, J., and A. Rusch,
               "PKCS #1: RSA Cryptography Specifications Version 2.2",
               RFC 8017, DOI 10.17487/RFC8017, November 2016,
@@ -2372,9 +2380,7 @@ A.2.  Parameters for OQUAKE+
 
 A.3.  Parameters for CPace
 
-   We refer to the CPace [CPACE].  This standard requires Nkey, the
-   number of bytes in CPace's session key, to be 32, so one must set
-   H.bmax_in_bytes = 32.
+   We refer to [CPACE] for the parameters of CPace.
 
 A.4.  Parameters for CPaceOQUAKE
 
@@ -2435,7 +2441,16 @@ Appendix B.  CPace Wrapper
    a session identifier (sid); CI may carry confidential information and
    is never sent on the wire, whereas sid is public and is additionally
    bound into the session key.  Accordingly, CPace uses the
-   secret_context as its CI and the public_context as its sid.
+   secret_context as its CI and the public_context as its sid.  CPace's
+   sid is therefore the entire public_context, e.g.,
+   EncodePublicContext(sid, U, S) (Appendix C.1), rather than the
+   session identifier sid itself.
+
+   The functions below are parameterized by a group environment G and a
+   hash function H, both as specified in [CPACE].  From G, they use
+   G.calculate_generator, G.sample_scalar, G.scalar_mult, and
+   G.scalar_mult_vfy, the neutral element G.I, and the domain-separation
+   identifier G.DSI.  From H, they use H.hash.
 
 B.1.  Initiation
 
