@@ -257,6 +257,9 @@ The following functions and operators are used throughout the document.
 - The notation `bytes[l..h]` refers to the slice of byte array `bytes` starting
   at index `l` and ending at index `h-1`. For example, given `bytes = (0x00, 0x01, 0x02)`, then `bytes[0..1] = 0x00` and `bytes[0..3] = (0x00, 0x01, 0x02)`. Similarly, the notation `bytes[l..]` refers to the slice of the byte
   array `bytes` starting at `l` until the end of `bytes`, i.e., `bytes[l..] = bytes[l..len(bytes)]`.
+- The value `None` denotes an optional input that is not provided. Wherever such an
+  input is used as a byte string, e.g., in a concatenation, it is equivalent to the
+  empty string `b""`.
 
 All algorithms and procedures described in this document are laid out
 in a Python-like pseudocode. Each function takes a set of inputs and parameters
@@ -302,8 +305,11 @@ for CPaceOQUAKE+.
 
 ## Splittable binary KEM {#deps-BUA-sKEM}
 
+A KEM is binary if every byte string of length Npk is a valid public key, i.e.,
+Encaps accepts any such string.
+
 A binary KEM with uniform public keys and anonymous ciphertexts, denoted
-a UPK-ANO-KEM, supports the same functions as defined above for
+a binary UPK-ANO-KEM, supports the same functions as defined above for
 a KEM, and it must also be IND-CCA secure, but it must also achieve
 two additional security properties. Namely, in addition to IND-CCA
 security, a binary UPK-ANO-KEM requires that:
@@ -448,6 +454,10 @@ This specification uses a KDF with the following API and parameters:
   into `L` bytes of output keying material.
 - Nx: The output size of the `Extract()` function in bytes.
 
+The security analysis of the protocols in this document models the KDF as a random
+oracle. The KDF MUST therefore be one that is reasonably modeled as a random oracle,
+such as HKDF {{!RFC5869}} instantiated with SHA-256.
+
 
 ## Key Stretching Function {#deps-ksf}
 
@@ -540,6 +550,8 @@ The byte-level encoding of the OQUAKE protocol messages is specified in {{encodi
 Init takes as input the initiator's PRS, a public_context, and a secret_context.
 It produces a state for the initiator to store, as well as a
 protocol message that is sent to the responder. Its implementation is as follows.
+In the comments, H denotes the random oracle of the protocol's security analysis,
+which this document instantiates with the KDF ({{deps-symmetric}}).
 
 ~~~
 OQUAKE.Init
@@ -570,7 +582,7 @@ def Init(PRS, public_context, secret_context):
 
   r = random(3 * Nsec)
 
-  // T = XOR(t, H(public_context, effective_PRS, ⍴, r))
+  // T = XOR(ut, H(public_context, effective_PRS, ⍴, r))
   prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   T = XOR(ut, T_pad)
@@ -1048,19 +1060,19 @@ For symmetric PAKEs adhering to the interface described in {{overview}},
 the combiner works as follows.
 
 ~~~ aasvg
-            Client                  Server
-              |                       |
-              |     +----------+      |
-              |     | Stage 1  |      |
-     PRS ---->+---->|   PAKE   |<-----+<---- PRS
-                    +----------+
-                         |
-                        SK1
-                         |
-                    +----v-----+
-                    | Stage 2  |
-                    |   PAKE   |
-                    +----------+
+            Client                 Server
+              |                      |
+              |     +---------+      |
+              |     | Stage 1 |      |
+     PRS ---->+---->|  PAKE   |<-----+<---- PRS
+              |     +---------+      |
+              |          |           |
+              |    sec_ctx=SK1       |
+              |          |           |
+              |     +---------+      |
+              |     | Stage 2 |      |
+     PRS ---->+---->|  PAKE   |<-----+<---- PRS
+                    +---------+
                       |      |
                       |      |
   client_key <--------+      +------> server_key
@@ -1632,9 +1644,6 @@ The RECOMMENDED parameters, common to all configurations below, are (see
 - Nsec = 32
 - Nkey = 32
 
-For the CPace-based configurations, Nkey = 32 is achieved by choosing H in CPace
-with H.bmax_in_bytes = 32.
-
 ## OQUAKE {#config-oquake}
 
 OQUAKE ({{oquake}}) is a symmetric PAKE, so it requires neither a verifier-deriving
@@ -1643,7 +1652,6 @@ no prefix is needed.
 
 - BUA-sKEM: ML-BUA-sKEM-1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
 - KDF: HKDF-SHA-256
-- H: SHA256
 - DST: "1a79cc540de75c41a0b6bb4c83cc38d0121954823848d17272957b3b9724a5ab" (a randomly generated 32-byte string)
 
 ## OQUAKE+ {#config-oquakeplus}
@@ -1659,7 +1667,6 @@ prefix to distinguish it from the password confirmation KDF.
 - KEM: ML-KEM-768 {{FIPS203}}, where Nseed = 64, Nct = 1088, and Npk = 1184.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nverifier + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
-- H: SHA256
 - DST: "72bc7dff23f85f771e1475165f32387db27f5082d49bdb79a2abb29623a9f3e8" (a randomly generated 32-byte string)
 
 ## CPaceOQUAKE {#config-cpaceoquake}
@@ -1667,11 +1674,10 @@ prefix to distinguish it from the password confirmation KDF.
 CPaceOQUAKE ({{CPaceOQUAKE}}) runs CPace as Stage 1 and OQUAKE as Stage 2, so it
 extends {{config-oquake}} with the CPace group and hash.
 
-- CPace-Group: CPACE-RISTR255-SHA512 {{Section 4 of CPACE}}
+- CPace-Group: CPACE-RISTR255-SHA512 {{Section 5 of CPACE}}
 - CPace-Hash: SHA-512
 - BUA-sKEM: ML-BUA-sKEM-1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
 - PAKE-KDF: HKDF-SHA-256
-- H: SHA256
 - DST: "f6b86c2506db08800872a1b3fb9584a79f34b51226d441a83d7a07fa2e9d6078" (a randomly generated 32-byte string)
 
 ## CPaceOQUAKE+ {#config-cpaceoquakeplus}
@@ -1681,14 +1687,13 @@ and so uses every component named above, with X-Wing in place of ML-KEM-768 as t
 password confirmation KEM, since it targets hybrid security. This is the configuration to which the
 test vectors in this document correspond.
 
-- CPace-Group: CPACE-RISTR255-SHA512 {{Section 4 of CPACE}}
+- CPace-Group: CPACE-RISTR255-SHA512 {{Section 5 of CPACE}}
 - CPace-Hash: SHA-512
 - BUA-sKEM: ML-BUA-sKEM-1024 {{deps-BUA-sKEM}}, where Kemeleon.sec_param = 256, Nseed = 64, Npk = 1594, Nt = 1562, N⍴ = 32, and Nct = 1568.
 - PAKE-KDF: HKDF-SHA-256
 - KEM: X-Wing {{XWING}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
 - PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nverifier + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
-- H: SHA256
 - DST: "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672" (a randomly generated 32-byte string)
 
 ## Defining New Configurations
@@ -1706,7 +1711,7 @@ For instance, one possible additional configuration for CPaceOQUAKE+ replaces th
 CPace group and hash with their NIST P-256 counterparts and the KSF with scrypt,
 leaving every other entry in {{config-cpaceoquakeplus}} unchanged:
 
-- CPace-Group: CPACE-P256_XMD:SHA-256_SSWU_NU_-SHA256 {{Section 4 of CPACE}}
+- CPace-Group: CPACE-P256_XMD:SHA-256_SSWU_NU_-SHA256 {{Section 5 of CPACE}}
 - CPace-Hash: SHA-256
 - PC-KSF: Scrypt(N = 32768, r = 8, p = 1) {{!SCRYPT=RFC7914}}
 - DST: "b840fa4d4b4caec9e25d13d8c016cfe93e7468d54e936490bd0b0a3ffca1a01b" (a randomly generated 32-byte string)
@@ -2035,8 +2040,7 @@ We ignore the KEM failure following the same reasoning as in {{params-oquake}}.
 
 ## Parameters for CPace {#params-cpace}
 
-We refer to the CPace {{CPACE}}. This standard requires Nkey, the number of bytes in
-CPace's session key, to be 32, so one must set H.bmax_in_bytes = 32.
+We refer to {{CPACE}} for the parameters of CPace.
 
 
 ## Parameters for CPaceOQUAKE {#params-cpaceoquake}
@@ -2084,7 +2088,14 @@ match. Otherwise, they obtain random keys. In exceptional cases, the protocol ab
 CPace derives its generator from PRS, a channel identifier (CI), and a session identifier (sid);
 CI may carry confidential information and is never sent on the wire, whereas sid is public and is
 additionally bound into the session key. Accordingly, CPace uses the secret_context as its CI and the
-public_context as its sid.
+public_context as its sid. CPace's sid is therefore the entire public_context, e.g.,
+`EncodePublicContext(sid, U, S)` ({{public-context-encoding}}), rather than the session identifier
+sid itself.
+
+The functions below are parameterized by a group environment G and a hash function H, both as
+specified in {{CPACE}}. From G, they use `G.calculate_generator`, `G.sample_scalar`,
+`G.scalar_mult`, and `G.scalar_mult_vfy`, the neutral element `G.I`, and the domain-separation
+identifier `G.DSI`. From H, they use `H.hash`.
 
 ## Initiation
 
