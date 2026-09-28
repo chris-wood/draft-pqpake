@@ -2120,13 +2120,14 @@ def Finish(state, resp_msg):
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-hybrid-pake-cpaceoquake" class="section-name selfRef">Hybrid PAKE: CPaceOQUAKE</a>
       </h2>
 <p id="section-7-1">This section specifies the hybrid PAKE called CPaceOQUAKE.
-It is a sequential combination of two PAKEs, denoted Stage 1 and Stage 2, that both implement the common interface defined in <a href="#overview" class="auto internal xref">Section 5</a>, and composes them into one hybrid PAKE. This combiner is based on the `Sequential PAKE Combiner' protocol proposed by <span>[<a href="#HR24" class="cite xref">HR24</a>]</span>.
+It is built on a sequential combiner that takes two PAKEs, denoted Stage 1 and Stage 2, that both implement the common interface defined in <a href="#overview" class="auto internal xref">Section 5</a>, and composes them into one hybrid PAKE.
+This combiner is based on the `Sequential PAKE Combiner' protocol proposed by <span>[<a href="#HR24" class="cite xref">HR24</a>]</span>.
 A close variant was also analyzed in <span>[<a href="#LL24" class="cite xref">LL24</a>]</span>.
 CPaceOQUAKE is the instantiation of this combiner with CPace (<a href="#cpace" class="auto internal xref">Appendix B</a>) as Stage 1 and OQUAKE (<a href="#oquake" class="auto internal xref">Section 6</a>) as Stage 2, which assumes that OQUAKE is instantiated with a quantum-resistant BUA-sKEM.
 The augmented version, CPaceOQUAKE+, is specified in <a href="#CPaceOQUAKEplus" class="auto internal xref">Section 8.3</a>.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">Whereas running these two PAKEs in parallel realizes a worst-of-both worlds PAKE, this sequential composition realizes a combined PAKE that remains as secure as the strongest of its two component PAKEs.
 In other words, it resists attacks that break either sub-PAKE.
-For example, it remains secure either if a quantum-capable attacker breaks CPace or if there is a flaw in the OQUAKE implementation.
+For example, it remains secure either if a quantum-capable attacker breaks CPace or if there is a flaw in the implementation of OQUAKE.
 The reason a parallel combination of CPace and OQUAKE does not achieve best-of-both-worlds security is that it requires both underlying PAKEs to hide the password unconditionally.
 For more information, see <a href="#hybrid-design" class="auto internal xref">Section 11.1</a>.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <p id="section-7-3">The sequential combiner overcomes this limitation: it only requires Stage 1's PAKE to unconditionally hide the password.
@@ -2331,7 +2332,7 @@ def Respond(PRS, public_context, secret_context, init_msg):
         <h3 id="name-client-finish">
 <a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-client-finish" class="section-name selfRef">Client Finish</a>
         </h3>
-<p id="section-7.3-1">The client finishes CPace and OQUAKE.
+<p id="section-7.3-1">The client finishes CPace and responds to OQUAKE.
 OQUAKE's resulting session key is the CPaceOQUAKE session key.
 The client <span class="bcp14">MUST</span> abort if its received message does not have the correct length.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-7.3-2">
@@ -2417,13 +2418,13 @@ OQUAKE+ (<a href="#oquakeplus" class="auto internal xref">Section 8.2</a>) appli
         <h3 id="name-pake-to-apake-transformatio">
 <a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-pake-to-apake-transformatio" class="section-name selfRef">PAKE-to-aPAKE Transformation</a>
         </h3>
-<p id="section-8.1-1">The transformation transform a symmetric PAKE into an asymmetric (augmented) PAKE, in which the
+<p id="section-8.1-1">The transformation transforms a symmetric PAKE into an asymmetric (augmented) PAKE, in which the
 server stores a verifier for the client's password, instead of the password itself.
 It is a close variant of the `augmented PAKE' constructions presented in <span>[<a href="#LLH24" class="cite xref">LLH24</a>]</span> and in <span>[<a href="#Gu24" class="cite xref">Gu24</a>]</span>.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-2">The verifier consists of two parts that are derived by computing a key stretching function on the client's password.
-The first half of the output of the KSF is denoted v, which makes up the first part of the verifier.
-The second half of the KSF output, which we call the seed, is used to derive a KEM key pair, of which the public key is the second part of the verifier.
-Note that this does not have to be a BUA-sKEM.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+The first Nverifier bytes of the KSF output are denoted v, which makes up the first part of the verifier.
+The remaining KEM.Nseed bytes, which we call the seed, are used to derive a KEM key pair, of which the public key is the second part of the verifier.
+This KEM does not have to be a BUA-sKEM.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
 <p id="section-8.1-3">In each session, the client and server first run the symmetric PAKE with v instead of the PRS, yielding session key SK.
 The server then uses SK and the KEM public key pk to challenge the client to prove knowledge of the seed (<a href="#pwconf" class="auto internal xref">Section 8.1.2</a>).
 Password confirmation relies on SK for confidentiality, so it cannot be used as a standalone protocol and <span class="bcp14">SHOULD NOT</span> be used outside of this transformation.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
@@ -2558,12 +2559,12 @@ The server stores this information corresponding to the client for future use in
 This phase requires a secure channel from client to server in order to transfer the password verifier and public key.
 The salt can be sent in plain text.
 In some cases, there may not be a secure channel, but the server may already know the password.
-In such cases, the server <span class="bcp14">MAY</span> instead compute the verifier on behalf of the client, store it, and erase the password.<a href="#section-8.1.1.2-1" class="pilcrow">¶</a></p>
+In such cases, the server <span class="bcp14">MAY</span> instead choose the salt, compute the verifier on behalf of the client using GenVerifiers, store it, and erase the password and the seed.<a href="#section-8.1.1.2-1" class="pilcrow">¶</a></p>
 <p id="section-8.1.1.2-2">We recommend that the salt is a random byte string: <code>salt = random(32)</code>.
 The client needs the salt before it sends its first protocol message, since the symmetric PAKE already runs over v.
 It can store the salt, or derive it from some client-specific value that it knows and can retain locally.
-Otherwise, it obtains the salt from the server, which can send it in plain text, in an additional roundtrip before the protocol starts.
-That roundtrip requires the client to first identify its registration to the server.<a href="#section-8.1.1.2-2" class="pilcrow">¶</a></p>
+Otherwise, it obtains the salt from the server, which can send it in plain text, in an additional round trip before the protocol starts.
+That round trip requires the client to first identify its registration to the server.<a href="#section-8.1.1.2-2" class="pilcrow">¶</a></p>
 <p id="section-8.1.1.2-3">A high level flow overview of the registration flow is below.<a href="#section-8.1.1.2-3" class="pilcrow">¶</a></p>
 <div id="section-8.1.1.2-4">
               <div class="alignLeft art-svg artwork" id="section-8.1.1.2-4.1">
@@ -2617,8 +2618,8 @@ That roundtrip requires the client to first identify its registration to the ser
 Both parties input key SK output by the symmetric PAKE and a public_context.
 The server must also input the client's registered public key pk, while the client inputs the corresponding seed.
 The server creates a challenge in the form of a KEM ciphertext encapsulated for that pk, and encrypted with SK.
-The client decrypts SK and proves that it can decapsulate the KEM ciphertext.
-It does so by deriving the KEM's secret decapsulation from the seed.<a href="#section-8.1.2-1" class="pilcrow">¶</a></p>
+The client decrypts the ciphertext using SK and proves that it can decapsulate it.
+It does so by deriving the KEM's secret decapsulation key from the seed.<a href="#section-8.1.2-1" class="pilcrow">¶</a></p>
 <p id="section-8.1.2-2">The state returned by Challenge holds the server's candidate session key.
 This key <span class="bcp14">MUST NOT</span> be released to the calling application, used to protect traffic, or otherwise acted upon before Verify has confirmed the client's response.
 Implementations <span class="bcp14">SHOULD</span> keep the state opaque so that server_key is reachable only as the return value of Verify.<a href="#section-8.1.2-2" class="pilcrow">¶</a></p>
@@ -2943,7 +2944,7 @@ def Verify(state, response):
 <a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-cpaceoquake-protocol" class="section-name selfRef">CPaceOQUAKE+ Protocol</a>
         </h3>
 <p id="section-8.3-1">CPaceOQUAKE+ is the hybrid aPAKE obtained by applying the transformation of <a href="#apake-transform" class="auto internal xref">Section 8.1</a> to CPaceOQUAKE (<a href="#CPaceOQUAKE" class="auto internal xref">Section 7</a>).
-It is a five-message aPAKE that provides security against both classical and quantum attackers.
+It is a five-message aPAKE that provides security against both classical and quantum-capable attackers.
 The first three messages are entirely CPaceOQUAKE, while the last two messages are the password confirmation protocol.
 To ensure hybrid post-quantum security, the KEM used during password confirmation must be a hybrid KEM.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
 <p id="section-8.3-2">Upon successful completion of the entire protocol, the client and server will share a
@@ -3503,7 +3504,7 @@ improving overall confidence in the design.<a href="#section-11.1-3" class="pilc
         </h3>
 <p id="section-11.2-1">A PAKE is unconditionally password hiding if its protocol messages remain statistically
 independent of the password even when every computational assumption underlying the PAKE fails.
-Few efficient PAKEs achieve this: as discussed in <a href="#CPaceOQUAKE" class="auto internal xref">Section 7</a>, CPace does, but
+Few efficient PAKEs achieve this: CPace does, but
 OQUAKE does not, and this is true of PAKEs generally, not just the ones specified in this document.
 This property is what makes CPace safe to use as the first stage of a sequential combiner: its
 output key is never subjected to a verification check on its own, so an attacker who breaks the
@@ -3549,7 +3550,7 @@ variants such as the KEM-based compiler OQUAKE: the first protocol flow
 is a password-encrypted public key, so an attacker who recovers the password by breaking
 the KEM's hardness assumption (D-MLWE, for the ML-KEM-based instantiation in this document) can
 decrypt that flow and derive the identical session key an honest party would. The password-hiding
-failure of OQUAKE described in <a href="#CPaceOQUAKE" class="auto internal xref">Section 7</a> and <a href="#hybrid-design" class="auto internal xref">Section 11.1</a> is the concrete
+failure of OQUAKE described in <a href="#hybrid-design" class="auto internal xref">Section 11.1</a> is the concrete
 instance of this general EKE-style argument for the specific construction used in this document.<a href="#section-11.2-4" class="pilcrow">¶</a></p>
 <p id="section-11.2-5">This is precisely why the sequential hybrid composition specified in this document is valuable:
 an attacker must break both a classical and a post-quantum hard problem simultaneously to
