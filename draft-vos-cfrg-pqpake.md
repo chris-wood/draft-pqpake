@@ -454,6 +454,8 @@ This specification uses a KDF with the following API and parameters:
   into `L` bytes of output keying material.
 - Nx: The output size of the `Extract()` function in bytes.
 
+Where an input to a KDF or KSF concatenates several fields, each variable-length field is encoded with `lv_encode`, so that distinct field values always yield distinct inputs.
+
 The security analysis of the protocols in this document models the KDF as a random
 oracle. The KDF MUST therefore be one that is reasonably modeled as a random oracle,
 such as HKDF {{!RFC5869}} instantiated with SHA-256.
@@ -499,6 +501,32 @@ information by prepending or appending it to the returned value. The byte-level
 encoding produced by `EncodePublicContext`, along with the encodings of all
 protocol messages, is specified in {{encodings}}; the main body of this document
 describes protocol messages abstractly as tuples of named fields.
+
+Along with its session key, each PAKE outputs a transcript hash th, computed with the TH function below.
+The th publicly binds to the public_context and to all protocol messages of
+the session.
+When a protocol in this document sequentially composes two sub-protocols, the later protocol uses the preceding's th as its public_context, binding them together.
+Applications can also use th to bind a higher-level protocol to a PAKE session.
+An implementation does not need to expose th to its callers.
+
+~~~
+TH
+
+Input:
+- label, a byte string identifying the protocol
+- f_1, ..., f_n, the fields to hash, byte strings
+
+Output:
+- th, a transcript hash of KDF.Nx bytes
+
+Parameters:
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
+
+def TH(label, f_1, ..., f_n):
+  return KDF.Extract(DST || "TH-" || label,
+                     lv_encode(f_1) || ... || lv_encode(f_n))
+~~~
 
 # Post-Quantum PAKE: OQUAKE {#oquake}
 
@@ -565,7 +593,8 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def Init(PRS, public_context, secret_context):
-  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || public_context || secret_context)
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" ||
+                         lv_encode(public_context) || lv_encode(secret_context))
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   seed = random(BUA-sKEM.Nseed)
@@ -575,25 +604,25 @@ def Init(PRS, public_context, secret_context):
   r = random(3 * Nsec)
 
   // T = XOR(ut, H(public_context, effective_PRS, ⍴, r))
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || r)
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   T = XOR(ut, T_pad)
 
   // s = XOR(r, H(public_context, effective_PRS, ⍴, T))
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || T)
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
   msg = (s, T, ⍴)
 
-  return State(effective_PRS, sk, pk, ⍴, s, T, public_context, secret_context), msg
+  return State(effective_PRS, sk, pk, ⍴, s, T, public_context), msg
 ~~~
 
 ## Response
 
 Respond takes as input the PRS, a public_context, a secret_context, and the initiator's protocol message.
-It produces a protocol message intended to be sent to the initiator and an Nkey-byte symmetric key. Its implementation
-is as follows.
+It produces a protocol message intended to be sent to the initiator, an Nkey-byte symmetric key, and a transcript hash.
+Its implementation is as follows.
 
 ~~~
 OQUAKE.Respond
@@ -607,6 +636,7 @@ Input:
 Output:
 - resp_msg, a protocol message for the responder to send to the initiator
 - key, output shared secret, a byte string of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - BUA-sKEM, a BUA-sKEM instance
@@ -616,39 +646,37 @@ Parameters:
 def Respond(PRS, public_context, secret_context, init_msg):
   (s, T, ⍴) = init_msg
 
-  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || public_context || secret_context)
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" ||
+                         lv_encode(public_context) || lv_encode(secret_context))
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || T)
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || r)
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   ut = XOR(T, T_pad)
 
   pk = BUA-sKEM.Combine(ut, ⍴)
   (k, ct) = BUA-sKEM.Encaps(pk)
 
-  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || s || T || pk || ct || k)
-  intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
-
-  transcript = s || T || ⍴ || ct
-  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || public_context || secret_context || transcript)
-  key = KDF.Expand(prk_final, DST || "key", Nkey)
-
+  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) ||
+                       s || T || pk || ct || k)
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
+  key = KDF.Expand(prk_sk, DST || "key", Nkey)
 
   resp_msg = (ct, h)
+  th = TH("OQUAKE", public_context, s, T, ⍴, ct, h)
 
-  return resp_msg, key
+  return resp_msg, key, th
 ~~~
 
 ## Finish {#quake-finish}
 
 Finish takes as input the initiator-created state that is output from Init
 as well as the responder's reply message resp\_msg. It produces a symmetric key
-that is output to the initiator.
+and a transcript hash that are output to the initiator.
 
 Finish does not raise an error when key confirmation or decapsulation fails.
 Instead, it returns a freshly sampled random key, so that a party that does not
@@ -668,6 +696,7 @@ Input:
 
 Output:
 - key, output shared secret, a byte string of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - BUA-sKEM, a BUA-sKEM instance
@@ -675,26 +704,24 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def Finish(state, resp_msg):
-  (effective_PRS, sk, pk, ⍴, s, T, public_context, secret_context) = state
+  (effective_PRS, sk, pk, ⍴, s, T, public_context) = state
   (ct, h) = resp_msg
+
+  th = TH("OQUAKE", public_context, s, T, ⍴, ct, h)
 
   try:
     k = BUA-sKEM.Decaps(ct, sk)
-    prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || s || T || pk || ct || k)
-
-    intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
-
-    transcript = s || T || ⍴ || ct
-    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || public_context || secret_context || transcript)
-    key = KDF.Expand(prk_final, DST || "key", Nkey)
-
-    h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
-    if h != h_expected:
-      return random(Nkey)
-
-    return key
   catch DecapsError:
-    return random(Nkey)
+    return random(Nkey), th
+
+  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) ||
+                       s || T || pk || ct || k)
+  h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
+  if h != h_expected:
+    return random(Nkey), th
+
+  key = KDF.Expand(prk_sk, DST || "key", Nkey)
+  return key, th
 ~~~
 
 # Hybrid PAKE: CPaceOQUAKE {#CPaceOQUAKE}
@@ -2028,6 +2055,7 @@ The functions below are parameterized by a group environment G and a hash functi
 specified in {{CPACE}}. From G, they use `G.calculate_generator`, `G.sample_scalar`,
 `G.scalar_mult`, and `G.scalar_mult_vfy`, the neutral element `G.I`, and the domain-separation
 identifier `G.DSI`. From H, they use `H.hash`.
+The transcript hash TH ({{overview}}) uses the KDF and DST of the configuration.
 
 ## Initiation
 
@@ -2066,7 +2094,7 @@ CPace.Finish binds the full protocol transcript, which includes both Ya and Yb.
 
 The responder performs the same actions as the initiator.
 Since it already received the initiator's message, it can immediately finish its execution of the protocol.
-It outputs the shared secret and a message Yb intended to be sent to the initiator.
+It outputs the shared secret, a message Yb intended to be sent to the initiator, and a transcript hash.
 
 ~~~
 CPace.Respond
@@ -2080,10 +2108,13 @@ Input:
 Output:
 - ISK, the established shared secret
 - Yb, public point, intended to be sent to the initiator
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - G, a group environment as specified in CPace
 - H, a hash function as specified in CPace
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 Exceptions:
 - CPaceError, raised when an invalid value was encountered in CPace
@@ -2097,16 +2128,17 @@ def Respond(PRS, public_context, secret_context, Ya):
   If K = G.I, raise CPaceError
 
   ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript_ir(Ya, b"", Yb, b""))
+  th = TH("CPace", public_context, Ya, Yb)
 
-  return ISK, Yb
+  return ISK, Yb, th
 ~~~
 
 The functions `lv_cat` and `transcript_ir` are defined in {{CPACE}}. This document does not use CPace's associated data, so ADa and ADb are empty.
 
 ## Finish
 
-The initiator finishes the protocol by combining the state generated by CPace.Init and the message Yb received
-from the responder.
+The initiator finishes the protocol by combining the state generated by CPace.Init and the message Yb received from the responder.
+It outputs the shared secret and a transcript hash.
 
 ~~~
 CPace.Finish
@@ -2118,10 +2150,13 @@ Input:
 
 Output:
 - ISK, the established shared secret
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - G, a group environment as specified in CPace
 - H, a hash function as specified in CPace
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 Exceptions:
 - CPaceError, raised when an invalid value was encountered in CPace
@@ -2133,8 +2168,9 @@ def Finish(state, public_context, Yb):
   If K = G.I, raise CPaceError
 
   ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript_ir(Ya, b"", Yb, b""))
+  th = TH("CPace", public_context, Ya, Yb)
 
-  return ISK
+  return ISK, th
 ~~~
 
 # Message Encodings {#encodings}
