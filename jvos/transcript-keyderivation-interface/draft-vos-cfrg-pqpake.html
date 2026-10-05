@@ -2153,8 +2153,9 @@ For example, it remains secure either if a quantum-capable attacker breaks CPace
 The reason a parallel combination of CPace and OQUAKE does not achieve best-of-both-worlds security is that it requires both underlying PAKEs to hide the password unconditionally.
 For more information, see <a href="#hybrid-design" class="auto internal xref">Section 11.1</a>.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <p id="section-7-3">The sequential combiner overcomes this limitation: it only requires Stage 1's PAKE to unconditionally hide the password.
-The combiner first runs Stage 1, establishing session key SK1, and then runs Stage 2 with secret_context=SK1.
-Stage 2 derives an effective password from (PRS, SK1) and uses it throughout, producing the final session key.
+The combiner first runs Stage 1, establishing session key SK1 and transcript hash th1, and then runs Stage 2 with secret_context=SK1 and public_context=th1.
+Stage 2 derives an effective password from (PRS, th1, SK1) and uses it throughout.
+The final session key is derived from Stage 2's session key, SK1, and Stage 2's transcript hash, which covers both stages.
 See the diagram below.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <div id="section-7-4">
         <div class="alignLeft art-svg artwork" id="section-7-4.1">
@@ -2163,6 +2164,7 @@ See the diagram below.<a href="#section-7-3" class="pilcrow">¶</a></p>
             <path d="M 152,64 L 152,112" fill="none" stroke="black"></path>
             <path d="M 152,176 L 152,224" fill="none" stroke="black"></path>
             <path d="M 168,232 L 168,272" fill="none" stroke="black"></path>
+            <path d="M 192,144 L 192,168" fill="none" stroke="black"></path>
             <path d="M 224,232 L 224,272" fill="none" stroke="black"></path>
             <path d="M 232,64 L 232,112" fill="none" stroke="black"></path>
             <path d="M 232,176 L 232,224" fill="none" stroke="black"></path>
@@ -2196,8 +2198,8 @@ See the diagram below.<a href="#section-7-3" class="pilcrow">¶</a></p>
               <text x="188" y="100">PAKE</text>
               <text x="352" y="100">PRS</text>
               <text x="192" y="132">|</text>
-              <text x="184" y="148">sec_ctx=SK1</text>
-              <text x="192" y="164">|</text>
+              <text x="176" y="148">SK1</text>
+              <text x="216" y="148">th1</text>
               <text x="184" y="196">Stage</text>
               <text x="216" y="196">2</text>
               <text x="40" y="212">PRS</text>
@@ -2218,7 +2220,8 @@ Upon receiving the client's first message, the server finishes CPace and uses it
 The server sends its CPace response along with its first OQUAKE message.
 After that, the client finishes CPace and responds to OQUAKE.<a href="#section-7-7" class="pilcrow">¶</a></p>
 <p id="section-7-8">Unlike OQUAKE, CPaceOQUAKE does not require a shared session identifier sid, although this is strongly recommended.
-The public_context of OQUAKE is prefixed with an extended session identifier derived from random nonces s1 and s2 contributed by both parties, so that it is unique to the session even if the application provides no sid.<a href="#section-7-8" class="pilcrow">¶</a></p>
+The public_context of OQUAKE is CPace's transcript hash, which covers the public_context and the messages Ya and Yb.
+Since each party contributes a fresh Ya or Yb, it is unique to the session even if the application provides no sid.<a href="#section-7-8" class="pilcrow">¶</a></p>
 <p id="section-7-9">See the diagram below for an overview of the protocol flow.
 There are four functions: Init and InitiatorFinish are intended to be called by the client, and Respond and ResponderFinish are intended to be called by the server.
 The byte-level encoding of the protocol messages is specified in <a href="#encodings" class="auto internal xref">Appendix C</a>.<a href="#section-7-9" class="pilcrow">¶</a></p>
@@ -2253,13 +2256,15 @@ The byte-level encoding of the protocol messages is specified in <a href="#encod
               <text x="320" y="180">CPaceOQUAKE.Respond(PRS,pub_ctx,sec_ctx,msg1)</text>
               <text x="220" y="212">msg2</text>
               <text x="88" y="260">client_key,</text>
-              <text x="156" y="260">msg3</text>
-              <text x="184" y="260">=</text>
+              <text x="160" y="260">msg3,</text>
+              <text x="196" y="260">th</text>
+              <text x="216" y="260">=</text>
               <text x="116" y="276">CPaceOQUAKE.InitiatorFinish(</text>
               <text x="64" y="292">PRS,pub_ctx</text>
               <text x="184" y="292">sec_ctx,ctx,msg2)</text>
               <text x="220" y="324">msg3</text>
-              <text x="300" y="372">server_key</text>
+              <text x="272" y="372">server_key,</text>
+              <text x="332" y="372">th</text>
               <text x="352" y="372">=</text>
               <text x="304" y="388">CPaceOQUAKE.ResponderFinish(ctx,msg3)</text>
               <text x="352" y="404">|</text>
@@ -2295,10 +2300,7 @@ Parameters:
 
 def Init(PRS, public_context, secret_context):
   ctx1, Ya = CPace.Init(PRS, public_context, secret_context)
-  s1 = random(32)
-  msg = (s1, Ya)
-
-  return State(ctx1, s1), msg
+  return ctx1, Ya
 </pre><a href="#section-7.1-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2308,8 +2310,8 @@ def Init(PRS, public_context, secret_context):
         <h3 id="name-server-response">
 <a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-server-response" class="section-name selfRef">Server Response</a>
         </h3>
-<p id="section-7.2-1">The server finishes CPace and initiates OQUAKE (Stage 2) using the CPace session key as the
-secret_context for OQUAKE.
+<p id="section-7.2-1">The server finishes CPace and initiates OQUAKE (Stage 2), using the CPace session key as OQUAKE's
+secret_context and the CPace transcript hash as OQUAKE's public_context.
 The server <span class="bcp14">MUST</span> abort if its received message does not have the correct length.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-7.2-2">
 <pre>
@@ -2328,23 +2330,16 @@ Output:
 Parameters:
 - CPace, parameterized instance of CPace
 - OQUAKE, parameterized instance of OQUAKE
-- KDF, a KDF instance
-- DST, domain separation tag, a byte string
 
 def Respond(PRS, public_context, secret_context, init_msg):
-  (s1, Ya) = init_msg
+  Ya = init_msg
 
-  key1, Yb = CPace.Respond(PRS, public_context, secret_context, Ya)
+  key1, Yb, th1 = CPace.Respond(PRS, public_context, secret_context, Ya)
+  ctx2, oquake_init = OQUAKE.Init(PRS, th1, key1)
 
-  s2 = random(32)
-  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
+  resp_msg = (Yb, oquake_init)
 
-  ctx2, oquake_init = OQUAKE.Init(PRS, extended_sid || public_context, key1)
-
-  resp_msg = (s2, Yb, oquake_init)
-
-  return ctx2, resp_msg
+  return State(ctx2, key1), resp_msg
 </pre><a href="#section-7.2-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2355,7 +2350,8 @@ def Respond(PRS, public_context, secret_context, init_msg):
 <a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-client-finish" class="section-name selfRef">Client Finish</a>
         </h3>
 <p id="section-7.3-1">The client finishes CPace and responds to OQUAKE.
-OQUAKE's resulting session key is the CPaceOQUAKE session key.
+It derives the session key from OQUAKE's session key, the CPace session key, and OQUAKE's transcript hash,
+which is also the CPaceOQUAKE transcript hash.
 The client <span class="bcp14">MUST</span> abort if its received message does not have the correct length.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-7.3-2">
 <pre>
@@ -2371,6 +2367,7 @@ Input:
 Output:
 - key, a shared secret of Nkey bytes
 - msg, a protocol message for the initiator to send to the responder
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - CPace, parameterized instance of CPace
@@ -2379,18 +2376,16 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def InitiatorFinish(PRS, public_context, secret_context, state, resp_msg):
-  (ctx1, s1) = state
-  (s2, Yb, oquake_init) = resp_msg
+  ctx1 = state
+  (Yb, oquake_init) = resp_msg
 
-  key1 = CPace.Finish(ctx1, public_context, Yb)
+  key1, th1 = CPace.Finish(ctx1, public_context, Yb)
+  msg, key2, th2 = OQUAKE.Respond(PRS, th1, key1, oquake_init)
 
-  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
+  prk = KDF.Extract(key2, DST || "CPaceOQUAKE" || th2 || key1)
+  client_key = KDF.Expand(prk, DST || "key", Nkey)
 
-  msg, client_key = OQUAKE.Respond(PRS, extended_sid || public_context, key1,
-                                   oquake_init)
-
-  return client_key, msg
+  return client_key, msg, th2
 </pre><a href="#section-7.3-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2400,8 +2395,7 @@ def InitiatorFinish(PRS, public_context, secret_context, state, resp_msg):
         <h3 id="name-server-finish">
 <a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-server-finish" class="section-name selfRef">Server Finish</a>
         </h3>
-<p id="section-7.4-1">The server finishes OQUAKE.
-OQUAKE's resulting session key is the CPaceOQUAKE session key.
+<p id="section-7.4-1">The server finishes OQUAKE and derives the session key in the same way as the client.
 The server <span class="bcp14">MUST</span> abort if its received message does not have the correct length.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-7.4-2">
 <pre>
@@ -2413,13 +2407,21 @@ Input:
 
 Output:
 - key, a shared secret of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - OQUAKE, parameterized instance of OQUAKE
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 def ResponderFinish(state, msg3):
-  server_key = OQUAKE.Finish(state, msg3)
-  return server_key
+  (ctx2, key1) = state
+  key2, th2 = OQUAKE.Finish(ctx2, msg3)
+
+  prk = KDF.Extract(key2, DST || "CPaceOQUAKE" || th2 || key1)
+  server_key = KDF.Expand(prk, DST || "key", Nkey)
+
+  return server_key, th2
 </pre><a href="#section-7.4-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -4292,26 +4294,22 @@ and <code>challenge</code> is a password confirmation challenge. On receipt,
         <h3 id="name-cpaceoquake-message-encodin">
 <a href="#appendix-C.4" class="section-number selfRef">C.4. </a><a href="#name-cpaceoquake-message-encodin" class="section-name selfRef">CPaceOQUAKE Message Encoding</a>
         </h3>
-<p id="appendix-C.4-1">The CPaceOQUAKE initiator message <code>(s1, Ya)</code>, produced by CPaceOQUAKE.Init
-(<a href="#CPaceOQUAKE" class="auto internal xref">Section 7</a>), is encoded as:<a href="#appendix-C.4-1" class="pilcrow">¶</a></p>
+<p id="appendix-C.4-1">The CPaceOQUAKE initiator message <code>Ya</code>, produced by CPaceOQUAKE.Init (<a href="#CPaceOQUAKE" class="auto internal xref">Section 7</a>), is encoded as:<a href="#appendix-C.4-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="appendix-C.4-2">
 <pre>
-init_msg = s1 || lv_encode(Ya)
+init_msg = lv_encode(Ya)
 </pre><a href="#appendix-C.4-2" class="pilcrow">¶</a>
 </div>
-<p id="appendix-C.4-3">where <code>s1</code> has 32 bytes and <code>Ya</code> is a CPace initiator message. On receipt,
-<code>s1 = init_msg[0..32]</code> and <code>Ya = lv_decode(init_msg[32..])</code>.<a href="#appendix-C.4-3" class="pilcrow">¶</a></p>
-<p id="appendix-C.4-4">The CPaceOQUAKE responder message <code>(s2, Yb, oquake_init)</code>, produced by
-CPaceOQUAKE.Respond, is encoded as:<a href="#appendix-C.4-4" class="pilcrow">¶</a></p>
+<p id="appendix-C.4-3">where <code>Ya</code> is a CPace initiator message. On receipt, <code>Ya = lv_decode(init_msg)</code>.<a href="#appendix-C.4-3" class="pilcrow">¶</a></p>
+<p id="appendix-C.4-4">The CPaceOQUAKE responder message <code>(Yb, oquake_init)</code>, produced by CPaceOQUAKE.Respond, is encoded as:<a href="#appendix-C.4-4" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="appendix-C.4-5">
 <pre>
-resp_msg = s2 || lv_encode(Yb) || oquake_init
+resp_msg = lv_encode(Yb) || oquake_init
 </pre><a href="#appendix-C.4-5" class="pilcrow">¶</a>
 </div>
-<p id="appendix-C.4-6">where <code>s2</code> has 32 bytes, <code>Yb</code> is a CPace responder message, and <code>oquake_init</code> is
-an OQUAKE initiator message. On receipt, <code>s2 = resp_msg[0..32]</code>,
-<code>L = bytes_to_int(resp_msg[32..34])</code>, <code>Yb = resp_msg[34..34+L]</code>, and
-<code>oquake_init = resp_msg[34+L..]</code>.<a href="#appendix-C.4-6" class="pilcrow">¶</a></p>
+<p id="appendix-C.4-6">where <code>Yb</code> is a CPace responder message and <code>oquake_init</code> is an OQUAKE initiator
+message. On receipt, <code>L = bytes_to_int(resp_msg[0..2])</code>, <code>Yb = resp_msg[2..2+L]</code>,
+and <code>oquake_init = resp_msg[2+L..]</code>.<a href="#appendix-C.4-6" class="pilcrow">¶</a></p>
 <p id="appendix-C.4-7">The CPaceOQUAKE message <code>msg3</code>, produced by CPaceOQUAKE.InitiatorFinish, is an
 OQUAKE responder message, encoded as described in the OQUAKE message encoding
 above.<a href="#appendix-C.4-7" class="pilcrow">¶</a></p>
@@ -4363,8 +4361,9 @@ protocol data unit. A specification that maps these protocols onto such a transp
 can define its own framing, including carrying the fields of a single protocol message
 in more than one transport message or PDU. This is possible because no value derived
 by these protocols depends on how a message is framed: every key, confirmation value,
-and transcript is computed from individual named fields -- <code>s</code>, <code>T</code>, <code>⍴</code>, <code>ct</code>, <code>enc_c</code>, <code>k</code>,
-the public and secret contexts -- and never from the concatenated message as a whole.
+and transcript hash is computed from individual named fields -- <code>Ya</code>, <code>Yb</code>, <code>s</code>, <code>T</code>, <code>⍴</code>,
+<code>ct</code>, <code>h</code>, <code>enc_c</code>, <code>k</code>, the public and secret contexts -- and never from the concatenated
+message as a whole.
 Re-framing a message therefore cannot change any derived value, and does not
 affect the security analysis of the protocol.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 <p id="appendix-D-2">Such a mapping <span class="bcp14">MUST</span> satisfy the following requirements.<a href="#appendix-D-2" class="pilcrow">¶</a></p>
@@ -4424,13 +4423,13 @@ field lengths.<a href="#appendix-D.1-1" class="pilcrow">¶</a></p>
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">msg1</td>
-              <td class="text-left" rowspan="1" colspan="1">s1, CPace Ya</td>
-              <td class="text-left" rowspan="1" colspan="1">66</td>
+              <td class="text-left" rowspan="1" colspan="1">CPace Ya</td>
+              <td class="text-left" rowspan="1" colspan="1">34</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">msg2</td>
-              <td class="text-left" rowspan="1" colspan="1">s2, CPace Yb, s, T, ⍴</td>
-              <td class="text-left" rowspan="1" colspan="1">1756</td>
+              <td class="text-left" rowspan="1" colspan="1">CPace Yb, s, T, ⍴</td>
+              <td class="text-left" rowspan="1" colspan="1">1724</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">msg3</td>
@@ -4449,7 +4448,7 @@ field lengths.<a href="#appendix-D.1-1" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
-<p id="appendix-D.1-3">The largest message is msg2, at 1756 octets.<a href="#appendix-D.1-3" class="pilcrow">¶</a></p>
+<p id="appendix-D.1-3">The largest message is msg2, at 1724 octets.<a href="#appendix-D.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
