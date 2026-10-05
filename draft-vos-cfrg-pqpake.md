@@ -740,8 +740,9 @@ The reason a parallel combination of CPace and OQUAKE does not achieve best-of-b
 For more information, see {{hybrid-design}}.
 
 The sequential combiner overcomes this limitation: it only requires Stage 1's PAKE to unconditionally hide the password.
-The combiner first runs Stage 1, establishing session key SK1, and then runs Stage 2 with secret_context=SK1.
-Stage 2 derives an effective password from (PRS, SK1) and uses it throughout, producing the final session key.
+The combiner first runs Stage 1, establishing session key SK1 and transcript hash th1, and then runs Stage 2 with secret_context=SK1 and public_context=th1.
+Stage 2 derives an effective password from (PRS, th1, SK1) and uses it throughout.
+The final session key is derived from Stage 2's session key, SK1, and Stage 2's transcript hash, which covers both stages.
 See the diagram below.
 
 ~~~ aasvg
@@ -752,7 +753,7 @@ See the diagram below.
      PRS ---->+---->|  PAKE   |<-----+<---- PRS
               |     +---------+      |
               |          |           |
-              |    sec_ctx=SK1       |
+              |       SK1, th1       |
               |          |           |
               |     +---------+      |
               |     | Stage 2 |      |
@@ -775,7 +776,8 @@ The server sends its CPace response along with its first OQUAKE message.
 After that, the client finishes CPace and responds to OQUAKE.
 
 Unlike OQUAKE, CPaceOQUAKE does not require a shared session identifier sid, although this is strongly recommended.
-The public_context of OQUAKE is prefixed with an extended session identifier derived from random nonces s1 and s2 contributed by both parties, so that it is unique to the session even if the application provides no sid.
+The public_context of OQUAKE is CPace's transcript hash, which covers the public_context and the messages Ya and Yb.
+Since each party contributes a fresh Ya or Yb, it is unique to the session even if the application provides no sid.
 
 See the diagram below for an overview of the protocol flow.
 There are four functions: Init and InitiatorFinish are intended to be called by the client, and Respond and ResponderFinish are intended to be called by the server.
@@ -796,14 +798,14 @@ CPaceOQUAKE.Init(PRS,pub_ctx,sec_ctx)      |
              |           msg2              |
              |<----------------------------|
              |                             |
-     client_key, msg3 =                    |
+     client_key, msg3, th =                |
 CPaceOQUAKE.InitiatorFinish(               |
   PRS,pub_ctx,sec_ctx,ctx,msg2)            |
              |                             |
              |           msg3              |
              |---------------------------->|
              |                             |
-             |                  server_key =
+             |              server_key, th =
              |     CPaceOQUAKE.ResponderFinish(ctx,msg3)
              |                             |
         -----------------------------------------
@@ -831,16 +833,13 @@ Parameters:
 
 def Init(PRS, public_context, secret_context):
   ctx1, Ya = CPace.Init(PRS, public_context, secret_context)
-  s1 = random(32)
-  msg = (s1, Ya)
-
-  return State(ctx1, s1), msg
+  return ctx1, Ya
 ~~~
 
 ## Server Response
 
-The server finishes CPace and initiates OQUAKE (Stage 2) using the CPace session key as the
-secret_context for OQUAKE.
+The server finishes CPace and initiates OQUAKE (Stage 2), using the CPace session key as OQUAKE's
+secret_context and the CPace transcript hash as OQUAKE's public_context.
 The server MUST abort if its received message does not have the correct length.
 
 ~~~
@@ -859,29 +858,23 @@ Output:
 Parameters:
 - CPace, parameterized instance of CPace
 - OQUAKE, parameterized instance of OQUAKE
-- KDF, a KDF instance
-- DST, domain separation tag, a byte string
 
 def Respond(PRS, public_context, secret_context, init_msg):
-  (s1, Ya) = init_msg
+  Ya = init_msg
 
-  key1, Yb = CPace.Respond(PRS, public_context, secret_context, Ya)
+  key1, Yb, th1 = CPace.Respond(PRS, public_context, secret_context, Ya)
+  ctx2, oquake_init = OQUAKE.Init(PRS, th1, key1)
 
-  s2 = random(32)
-  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
+  resp_msg = (Yb, oquake_init)
 
-  ctx2, oquake_init = OQUAKE.Init(PRS, extended_sid || public_context, key1)
-
-  resp_msg = (s2, Yb, oquake_init)
-
-  return ctx2, resp_msg
+  return State(ctx2, key1), resp_msg
 ~~~
 
 ## Client Finish
 
 The client finishes CPace and responds to OQUAKE.
-OQUAKE's resulting session key is the CPaceOQUAKE session key.
+It derives the session key from OQUAKE's session key, the CPace session key, and OQUAKE's transcript hash,
+which is also the CPaceOQUAKE transcript hash.
 The client MUST abort if its received message does not have the correct length.
 
 ~~~
@@ -897,6 +890,7 @@ Input:
 Output:
 - key, a shared secret of Nkey bytes
 - msg, a protocol message for the initiator to send to the responder
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - CPace, parameterized instance of CPace
@@ -905,24 +899,21 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def InitiatorFinish(PRS, public_context, secret_context, state, resp_msg):
-  (ctx1, s1) = state
-  (s2, Yb, oquake_init) = resp_msg
+  ctx1 = state
+  (Yb, oquake_init) = resp_msg
 
-  key1 = CPace.Finish(ctx1, public_context, Yb)
+  key1, th1 = CPace.Finish(ctx1, public_context, Yb)
+  msg, key2, th2 = OQUAKE.Respond(PRS, th1, key1, oquake_init)
 
-  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
+  prk = KDF.Extract(key2, DST || "CPaceOQUAKE" || th2 || key1)
+  client_key = KDF.Expand(prk, DST || "key", Nkey)
 
-  msg, client_key = OQUAKE.Respond(PRS, extended_sid || public_context, key1,
-                                   oquake_init)
-
-  return client_key, msg
+  return client_key, msg, th2
 ~~~
 
 ## Server Finish
 
-The server finishes OQUAKE.
-OQUAKE's resulting session key is the CPaceOQUAKE session key.
+The server finishes OQUAKE and derives the session key in the same way as the client.
 The server MUST abort if its received message does not have the correct length.
 
 ~~~
@@ -934,13 +925,21 @@ Input:
 
 Output:
 - key, a shared secret of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - OQUAKE, parameterized instance of OQUAKE
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 def ResponderFinish(state, msg3):
-  server_key = OQUAKE.Finish(state, msg3)
-  return server_key
+  (ctx2, key1) = state
+  key2, th2 = OQUAKE.Finish(ctx2, msg3)
+
+  prk = KDF.Extract(key2, DST || "CPaceOQUAKE" || th2 || key1)
+  server_key = KDF.Expand(prk, DST || "key", Nkey)
+
+  return server_key, th2
 ~~~
 
 
@@ -2278,27 +2277,23 @@ The OQUAKE+ response message is a password confirmation response.
 
 ## CPaceOQUAKE Message Encoding
 
-The CPaceOQUAKE initiator message `(s1, Ya)`, produced by CPaceOQUAKE.Init
-({{CPaceOQUAKE}}), is encoded as:
+The CPaceOQUAKE initiator message `Ya`, produced by CPaceOQUAKE.Init ({{CPaceOQUAKE}}), is encoded as:
 
 ~~~
-init_msg = s1 || lv_encode(Ya)
+init_msg = lv_encode(Ya)
 ~~~
 
-where `s1` has 32 bytes and `Ya` is a CPace initiator message. On receipt,
-`s1 = init_msg[0..32]` and `Ya = lv_decode(init_msg[32..])`.
+where `Ya` is a CPace initiator message. On receipt, `Ya = lv_decode(init_msg)`.
 
-The CPaceOQUAKE responder message `(s2, Yb, oquake_init)`, produced by
-CPaceOQUAKE.Respond, is encoded as:
+The CPaceOQUAKE responder message `(Yb, oquake_init)`, produced by CPaceOQUAKE.Respond, is encoded as:
 
 ~~~
-resp_msg = s2 || lv_encode(Yb) || oquake_init
+resp_msg = lv_encode(Yb) || oquake_init
 ~~~
 
-where `s2` has 32 bytes, `Yb` is a CPace responder message, and `oquake_init` is
-an OQUAKE initiator message. On receipt, `s2 = resp_msg[0..32]`,
-`L = bytes_to_int(resp_msg[32..34])`, `Yb = resp_msg[34..34+L]`, and
-`oquake_init = resp_msg[34+L..]`.
+where `Yb` is a CPace responder message and `oquake_init` is an OQUAKE initiator
+message. On receipt, `L = bytes_to_int(resp_msg[0..2])`, `Yb = resp_msg[2..2+L]`,
+and `oquake_init = resp_msg[2+L..]`.
 
 The CPaceOQUAKE message `msg3`, produced by CPaceOQUAKE.InitiatorFinish, is an
 OQUAKE responder message, encoded as described in the OQUAKE message encoding
@@ -2338,8 +2333,9 @@ protocol data unit. A specification that maps these protocols onto such a transp
 can define its own framing, including carrying the fields of a single protocol message
 in more than one transport message or PDU. This is possible because no value derived
 by these protocols depends on how a message is framed: every key, confirmation value,
-and transcript is computed from individual named fields -- `s`, `T`, `⍴`, `ct`, `enc_c`, `k`,
-the public and secret contexts -- and never from the concatenated message as a whole.
+and transcript hash is computed from individual named fields -- `Ya`, `Yb`, `s`, `T`, `⍴`,
+`ct`, `h`, `enc_c`, `k`, the public and secret contexts -- and never from the concatenated
+message as a whole.
 Re-framing a message therefore cannot change any derived value, and does not
 affect the security analysis of the protocol.
 
@@ -2379,13 +2375,13 @@ field lengths.
 
 | Message | Fields | Octets |
 |---|---|---|
-| msg1 | s1, CPace Ya | 66 |
-| msg2 | s2, CPace Yb, s, T, ⍴ | 1756 |
+| msg1 | CPace Ya | 34 |
+| msg2 | CPace Yb, s, T, ⍴ | 1724 |
 | msg3 | ct, h | 1632 |
 | msg4 | enc_c, client_confirm | 1184 |
 | msg5 | server_confirm | 64 |
 
-The largest message is msg2, at 1756 octets.
+The largest message is msg2, at 1724 octets.
 
 <!--
 
