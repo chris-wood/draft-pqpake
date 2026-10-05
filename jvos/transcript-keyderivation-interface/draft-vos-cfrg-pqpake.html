@@ -1338,16 +1338,19 @@ also provides recommended configurations for each protocol.<a href="#section-abs
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.4">
-                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-timing-attacks-and-tempo" class="internal xref">Timing Attacks and Tempo</a></p>
+                <p id="section-toc.1-1.11.2.4.1"><a href="#section-11.4" class="auto internal xref">11.4</a>.  <a href="#name-verifier-compromise" class="internal xref">Verifier Compromise</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.5">
-                <p id="section-toc.1-1.11.2.5.1"><a href="#section-11.5" class="auto internal xref">11.5</a>.  <a href="#name-related-work" class="internal xref">Related Work</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.5.2.1">
-                    <p id="section-toc.1-1.11.2.5.2.1.1"><a href="#section-11.5.1" class="auto internal xref">11.5.1</a>.  <a href="#name-existing-solutions-and-thei" class="internal xref">Existing Solutions and Their Gaps</a></p>
+                <p id="section-toc.1-1.11.2.5.1"><a href="#section-11.5" class="auto internal xref">11.5</a>.  <a href="#name-timing-attacks-and-tempo" class="internal xref">Timing Attacks and Tempo</a></p>
 </li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.5.2.2">
-                    <p id="section-toc.1-1.11.2.5.2.2.1"><a href="#section-11.5.2" class="auto internal xref">11.5.2</a>.  <a href="#name-ongoing-research" class="internal xref">Ongoing Research</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.6">
+                <p id="section-toc.1-1.11.2.6.1"><a href="#section-11.6" class="auto internal xref">11.6</a>.  <a href="#name-related-work" class="internal xref">Related Work</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.6.2.1">
+                    <p id="section-toc.1-1.11.2.6.2.1.1"><a href="#section-11.6.1" class="auto internal xref">11.6.1</a>.  <a href="#name-existing-solutions-and-thei" class="internal xref">Existing Solutions and Their Gaps</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.6.2.2">
+                    <p id="section-toc.1-1.11.2.6.2.2.1"><a href="#section-11.6.2" class="auto internal xref">11.6.2</a>.  <a href="#name-ongoing-research" class="internal xref">Ongoing Research</a></p>
 </li>
                 </ul>
 </li>
@@ -1961,7 +1964,7 @@ server identifiers U and S. It has the following requirements. If a client and s
 <p id="section-6-7">These requirements originate from the security proof for OQUAKE. If these requirements are not met, the proof
 does not apply, but this does not mean that the protocol becomes vulnerable.<a href="#section-6-7" class="pilcrow">¶</a></p>
 <p id="section-6-8">The specification follows the design as presented in <span>[<a href="#VJWYMS25" class="cite xref">VJWYMS25</a>]</span>, with the splittable KEM technique described
-in <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>, which prevents timing attacks caused by rejection sampling in ML-KEM. See <a href="#timing-and-tempo" class="auto internal xref">Section 11.4</a>
+in <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>, which prevents timing attacks caused by rejection sampling in ML-KEM. See <a href="#timing-and-tempo" class="auto internal xref">Section 11.5</a>
 for more information on the timing attack and this fix.<a href="#section-6-8" class="pilcrow">¶</a></p>
 <p id="section-6-9">The byte-level encoding of the OQUAKE protocol messages is specified in <a href="#encodings" class="auto internal xref">Appendix C</a>.<a href="#section-6-9" class="pilcrow">¶</a></p>
 <div id="initiation">
@@ -2449,8 +2452,8 @@ It is a close variant of the `augmented PAKE' constructions presented in <span>[
 The first Nv bytes of the KSF output are denoted v, which makes up the first part of the verifier.
 The remaining KEM.Nseed bytes, which we call the seed, are used to derive a KEM key pair, of which the public key is the second part of the verifier.
 This KEM does not have to be a BUA-sKEM.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
-<p id="section-8.1-3">In each session, the client and server first run the symmetric PAKE with v instead of the PRS, yielding session key SK.
-The server then uses SK and the KEM public key pk to challenge the client to prove knowledge of the seed (<a href="#pwconf" class="auto internal xref">Section 8.1.2</a>).
+<p id="section-8.1-3">In each session, the client and server first run the symmetric PAKE with v instead of the PRS, yielding session key SK and transcript hash th.
+The server then uses SK, th, and the KEM public key pk to challenge the client to prove knowledge of the seed (<a href="#pwconf" class="auto internal xref">Section 8.1.2</a>).
 Password confirmation relies on SK for confidentiality, so it cannot be used as a standalone protocol and <span class="bcp14">SHOULD NOT</span> be used outside of this transformation.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
 <div id="section-8.1-4">
           <div class="alignLeft art-svg artwork" id="section-8.1-4.1">
@@ -2459,6 +2462,7 @@ Password confirmation relies on SK for confidentiality, so it cannot be used as 
               <path d="M 152,64 L 152,112" fill="none" stroke="black"></path>
               <path d="M 152,176 L 152,224" fill="none" stroke="black"></path>
               <path d="M 176,232 L 176,256" fill="none" stroke="black"></path>
+              <path d="M 208,144 L 208,168" fill="none" stroke="black"></path>
               <path d="M 248,232 L 248,256" fill="none" stroke="black"></path>
               <path d="M 272,64 L 272,112" fill="none" stroke="black"></path>
               <path d="M 272,176 L 272,224" fill="none" stroke="black"></path>
@@ -2491,8 +2495,8 @@ Password confirmation relies on SK for confidentiality, so it cannot be used as 
                 <text x="212" y="100">PAKE</text>
                 <text x="384" y="100">v</text>
                 <text x="208" y="132">|</text>
-                <text x="212" y="148">SK</text>
-                <text x="208" y="164">|</text>
+                <text x="196" y="148">SK</text>
+                <text x="228" y="148">th</text>
                 <text x="212" y="196">Password</text>
                 <text x="36" y="212">seed</text>
                 <text x="212" y="212">confirmation</text>
@@ -2538,7 +2542,8 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def GenVerifierMaterial(PRS, salt, U, S):
-  material = KSF.Stretch(DST || PRS || U || S, salt, Nv + KEM.Nseed)
+  material = KSF.Stretch(DST || lv_encode(PRS) || lv_encode(U) || lv_encode(S),
+                         salt, Nv + KEM.Nseed)
   v = material[0:Nv]
   seed = material[Nv:Nv + KEM.Nseed]
   return v, seed
@@ -2639,11 +2644,13 @@ That round trip requires the client to first identify its registration to the se
 <a href="#section-8.1.2" class="section-number selfRef">8.1.2. </a><a href="#name-password-confirmation" class="section-name selfRef">Password Confirmation</a>
           </h4>
 <p id="section-8.1.2-1">Password confirmation is a challenge-response exchange after the symmetric PAKE finishes.
-Both parties input key SK output by the symmetric PAKE and a public_context.
+Both parties input the key SK and the transcript hash th output by the symmetric PAKE.
 The server must also input the client's registered public key pk, while the client inputs the corresponding seed.
 The server creates a challenge in the form of a KEM ciphertext encapsulated for that pk, and encrypted with SK.
 The client decrypts the ciphertext using SK and proves that it can decapsulate it.
-It does so by deriving the KEM's secret decapsulation key from the seed.<a href="#section-8.1.2-1" class="pilcrow">¶</a></p>
+It does so by deriving the KEM's secret decapsulation key from the seed.
+The challenge also contains client_confirm, which depends on SK and on the encapsulated key.
+It lets the client check that the server knows both, which requires the full verifier (v, pk) or the password.<a href="#section-8.1.2-1" class="pilcrow">¶</a></p>
 <p id="section-8.1.2-2">The state returned by Challenge holds the server's candidate session key.
 This key <span class="bcp14">MUST NOT</span> be released to the calling application, used to protect traffic, or otherwise acted upon before Verify has confirmed the client's response.
 Implementations <span class="bcp14">SHOULD</span> keep the state opaque so that server_key is reachable only as the return value of Verify.<a href="#section-8.1.2-2" class="pilcrow">¶</a></p>
@@ -2653,7 +2660,7 @@ PC.Challenge
 
 Input:
 - SK, the key output by the symmetric PAKE, a byte string
-- public_context, optional public context, a byte string
+- th, the transcript hash output by the symmetric PAKE, a byte string
 - pk, part of the client's registered verifier, a KEM public key
 
 Output:
@@ -2665,42 +2672,39 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Challenge(SK, public_context, pk):
+def Challenge(SK, th, pk):
   (k, c) = KEM.Encaps(pk)
   r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  confirm_input = public_context || enc_c
+  prk_pc = KDF.Extract(SK, DST || "PC" || th || enc_c || k)
+  client_confirm = KDF.Expand(prk_pc, DST || "client_confirm", Nkc)
+  server_confirm = KDF.Expand(prk_pc, DST || "server_confirm", Nkc)
+  server_key = KDF.Expand(prk_pc, DST || "key", Nkey)
 
-  prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
-  prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
-
-  client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
-
-  server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
-  server_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
-
+  th_out = TH("PC", th, enc_c, client_confirm, server_confirm)
   challenge = (enc_c, client_confirm)
 
-  return State(server_confirm, server_key), challenge
+  return State(server_confirm, server_key, th_out), challenge
 </pre><a href="#section-8.1.2-3" class="pilcrow">¶</a>
 </div>
 <p id="section-8.1.2-4">The client decrypts the KEM ciphertext using SK, re-derives the KEM key pair from the seed, and decapsulates the ciphertext to derive the password confirmation values and its session key.
 It aborts if the server-provided confirmation value does not match its own.
-Otherwise, it returns its session key and its own confirmation value.<a href="#section-8.1.2-4" class="pilcrow">¶</a></p>
+Otherwise, it returns its session key, its own confirmation value, and the transcript hash.<a href="#section-8.1.2-4" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-8.1.2-5">
 <pre>
 PC.Respond
 
 Input:
 - SK, the key output by the symmetric PAKE, a byte string
-- public_context, optional public context, a byte string
+- th, the transcript hash output by the symmetric PAKE, a byte string
 - seed, seed used to derive the KEM key pair during registration
 - challenge, the server's password confirmation challenge
 
 Output:
 - client_key, a byte string of Nkey bytes
 - response, a protocol message for the client to send to the server
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
@@ -2710,7 +2714,7 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Respond(SK, public_context, seed, challenge):
+def Respond(SK, th, seed, challenge):
   (enc_c, client_confirm_target) = challenge
 
   r = KDF.Expand(SK, DST || "OTP", Nct)
@@ -2720,28 +2724,24 @@ def Respond(SK, public_context, seed, challenge):
 
   try:
     k = KEM.Decaps(c, sk)
-
-    confirm_input = public_context || enc_c
-
-    prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
-    prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
-
-    client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
-
-    server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
-    client_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
-
-    if client_confirm != client_confirm_target:
-      raise AuthenticationError
-
-    return client_key, server_confirm
   catch DecapsError:
     raise AuthenticationError
+
+  prk_pc = KDF.Extract(SK, DST || "PC" || th || enc_c || k)
+  client_confirm = KDF.Expand(prk_pc, DST || "client_confirm", Nkc)
+  if client_confirm != client_confirm_target:
+    raise AuthenticationError
+
+  server_confirm = KDF.Expand(prk_pc, DST || "server_confirm", Nkc)
+  client_key = KDF.Expand(prk_pc, DST || "key", Nkey)
+  th_out = TH("PC", th, enc_c, client_confirm, server_confirm)
+
+  return client_key, server_confirm, th_out
 </pre><a href="#section-8.1.2-5" class="pilcrow">¶</a>
 </div>
 <p id="section-8.1.2-6">Upon receipt of the response, the server validates that the password confirmation
 value matches its own value. If the value does not match, the server aborts.
-Otherwise, the server outputs its session key.<a href="#section-8.1.2-6" class="pilcrow">¶</a></p>
+Otherwise, the server outputs its session key and the transcript hash.<a href="#section-8.1.2-6" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-8.1.2-7">
 <pre>
 PC.Verify
@@ -2752,15 +2752,16 @@ Input:
 
 Output:
 - server_key, a byte string of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
 
 def Verify(state, server_confirm_target):
-  (server_confirm, server_key) = state
+  (server_confirm, server_key, th_out) = state
   if server_confirm != server_confirm_target:
     raise AuthenticationError
-  return server_key
+  return server_key, th_out
 </pre><a href="#section-8.1.2-7" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2777,17 +2778,18 @@ The client initiates OQUAKE, and the server sends its password confirmation chal
 <p id="section-8.2-2">A high level overview of OQUAKE+ is below.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
 <div id="section-8.2-3">
           <div class="alignLeft art-svg artwork" id="section-8.2-3.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="384" width="544" viewBox="0 0 544 384" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="400" width="544" viewBox="0 0 544 400" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 104,80 L 104,224" fill="none" stroke="black"></path>
-              <path d="M 104,256 L 104,344" fill="none" stroke="black"></path>
+              <path d="M 104,272 L 104,360" fill="none" stroke="black"></path>
+              <path d="M 136,240 L 136,248" fill="none" stroke="black"></path>
               <path d="M 384,56 L 384,128" fill="none" stroke="black"></path>
-              <path d="M 384,176 L 384,304" fill="none" stroke="black"></path>
+              <path d="M 384,176 L 384,320" fill="none" stroke="black"></path>
               <path d="M 88,48 L 400,48" fill="none" stroke="black"></path>
               <path d="M 112,112 L 376,112" fill="none" stroke="black"></path>
               <path d="M 112,208 L 376,208" fill="none" stroke="black"></path>
-              <path d="M 112,288 L 376,288" fill="none" stroke="black"></path>
-              <path d="M 88,352 L 400,352" fill="none" stroke="black"></path>
-              <polygon class="arrowhead" points="384,288 372,282.4 372,293.6" fill="black" transform="rotate(0,376,288)"></polygon>
+              <path d="M 112,304 L 376,304" fill="none" stroke="black"></path>
+              <path d="M 88,368 L 400,368" fill="none" stroke="black"></path>
+              <polygon class="arrowhead" points="384,304 372,298.4 372,309.6" fill="black" transform="rotate(0,376,304)"></polygon>
               <polygon class="arrowhead" points="384,112 372,106.4 372,117.6" fill="black" transform="rotate(0,376,112)"></polygon>
               <polygon class="arrowhead" points="120,208 108,202.4 108,213.6" fill="black" transform="rotate(180,112,208)"></polygon>
               <g class="text">
@@ -2810,17 +2812,19 @@ The client initiates OQUAKE, and the server sends its password confirmation chal
                 <text x="244" y="196">msg2</text>
                 <text x="48" y="244">client_key,</text>
                 <text x="116" y="244">msg3</text>
-                <text x="144" y="244">=</text>
-                <text x="252" y="244">OQUAKE+.Finish(ctx,msg2)</text>
-                <text x="244" y="276">msg3</text>
-                <text x="212" y="324">server_key</text>
-                <text x="264" y="324">=</text>
-                <text x="372" y="324">OQUAKE+.Verify(ctx,msg3)</text>
-                <text x="384" y="340">|</text>
-                <text x="76" y="372">output</text>
-                <text x="148" y="372">client_key</text>
-                <text x="348" y="372">output</text>
-                <text x="420" y="372">server_key</text>
+                <text x="156" y="244">th</text>
+                <text x="176" y="244">=</text>
+                <text x="116" y="260">OQUAKE+.Finish(ctx,msg2)</text>
+                <text x="244" y="292">msg3</text>
+                <text x="184" y="340">server_key,</text>
+                <text x="244" y="340">th</text>
+                <text x="264" y="340">=</text>
+                <text x="372" y="340">OQUAKE+.Verify(ctx,msg3)</text>
+                <text x="384" y="356">|</text>
+                <text x="76" y="388">output</text>
+                <text x="148" y="388">client_key</text>
+                <text x="348" y="388">output</text>
+                <text x="420" y="388">server_key</text>
               </g>
             </svg><a href="#section-8.2-3.1" class="pilcrow">¶</a>
 </div>
@@ -2854,7 +2858,7 @@ Parameters:
 def Init(PRS, salt, U, S, public_context, secret_context):
   (v, seed) = GenVerifierMaterial(PRS, salt, U, S)
   ctx, msg = OQUAKE.Init(v, public_context, secret_context)
-  return State(ctx, seed, public_context), msg
+  return State(ctx, seed), msg
 </pre><a href="#section-8.2.1-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2886,8 +2890,8 @@ Parameters:
 - PC, password confirmation ({{pwconf}})
 
 def Respond(v, public_context, secret_context, init_msg, pk):
-  oquake_resp, SK = OQUAKE.Respond(v, public_context, secret_context, init_msg)
-  state, challenge = PC.Challenge(SK, public_context, pk)
+  oquake_resp, SK, th = OQUAKE.Respond(v, public_context, secret_context, init_msg)
+  state, challenge = PC.Challenge(SK, th, pk)
   resp_msg = (oquake_resp, challenge)
   return state, resp_msg
 </pre><a href="#section-8.2.2-2" class="pilcrow">¶</a>
@@ -2912,6 +2916,7 @@ Input:
 Output:
 - client_key, a byte string of Nkey bytes
 - response, a protocol message for the client to send to the server
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
@@ -2921,12 +2926,12 @@ Parameters:
 - PC, password confirmation ({{pwconf}})
 
 def Finish(state, resp_msg):
-  (ctx, seed, public_context) = state
+  (ctx, seed) = state
   (oquake_resp, challenge) = resp_msg
 
-  SK = OQUAKE.Finish(ctx, oquake_resp)
+  SK, th = OQUAKE.Finish(ctx, oquake_resp)
 
-  return PC.Respond(SK, public_context, seed, challenge)
+  return PC.Respond(SK, th, seed, challenge)
 </pre><a href="#section-8.2.3-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -2936,7 +2941,7 @@ def Finish(state, resp_msg):
           <h4 id="name-verify">
 <a href="#section-8.2.4" class="section-number selfRef">8.2.4. </a><a href="#name-verify" class="section-name selfRef">Verify</a>
           </h4>
-<p id="section-8.2.4-1">Verify checks the client's password confirmation value and outputs the server's session key.<a href="#section-8.2.4-1" class="pilcrow">¶</a></p>
+<p id="section-8.2.4-1">Verify checks the client's password confirmation value and outputs the server's session key and the transcript hash.<a href="#section-8.2.4-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-8.2.4-2">
 <pre>
 OQUAKE+.Verify
@@ -2947,6 +2952,7 @@ Input:
 
 Output:
 - server_key, a byte string of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
@@ -2978,7 +2984,7 @@ aborts if the password did not match.<a href="#section-8.3-2" class="pilcrow">¶
 protocol starts; see <a href="#gen-verifiers" class="auto internal xref">Section 8.1.1.1</a>.<a href="#section-8.3-3" class="pilcrow">¶</a></p>
 <div id="section-8.3-4">
           <div class="alignLeft art-svg artwork" id="section-8.3-4.1">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="560" width="544" viewBox="0 0 544 560" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="560" width="568" viewBox="0 0 568 560" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
               <path d="M 104,80 L 104,224" fill="none" stroke="black"></path>
               <path d="M 104,272 L 104,408" fill="none" stroke="black"></path>
               <path d="M 104,448 L 104,520" fill="none" stroke="black"></path>
@@ -3029,14 +3035,16 @@ protocol starts; see <a href="#gen-verifiers" class="auto internal xref">Section
                 <text x="228" y="340">ctx,msg3,pk)</text>
                 <text x="244" y="372">msg4</text>
                 <text x="64" y="420">client_key,</text>
-                <text x="132" y="420">msg5</text>
-                <text x="160" y="420">=</text>
-                <text x="288" y="420">CPaceOQUAKE+.InitiatorFinish(</text>
+                <text x="136" y="420">msg5,</text>
+                <text x="172" y="420">th</text>
+                <text x="192" y="420">=</text>
+                <text x="320" y="420">CPaceOQUAKE+.InitiatorFinish(</text>
                 <text x="80" y="436">ctx,msg4)</text>
                 <text x="244" y="452">msg5</text>
-                <text x="164" y="500">server_key</text>
-                <text x="216" y="500">=</text>
-                <text x="380" y="500">CPaceOQUAKE+.ResponderFinish(ctx,msg5)</text>
+                <text x="168" y="500">server_key,</text>
+                <text x="228" y="500">th</text>
+                <text x="248" y="500">=</text>
+                <text x="412" y="500">CPaceOQUAKE+.ResponderFinish(ctx,msg5)</text>
                 <text x="384" y="516">|</text>
                 <text x="76" y="548">output</text>
                 <text x="148" y="548">client_key</text>
@@ -3108,7 +3116,7 @@ Parameters:
 
 def Respond(v, public_context, secret_context, init_msg):
   ctx, msg = CPaceOQUAKE.Respond(v, public_context, secret_context, init_msg)
-  return State(ctx, public_context), msg
+  return ctx, msg
 </pre><a href="#section-8.3.2-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -3119,7 +3127,7 @@ def Respond(v, public_context, secret_context, init_msg):
 <a href="#section-8.3.3" class="section-number selfRef">8.3.3. </a><a href="#name-client-continue" class="section-name selfRef">Client Continue</a>
           </h4>
 <p id="section-8.3.3-1">InitiatorContinue completes CPaceOQUAKE.
-The client retains the resulting key SK for password confirmation.
+The client retains the resulting key SK and transcript hash th for password confirmation.
 SK <span class="bcp14">MUST NOT</span> be used as a session key.<a href="#section-8.3.3-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-8.3.3-2">
 <pre>
@@ -3138,9 +3146,9 @@ Parameters:
 
 def InitiatorContinue(state, msg2):
   (ctx, v, seed, public_context, secret_context) = state
-  SK, msg = CPaceOQUAKE.InitiatorFinish(v, public_context, secret_context,
-                                        ctx, msg2)
-  return State(SK, seed, public_context), msg
+  SK, msg, th = CPaceOQUAKE.InitiatorFinish(v, public_context, secret_context,
+                                            ctx, msg2)
+  return State(SK, th, seed), msg
 </pre><a href="#section-8.3.3-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -3170,9 +3178,8 @@ Parameters:
 - PC, password confirmation ({{pwconf}})
 
 def ResponderContinue(state, msg3, pk):
-  (ctx, public_context) = state
-  SK = CPaceOQUAKE.ResponderFinish(ctx, msg3)
-  return PC.Challenge(SK, public_context, pk)
+  SK, th = CPaceOQUAKE.ResponderFinish(state, msg3)
+  return PC.Challenge(SK, th, pk)
 </pre><a href="#section-8.3.4-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -3182,7 +3189,7 @@ def ResponderContinue(state, msg3, pk):
           <h4 id="name-client-finish-2">
 <a href="#section-8.3.5" class="section-number selfRef">8.3.5. </a><a href="#name-client-finish-2" class="section-name selfRef">Client Finish</a>
           </h4>
-<p id="section-8.3.5-1">The client responds to the password confirmation challenge, obtaining the CPaceOQUAKE+ session key and the confirmation value it sends to the server.
+<p id="section-8.3.5-1">The client responds to the password confirmation challenge, obtaining the CPaceOQUAKE+ session key, the confirmation value it sends to the server, and the transcript hash.
 The client aborts if the server's password confirmation value does not verify.<a href="#section-8.3.5-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-8.3.5-2">
 <pre>
@@ -3195,6 +3202,7 @@ Input:
 Output:
 - client_key, a shared secret of Nkey bytes
 - msg, a protocol message for the initiator to send to the responder
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
@@ -3203,8 +3211,8 @@ Parameters:
 - PC, password confirmation ({{pwconf}})
 
 def InitiatorFinish(state, msg4):
-  (SK, seed, public_context) = state
-  return PC.Respond(SK, public_context, seed, msg4)
+  (SK, th, seed) = state
+  return PC.Respond(SK, th, seed, msg4)
 </pre><a href="#section-8.3.5-2" class="pilcrow">¶</a>
 </div>
 </section>
@@ -3214,7 +3222,7 @@ def InitiatorFinish(state, msg4):
           <h4 id="name-server-finish-2">
 <a href="#section-8.3.6" class="section-number selfRef">8.3.6. </a><a href="#name-server-finish-2" class="section-name selfRef">Server Finish</a>
           </h4>
-<p id="section-8.3.6-1">The server finishes the protocol by verifying the client's password confirmation value.<a href="#section-8.3.6-1" class="pilcrow">¶</a></p>
+<p id="section-8.3.6-1">The server finishes the protocol by verifying the client's password confirmation value, and outputs the session key and the transcript hash.<a href="#section-8.3.6-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-8.3.6-2">
 <pre>
 CPaceOQUAKE+.ResponderFinish
@@ -3225,6 +3233,7 @@ Input:
 
 Output:
 - server_key, a shared secret of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
@@ -3475,12 +3484,15 @@ surfaced as a DecapsError. As described in <a href="#quake-finish" class="auto i
 a random key in that case so that a failure is indistinguishable from a mismatched
 password. Implementations <span class="bcp14">SHOULD NOT</span> convert this into a distinguishable error, as
 doing so would leak whether the peer holds the correct PRS.<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4">Beyond these explicit errors, CPaceOQUAKE+ implementations can produce implicit errors.
+<p id="section-10-4">The KEMs in the configurations of this document use implicit rejection: decapsulating a
+ciphertext of the correct length does not fail, but yields an unrelated key. A DecapsError
+therefore only results from malformed input.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-5">Beyond these explicit errors, CPaceOQUAKE+ implementations can produce implicit errors.
 For example, if protocol messages sent between client and server do not match
-their expected size, an implementation should produce an error.<a href="#section-10-4" class="pilcrow">¶</a></p>
-<p id="section-10-5">The errors in this document are meant as a guide for implementors. They are not an
+their expected size, an implementation should produce an error.<a href="#section-10-5" class="pilcrow">¶</a></p>
+<p id="section-10-6">The errors in this document are meant as a guide for implementors. They are not an
 exhaustive list of all the errors an implementation might emit. For example, an
-implementation might run out of memory.<a href="#section-10-5" class="pilcrow">¶</a></p>
+implementation might run out of memory.<a href="#section-10-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -3552,7 +3564,7 @@ as in ordinary Harvest Now, Decrypt Later against unauthenticated key exchange. 
 that ordinary case, the attacker also now holds a long-lived credential: they can impersonate the
 client in every future session until the password is changed. Retroactive password recovery is
 therefore strictly worse for a PAKE than HNDL is for plain key exchange, which is why deploying a
-post-quantum KEM only at the transport layer, as discussed in <a href="#related-work" class="auto internal xref">Section 11.5</a>, does not address
+post-quantum KEM only at the transport layer, as discussed in <a href="#related-work" class="auto internal xref">Section 11.6</a>, does not address
 the risk that a classical PAKE poses on its own.<a href="#section-11.2-2" class="pilcrow">¶</a></p>
 <p id="section-11.2-3">This principle applies directly to classical Diffie-Hellman-based PAKEs, including CPace, SPAKE2,
 and SPAKE2+, when deployed in the ordinary way, i.e., with the resulting session key confirmed or
@@ -3660,45 +3672,58 @@ when instantiating these protocols.<a href="#section-11.3.2-5" class="pilcrow">�
 </div>
 </section>
 </div>
-<div id="timing-and-tempo">
+<div id="verifier-compromise">
 <section id="section-11.4">
-        <h3 id="name-timing-attacks-and-tempo">
-<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-timing-attacks-and-tempo" class="section-name selfRef">Timing Attacks and Tempo</a>
+        <h3 id="name-verifier-compromise">
+<a href="#section-11.4" class="section-number selfRef">11.4. </a><a href="#name-verifier-compromise" class="section-name selfRef">Verifier Compromise</a>
         </h3>
-<p id="section-11.4-1">OQUAKE (without the fix from <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>) is subject to a timing attack
+<p id="section-11.4-1">An attacker that obtains a client's verifier (v, pk) can perform an offline password guessing attack against it, and it can impersonate the server to that client.
+This is inherent to augmented PAKEs.
+Such an attacker, however, cannot impersonate the client without first recovering the password, which requires the seed (or a decapsulation key for this pk).
+An attacker that knows v but not pk can complete the symmetric PAKE, but it cannot pass password confirmation for a client that it tries to impersonate:
+computing client_confirm requires the key encapsulated to pk, and computing server_confirm requires the seed.
+Since an attacker that knows v can send the client ciphertexts of its choice, the KEM must be IND-CCA secure (<a href="#deps-kem" class="auto internal xref">Section 4.1</a>).<a href="#section-11.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="timing-and-tempo">
+<section id="section-11.5">
+        <h3 id="name-timing-attacks-and-tempo">
+<a href="#section-11.5" class="section-number selfRef">11.5. </a><a href="#name-timing-attacks-and-tempo" class="section-name selfRef">Timing Attacks and Tempo</a>
+        </h3>
+<p id="section-11.5-1">OQUAKE (without the fix from <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>) is subject to a timing attack
 due to how the ML-KEM expands the key-generation seed (rho) to a matrix (A).
 An internal function — SampleNTT — uses rejection sampling based on the seed
 and therefore is variable time. In NoIC / OQUAKE, after a sender password-encrypts
 a public key, an attacker can perform an offline dictionary attack based on
-this key in the following way:<a href="#section-11.4-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-11.4-2">
-<li id="section-11.4-2.1">
-            <p id="section-11.4-2.1.1">Password-decrypt the authenticated public key using a candidate password.<a href="#section-11.4-2.1.1" class="pilcrow">¶</a></p>
+this key in the following way:<a href="#section-11.5-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-11.5-2">
+<li id="section-11.5-2.1">
+            <p id="section-11.5-2.1.1">Password-decrypt the authenticated public key using a candidate password.<a href="#section-11.5-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-11.4-2.2">
-            <p id="section-11.4-2.2.1">Time the seed-to-matrix expansion step using this candidate public key and
-compare it against the known timing target.<a href="#section-11.4-2.2.1" class="pilcrow">¶</a></p>
+          <li id="section-11.5-2.2">
+            <p id="section-11.5-2.2.1">Time the seed-to-matrix expansion step using this candidate public key and
+compare it against the known timing target.<a href="#section-11.5-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-11.4-3">The Tempo fix addresses this issue by ensuring that input to SampleNTT is not
-secret-dependent.<a href="#section-11.4-3" class="pilcrow">¶</a></p>
+<p id="section-11.5-3">The Tempo fix addresses this issue by ensuring that input to SampleNTT is not
+secret-dependent.<a href="#section-11.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="related-work">
-<section id="section-11.5">
+<section id="section-11.6">
         <h3 id="name-related-work">
-<a href="#section-11.5" class="section-number selfRef">11.5. </a><a href="#name-related-work" class="section-name selfRef">Related Work</a>
+<a href="#section-11.6" class="section-number selfRef">11.6. </a><a href="#name-related-work" class="section-name selfRef">Related Work</a>
         </h3>
-<p id="section-11.5-1">This section relates the protocols in this document to existing standardized PAKEs and to the broader post-quantum
+<p id="section-11.6-1">This section relates the protocols in this document to existing standardized PAKEs and to the broader post-quantum
 PAKE research literature, and addresses why this problem is not already solved, why it remains an
 active research problem, and why the state of the art is nonetheless mature enough for CFRG to
-engage with it.<a href="#section-11.5-1" class="pilcrow">¶</a></p>
+engage with it.<a href="#section-11.6-1" class="pilcrow">¶</a></p>
 <div id="existing-solutions-and-their-gaps">
-<section id="section-11.5.1">
+<section id="section-11.6.1">
           <h4 id="name-existing-solutions-and-thei">
-<a href="#section-11.5.1" class="section-number selfRef">11.5.1. </a><a href="#name-existing-solutions-and-thei" class="section-name selfRef">Existing Solutions and Their Gaps</a>
+<a href="#section-11.6.1" class="section-number selfRef">11.6.1. </a><a href="#name-existing-solutions-and-thei" class="section-name selfRef">Existing Solutions and Their Gaps</a>
           </h4>
-<p id="section-11.5.1-1">OPAQUE-3DH and SPAKE2+ are standardized aPAKEs, and CPace <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span> is an
+<p id="section-11.6.1-1">OPAQUE-3DH and SPAKE2+ are standardized aPAKEs, and CPace <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span> is an
 emerging symmetric PAKE, but all three are purely classical constructions: none provide
 security against a quantum-capable attacker. NIST's post-quantum cryptography standardization
 effort has, to date, produced key encapsulation mechanisms <span>[<a href="#FIPS203" class="cite xref">FIPS203</a>]</span> and signature schemes, but
@@ -3710,16 +3735,16 @@ transcript. If that classical PAKE's underlying hard problem is later broken, th
 itself becomes retroactively recoverable from the harvested transcript, as detailed in
 <a href="#retroactive-recovery" class="auto internal xref">Section 11.2</a>, independent of whatever post-quantum protection was applied to the
 surrounding transport. This is the concrete gap that simply layering a post-quantum KEM around an
-existing classical PAKE does not close, and it is the gap this document addresses directly.<a href="#section-11.5.1-1" class="pilcrow">¶</a></p>
+existing classical PAKE does not close, and it is the gap this document addresses directly.<a href="#section-11.6.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="ongoing-research">
-<section id="section-11.5.2">
+<section id="section-11.6.2">
           <h4 id="name-ongoing-research">
-<a href="#section-11.5.2" class="section-number selfRef">11.5.2. </a><a href="#name-ongoing-research" class="section-name selfRef">Ongoing Research</a>
+<a href="#section-11.6.2" class="section-number selfRef">11.6.2. </a><a href="#name-ongoing-research" class="section-name selfRef">Ongoing Research</a>
           </h4>
-<p id="section-11.5.2-1">[[EDITOR'S NOTE: remove in the final version of this document]]<a href="#section-11.5.2-1" class="pilcrow">¶</a></p>
-<p id="section-11.5.2-2">The compiler techniques underlying this document's design are recent and remain under active
+<p id="section-11.6.2-1">[[EDITOR'S NOTE: remove in the final version of this document]]<a href="#section-11.6.2-1" class="pilcrow">¶</a></p>
+<p id="section-11.6.2-2">The compiler techniques underlying this document's design are recent and remain under active
 development. The KEM-to-PAKE compiler underlying OQUAKE <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span>, the timing side-channel fix
 required to use it safely with ML-KEM <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span>, the PAKE combiners used to hybridize it with
 CPace <span>[<a href="#HR24" class="cite xref">HR24</a>]</span><span>[<a href="#LL24" class="cite xref">LL24</a>]</span>, and closely related asymmetric PAKE compilers <span>[<a href="#Gu24" class="cite xref">Gu24</a>]</span><span>[<a href="#LLH24" class="cite xref">LLH24</a>]</span> were all
@@ -3727,7 +3752,7 @@ published in 2024 and 2025. <span>[<a href="#GRSV25" class="cite xref">GRSV25</a
 from a combiner of obfuscated KEMs; this relies on a non-standard KEM with larger public keys and
 ciphertexts. The security analysis backing this document's specific composition
 <span>[<a href="#VJWYMS25" class="cite xref">VJWYMS25</a>]</span> is similarly new. Concretely, <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span> identifies and fixes a timing side channel in
-OQUAKE's ML-KEM key-generation step (see <a href="#timing-and-tempo" class="auto internal xref">Section 11.4</a>) that was only discovered in 2025,
+OQUAKE's ML-KEM key-generation step (see <a href="#timing-and-tempo" class="auto internal xref">Section 11.5</a>) that was only discovered in 2025,
 after OQUAKE's core compiler had already been analyzed, illustrating that this design space is
 still being hardened rather than settled. Likewise, this document currently carries an open issue
 regarding whether OQUAKE's proof of security extends to the UC bare PAKE model without requiring
@@ -3736,7 +3761,7 @@ the basis of the existing NoIC/OQUAKE analysis in <span>[<a href="#ABJ25" class=
 no single compiler approach
 has yet converged as the preferred solution across the range of use cases in <a href="#use-cases" class="auto internal xref">Section 2</a>: designs
 optimized for case 3 (this document's target) make different tradeoffs than designs optimized for,
-e.g., case 1 or case 2.<a href="#section-11.5.2-2" class="pilcrow">¶</a></p>
+e.g., case 1 or case 2.<a href="#section-11.6.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4362,8 +4387,8 @@ can define its own framing, including carrying the fields of a single protocol m
 in more than one transport message or PDU. This is possible because no value derived
 by these protocols depends on how a message is framed: every key, confirmation value,
 and transcript hash is computed from individual named fields -- <code>Ya</code>, <code>Yb</code>, <code>s</code>, <code>T</code>, <code>⍴</code>,
-<code>ct</code>, <code>h</code>, <code>enc_c</code>, <code>k</code>, the public and secret contexts -- and never from the concatenated
-message as a whole.
+<code>ct</code>, <code>h</code>, <code>enc_c</code>, <code>k</code>, <code>client_confirm</code>, <code>server_confirm</code>, the public and secret contexts --
+and never from the concatenated message as a whole.
 Re-framing a message therefore cannot change any derived value, and does not
 affect the security analysis of the protocol.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 <p id="appendix-D-2">Such a mapping <span class="bcp14">MUST</span> satisfy the following requirements.<a href="#appendix-D-2" class="pilcrow">¶</a></p>
