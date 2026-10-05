@@ -565,8 +565,6 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def Init(PRS, public_context, secret_context):
-  if secret_context is None:
-    secret_context = b""
   prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || public_context || secret_context)
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
@@ -618,8 +616,6 @@ Parameters:
 def Respond(PRS, public_context, secret_context, init_msg):
   (s, T, ⍴) = init_msg
 
-  if secret_context is None:
-    secret_context = b""
   prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || public_context || secret_context)
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
@@ -935,7 +931,7 @@ server stores a verifier for the client's password, instead of the password itse
 It is a close variant of the `augmented PAKE' constructions presented in {{LLH24}} and in {{Gu24}}.
 
 The verifier consists of two parts that are derived by computing a key stretching function on the client's password.
-The first Nverifier bytes of the KSF output are denoted v, which makes up the first part of the verifier.
+The first Nv bytes of the KSF output are denoted v, which makes up the first part of the verifier.
 The remaining KEM.Nseed bytes, which we call the seed, are used to derive a KEM key pair, of which the public key is the second part of the verifier.
 This KEM does not have to be a BUA-sKEM.
 
@@ -963,7 +959,7 @@ Password confirmation relies on SK for confidentiality, so it cannot be used as 
 
 ### Offline Registration
 
-This subsection specifies functions for generating the verifiers and
+This subsection specifies functions for generating a verifier and
 a protocol for registering clients.
 
 #### Generating Verifiers {#gen-verifiers}
@@ -971,7 +967,7 @@ a protocol for registering clients.
 Verifiers are random-looking values derived from password-related strings from which it is computationally impractical to derive the password-related string.
 To make verifiers unique between different users with the same password or servers that they interact with, we employ a salt, a user account identifier, and an optional server identifier.
 These identifiers identify the registration and do not have to be equal to any identifiers in the public_context; see {{asymmetric-identities}}.
-The material required for the verifiers is generated as follows:
+The material required for the verifier is generated as follows:
 
 ~~~
 GenVerifierMaterial
@@ -982,7 +978,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- verifier, a byte string of Nverifier bytes
+- v, the first part of the verifier, a byte string of Nv bytes
 - seed, a KEM key-derivation seed, a byte string of KEM.Nseed bytes
 
 Parameters:
@@ -991,16 +987,16 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def GenVerifierMaterial(PRS, salt, U, S):
-  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + KEM.Nseed)
-  verifier = verifier_seed[0:Nverifier]
-  seed = verifier_seed[Nverifier:Nverifier + KEM.Nseed]
-  return verifier, seed
+  material = KSF.Stretch(DST || PRS || U || S, salt, Nv + KEM.Nseed)
+  v = material[0:Nv]
+  seed = material[Nv:Nv + KEM.Nseed]
+  return v, seed
 ~~~
 
-To derive an actual public key from the verifier material, we use the following function:
+To derive the verifier (v, pk), we use the following function:
 
 ~~~
-GenVerifiers
+GenVerifier
 
 Input:
 - PRS, password-related string, a byte string
@@ -1008,16 +1004,16 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- verifier, a byte string of Nverifier bytes
-- pk, a KEM public key
+- v, the first part of the verifier, a byte string of Nv bytes
+- pk, the second part of the verifier, a KEM public key
 
 Parameters:
 - KEM, a KEM instance
 
-def GenVerifiers(PRS, salt, U, S):
-  verifier, seed = GenVerifierMaterial(PRS, salt, U, S)
+def GenVerifier(PRS, salt, U, S):
+  v, seed = GenVerifierMaterial(PRS, salt, U, S)
   (sk, pk) = KEM.DeriveKeyPair(seed)
-  return verifier, pk
+  return v, pk
 ~~~
 
 The server MUST store pk; it MUST NOT store seed.
@@ -1028,12 +1024,12 @@ The stored (v, seed) SHOULD be protected in the same way as PRS, since it allows
 #### Client Registration
 
 The registration phase consists of one message sent from the client to the server. This message
-contains the verifier, a public key, and 32-byte salt.
+contains the verifier (v, pk) and a 32-byte salt.
 The server stores this information corresponding to the client for future use in the verification flow.
-This phase requires a secure channel from client to server in order to transfer the password verifier and public key.
+This phase requires a secure channel from client to server in order to transfer the verifier.
 The salt can be sent in plain text.
 In some cases, there may not be a secure channel, but the server may already know the password.
-In such cases, the server MAY instead choose the salt, compute the verifier on behalf of the client using GenVerifiers, store it, and erase the password and the seed.
+In such cases, the server MAY instead choose the salt, compute the verifier on behalf of the client using GenVerifier, store it, and erase the password and the seed.
 
 We recommend that the salt is a random byte string: `salt = random(32)`.
 The client needs the salt before it sends its first protocol message, since the symmetric PAKE already runs over v.
@@ -1046,7 +1042,7 @@ A high level flow overview of the registration flow is below.
 ~~~aasvg
 Client: PRS, salt, U, S              Server: N/A
        ---------------------------------------
- (v, pk) = GenVerifiers(PRS, salt, U, S)
+ (v, pk) = GenVerifier(PRS, salt, U, S)
             |                           |
             |    salt, v, pk, U, S      |
             |-------------------------->|
@@ -1075,7 +1071,7 @@ PC.Challenge
 Input:
 - SK, the key output by the symmetric PAKE, a byte string
 - public_context, optional public context, a byte string
-- pk, client-registered public key, a KEM public key
+- pk, part of the client's registered verifier, a KEM public key
 
 Output:
 - state, opaque state for the server to store
@@ -1255,11 +1251,11 @@ As described in {{pwconf}}, the server_key held in the returned state MUST NOT b
 OQUAKE+.Respond
 
 Input:
-- v, client-registered verifier, a byte string of Nverifier bytes
+- v, part of the client's registered verifier, a byte string of Nv bytes
 - public_context, optional public context, a byte string
 - secret_context, optional secret context, a byte string
 - init_msg, the initiator's protocol message
-- pk, client-registered public key, a KEM public key
+- pk, part of the client's registered verifier, a KEM public key
 
 Output:
 - state, opaque state for the server to store values to complete the protocol
@@ -1423,7 +1419,7 @@ Respond responds to CPaceOQUAKE using the verifier's v instead of PRS.
 CPaceOQUAKE+.Respond
 
 Input:
-- v, client-registered verifier, a byte string of Nverifier bytes
+- v, part of the client's registered verifier, a byte string of Nv bytes
 - public_context, optional public context, a byte string
 - secret_context, optional secret context, a byte string
 - init_msg, the message received from the client
@@ -1478,7 +1474,7 @@ CPaceOQUAKE+.ResponderContinue
 Input:
 - state, the state generated by CPaceOQUAKE+.Respond
 - msg3, the message received from the client
-- pk, client-registered public key, a KEM public key
+- pk, part of the client's registered verifier, a KEM public key
 
 Output:
 - state, opaque state for the responder to store
@@ -1572,7 +1568,7 @@ password confirmation alike.
 The RECOMMENDED parameters, common to all configurations below, are (see
 {{params}}):
 
-- Nverifier = 32 (used only by the augmented protocols, OQUAKE+ and CPaceOQUAKE+)
+- Nv = 32 (used only by the augmented protocols, OQUAKE+ and CPaceOQUAKE+)
 - Nkc = 64
 - Nsec = 32
 - Nkey = 32
@@ -1591,7 +1587,7 @@ no prefix is needed.
 
 OQUAKE+ ({{oquakeplus}}) applies the PAKE-to-aPAKE transformation to OQUAKE, which
 introduces the KEM used to carry the confirmation challenge and the KSF used to
-derive the verifier and seed at registration. It therefore extends
+derive v and the seed at registration. It therefore extends
 {{config-oquake}} with the "PC-" entries, and the OQUAKE KDF takes the "PAKE-"
 prefix to distinguish it from the password confirmation KDF.
 
@@ -1599,7 +1595,7 @@ prefix to distinguish it from the password confirmation KDF.
 - PAKE-KDF: HKDF-SHA-256
 - KEM: ML-KEM-768 {{FIPS203}}, where Nseed = 64, Nct = 1088, and Npk = 1184.
 - PC-KDF: HKDF-SHA-256
-- PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nverifier + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
+- PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nv + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
 - DST: "72bc7dff23f85f771e1475165f32387db27f5082d49bdb79a2abb29623a9f3e8" (a randomly generated 32-byte string)
 
 ## CPaceOQUAKE {#config-cpaceoquake}
@@ -1626,7 +1622,7 @@ test vectors in this document correspond.
 - PAKE-KDF: HKDF-SHA-256
 - KEM: X-Wing {{XWING}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
-- PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nverifier + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
+- PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nv + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
 - DST: "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672" (a randomly generated 32-byte string)
 
 ## Defining New Configurations
@@ -1955,12 +1951,12 @@ ML-BUA-sKEM-1024 is built on ML-KEM-1024, whose failure probability is 2^-175.2.
 
 ## Parameters for OQUAKE+ {#params-oquakeplus}
 
-OQUAKE+ adds password confirmation on top of OQUAKE, which introduces the
-verifier, the KEM key-derivation seed, and the confirmation values. In addition to
+OQUAKE+ adds password confirmation on top of OQUAKE, which introduces
+v, the KEM key-derivation seed, and the confirmation values. In addition to
 the requirements in {{params-oquake}}, we have:
 
-- Nseed * 8 + Nverifier * 8 >= 2 * qq + classical hardness
-- Nverifier * 8 >= qq + classical hardness
+- Nseed * 8 + Nv * 8 >= 2 * qq + classical hardness
+- Nv * 8 >= qq + classical hardness
 - Nkc * 8 >= qq + classical hardness
 - KEM failure <= -qq - classical hardness
 - KEM ind vs classical <= -qq - classical hardness
@@ -1969,7 +1965,7 @@ the requirements in {{params-oquake}}, we have:
 Here Nseed refers to KEM.Nseed, the seed length of the KEM used for password
 confirmation, and not to BUA-sKEM.Nseed. For the KEM in {{config-oquakeplus}} we
 have Nseed = 64, and for the KEM in {{config-cpaceoquakeplus}} we have Nseed = 32.
-For consistency, the spec uses Nverifier = 32.
+For consistency, the spec uses Nv = 32.
 We ignore the KEM failure following the same reasoning as in {{params-oquake}}.
 
 
@@ -2100,12 +2096,12 @@ def Respond(PRS, public_context, secret_context, Ya):
   K = G.scalar_mult_vfy(yb, Ya)
   If K = G.I, raise CPaceError
 
-  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript(Ya, Yb))
+  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript_ir(Ya, b"", Yb, b""))
 
   return ISK, Yb
 ~~~
 
-The functions `lv_cat` and `transcript` are defined in {{CPACE}}.
+The functions `lv_cat` and `transcript_ir` are defined in {{CPACE}}. This document does not use CPace's associated data, so ADa and ADb are empty.
 
 ## Finish
 
@@ -2136,7 +2132,7 @@ def Finish(state, public_context, Yb):
   K = G.scalar_mult_vfy(ya, Yb)
   If K = G.I, raise CPaceError
 
-  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript(Ya, Yb))
+  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript_ir(Ya, b"", Yb, b""))
 
   return ISK
 ~~~
@@ -2285,17 +2281,17 @@ message encoding above.
 
 ## Registration Message Encoding
 
-The registration message described in {{oquakeplus}}, carrying the client's salt,
-verifier, public key, and identifiers, is encoded as:
+The registration message described in {{apake-transform}}, carrying the client's salt,
+verifier (v, pk), and identifiers, is encoded as:
 
 ~~~
 reg_msg = salt || v || pk || lv_encode(U) || lv_encode(S)
 ~~~
 
-where `salt` has 32 bytes, `v` has `Nverifier` bytes, and `pk` has `KEM.Npk`
+where `salt` has 32 bytes, `v` has `Nv` bytes, and `pk` has `KEM.Npk`
 bytes. On receipt, the fields are recovered as `salt = reg_msg[0 : 32]`,
-`v = reg_msg[32 : 32 + Nverifier]`,
-`pk = reg_msg[32 + Nverifier : 32 + Nverifier + KEM.Npk]`, and the identifiers by
+`v = reg_msg[32 : 32 + Nv]`,
+`pk = reg_msg[32 + Nv : 32 + Nv + KEM.Npk]`, and the identifiers by
 successive `lv_decode` calls over the remainder.
 
 # Transport Mappings {#transport-mappings}
