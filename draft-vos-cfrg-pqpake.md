@@ -130,6 +130,66 @@ informative:
         name: Douglas Stebila
       -
         name: Shannon Veitch
+  AHH21:
+    title: "Security Analysis of CPace"
+    target: https://eprint.iacr.org/2021/114
+    author:
+      -
+        name: Michel Abdalla
+      -
+        name: Björn Haase
+      -
+        name: Julia Hesse
+  AS22:
+    title: "Quantum Augmented Dual Attack"
+    target: https://eprint.iacr.org/2022/656
+    author:
+      -
+        name: Martin R. Albrecht
+      -
+        name: Yixin Shen
+  CMST25:
+    title: "Assessing the Impact of a Variant of MATZOV's Dual Attack on Kyber"
+    target: https://eprint.iacr.org/2022/1750
+    author:
+      -
+        name: Kevin Carrier
+      -
+        name: Charles Meyer-Hilfiger
+      -
+        name: Yixin Shen
+      -
+        name: Jean-Pierre Tillich
+  Ogilvie26:
+    title: "On the Concrete Hardness Gap Between MLWE and LWE"
+    target: https://eprint.iacr.org/2026/279
+    author:
+      -
+        name: Tabitha Ogilvie
+  ADPS16:
+    title: "Post-quantum key exchange - A new hope"
+    target: https://www.usenix.org/conference/usenixsecurity16/technical-sessions/presentation/alkim
+    author:
+      -
+        name: Erdem Alkim
+      -
+        name: Léo Ducas
+      -
+        name: Thomas Pöppelmann
+      -
+        name: Peter Schwabe
+  Grover96:
+    title: "A fast quantum mechanical algorithm for database search"
+    target: https://doi.org/10.1145/237814.237866
+    author:
+      -
+        name: Lov K. Grover
+  Bernstein09:
+    title: "Cost analysis of hash collisions: Will quantum computers make SHARCS obsolete?"
+    target: https://cr.yp.to/papers.html#collisioncost
+    author:
+      -
+        name: Daniel J. Bernstein
 
 
 --- abstract
@@ -1981,7 +2041,21 @@ This document has no IANA actions.
 
 # Deriving parameters {#params}
 
-This section discusses how to generate parameters, given an upper bound on an adversary's advantage in breaking the hybrid (a)PAKE. The parameters in this standard correspond to a classical hardness of 117 bits (considering the attacker can break CPace) and a quantum hardness of 100 bits. We assume that an adversary can perform at most 2^qq queries to random oracles or (a)PAKE sessions. We use qq = 64. The derivation below uses some approximations, ignoring small constants in the exponent such as 1 and 1.6. We also only study dominant terms in the advantage equations.
+CPaceOQUAKE+ composes several protocols, each with its own security analysis {{AHH21}} {{ABJ25}} {{TEMPO}} {{HR24}} {{LLH24}} {{VJWYMS25}}. These analyses include security proofs that, under a set of reasonable assumptions, upper-bound an attacker's advantage. The resulting bounds are typically loose and depend on many variables, such as the maximum number of queries that an attacker is allowed to make to each random oracle and the maximum number of PAKE sessions. For these reasons, these bounds are typically unsuitable for describing the concrete cost of an attack. However, with a few additional assumptions, we can obtain tight enough bounds that allow us to select concrete parameters.
+
+Most of the slack in these bounds is introduced in proof steps that require a computational hardness assumption to hold even when an attacker obtains many instances. For example, an attacker may break a certain protocol if it can solve even just one out of q instances of the Diffie-Hellman problem. The question is how much easier that makes the problem for the attacker. Proofs typically bound the advantage of the attacker as `q * advantage_single`, where `advantage_single` is the advantage an attacker obtains in breaking a single isolated instance in a given amount of time. However, this approach does not accurately describe all computational problems: breaking one of q instances may require almost as much effort as breaking an isolated instance. After all, it may be the case that there is a large fixed computational cost associated with breaking any instance, or the problem may be random self-reducible like the Diffie-Hellman problem.
+
+We measure an attacker's resources by its running time t, which models the number of operations it can perform, including queries to random oracles and engaging in protocol sessions. A protocol has security level λ if, for every t, every attacker running in time at most t has an advantage of at most t/2^λ (in distinguishing the protocol from a simulation around the ideal functionality). Note that, for PAKEs, an attacker can always perform one online password guess per session, which does not count against λ. We target a security level λ = 128 against both classical and quantum attackers. For computational problems whose best known attack has an estimated cost of 2^b operations, we assume that an attacker running in time t has advantage at most t/2^b.
+
+For the parameter selection in this specification, we make some additional assumptions that tighten the bounds obtained by the security proofs. We keep all statistical terms unchanged, but we tighten computational terms like `q * advantage` to `1 * advantage` if they satisfy all of the following conditions:
+
+- The advantage describes an attack against a computational hardness assumption. This excludes, e.g., finding a collision in the output of a random oracle.
+- The number q only counts the positions in which a proof may place a challenge instance for the attacker, such as sessions or random oracle queries. This excludes, e.g., a square-root loss in the quantum random oracle model.
+- The computational hardness assumption is one for which we know that solving one of q instances is not significantly easier than solving an isolated instance. This holds for the Diffie-Hellman problem due to random self-reducibility, and for ML-KEM by the structure of the best known attacks.
+
+Note that the resulting security levels are therefore estimates rather than proven bounds.
+
+It is currently hard to obtain concrete protocol security estimates against quantum attackers, so we choose to be conservative: we use the Q0 quantum core-SVP metric {{AS22}} to estimate the cost 2^b of the best known quantum attack on ML-KEM. For classical attackers, we use the classical equivalent, which is C0 core-SVP {{Ogilvie26}} {{CMST25}}; see {{ADPS16}} for the core-SVP methodology. Given that the security proofs are in the classical random oracle model, we use a heuristic to estimate security against quantum attackers: we consider a quadratic speed-up {{Grover96}} for random oracle terms in which the attacker must find a value matching a target, but we do not consider a speed-up related to collision finding since quantum collision search is not known to be cheaper than classical collision search once the cost of quantum random access memory is taken into account {{Bernstein09}}.
 
 ## Parameters for OQUAKE {#params-oquake}
 
