@@ -2057,82 +2057,62 @@ Note that the resulting security levels are therefore estimates rather than prov
 
 It is currently hard to obtain concrete protocol security estimates against quantum attackers, so we choose to be conservative: we use the Q0 quantum core-SVP metric {{AS22}} to estimate the cost 2^b of the best known quantum attack on ML-KEM. For classical attackers, we use the classical equivalent, which is C0 core-SVP {{Ogilvie26}} {{CMST25}}; see {{ADPS16}} for the core-SVP methodology. Given that the security proofs are in the classical random oracle model, we use a heuristic to estimate security against quantum attackers: we consider a quadratic speed-up {{Grover96}} for random oracle terms in which the attacker must find a value matching a target, but we do not consider a speed-up related to collision finding since quantum collision search is not known to be cheaper than classical collision search once the cost of quantum random access memory is taken into account {{Bernstein09}}.
 
+## Conventions {#params-conventions}
+
+In the subsections below, `q_ses` denotes the number of sessions and `q_X` the number of queries to random oracle X.
+The sum of all these `q_*` values is at most t.
+A term meets the target if it is at most t/2^128 for every t up to 2^128.
+Note that we ignore small constant factors.
+
 ## Parameters for OQUAKE {#params-oquake}
 
-We have the following requirements:
+In the analysis below, we require estimates for the hardness of ML-KEM.
+{{tab-mlkem-costs}} lists the costs 2^b of the best known attacks on ML-KEM that we use, from {{Ogilvie26}} (C0) and {{AS22}} (Q0).
 
-- BUA-sKEM ind vs classical <= -qq - classical hardness
-- BUA-sKEM ind vs quantum <= -qq - quantum hardness
-- BUA-sKEM public key uniformity vs classical <= -qq - classical hardness
-- BUA-sKEM public key uniformity vs quantum <= -qq - quantum hardness
-- BUA-sKEM ciphertext uniformity vs classical <= -qq - classical hardness
-- BUA-sKEM ciphertext uniformity vs quantum <= -qq - quantum hardness
-- BUA-sKEM key * 8 >= qq + classical hardness
-- BUA-sKEM failure <= -qq - classical hardness
+| Parameter set | b against classical attackers (C0) | b against quantum attackers (Q0) |
+|---|---|---|
+| ML-KEM-512 | 120.3 | 99.7 |
+| ML-KEM-768 | 172.3 | 150.0 |
+| ML-KEM-1024 | 236.7 | 208.4 |
+{: #tab-mlkem-costs title="Estimated log2 cost b of the best known attacks on ML-KEM"}
 
-For ML-BUA-sKEM, if we set Kemeleon.sec_param to 256, it is as hard or harder to break public key and ciphertext uniformity as it is to break indistinguishability, so we discuss all three properties at once.
+The analysis of NoIC {{ABJ25}}, applied to the split public key of OQUAKE as in {{TEMPO}}, gives a bound with the following terms.
 
-For ML-BUA-sKEM-1024, the resistance to classical attacks is approximately `253 - qq` bits of security. So for qq = 64, classical hardness is approximately 189 bits of security. The resistance to quantum attacks is approximately `230 - qq` bits of security. So for qq = 64, quantum hardness is approximately 166 bits of security.
+- BUA-sKEM security: the one-wayness, anonymity, and public key uniformity advantages of the BUA-sKEM are multiplied by `q_ses * q_H1 * q_H2`. These factors count positions for a challenge instance, so we tighten these terms as described in {{params}}. The underlying KEM then needs b >= 128 against both classical and quantum attackers. Both ML-KEM-768 and ML-KEM-1024 achieve this, but ML-KEM-512 does not.
+- Attacker-chosen seeds: in an active attack, the responder encapsulates to a public key whose seed ρ was chosen by the attacker. The reduction in {{TEMPO}} loses a factor equal to the number of seeds tried by the attacker because they may pick the most favorable of many matrices. We are not aware of any attacks that benefit from this choice, but we choose to be conservative in this regard. As a margin in case such an attack is found, the configurations in this document use ML-KEM-1024: without tightening this term, it still achieves approximately 118 bits of security against classical and 104 bits against quantum attackers, compared with 86 and 75 bits for ML-KEM-768, respectively.
+- Public key encoding (Kemeleon): the public key uniformity advantage also includes the statistical distance between encoded KEM public keys and uniform bytestrings. An attacker can test this once per password guess, so this distance must be at most 2^-128 per public key. This treats the encoding's statistical distance separately from the public key uniformity of ML-KEM itself. In the paper, this would require an additional game hop that replaces all encoded public keys by uniform byte strings at a cost of at most t times the per-key distance. Kemeleon.EncodeEk meets this when we set Kemeleon's statistical distance parameter (Kemeleon.t) to at least 132 (Kemeleon allows values that match 76 + 8x).
+- Decryption failure: the term `q_ses * δ` requires a failure probability δ of at most 2^-128. ML-KEM's failure probability is below 2^-138 for all parameter sets {{FIPS203}}.
+- Randomness s: the proof requires that each message (s, T) sent by an attacker corresponds to at most one password guess. This fails when one of the attacker's hash outputs matches one of the roughly t^2 hash values it obtained earlier, which happens with probability approximately t^3 / 2^(8 * n) for an n-byte s. We treat this as a search for a target value, which a quantum attacker succeeds in with probability approximately t^4 / 2^(8 * n). To achieve a security level of 128 against quantum attackers, we need n >= 64.
+- Tag h: collisions between tags occur with probability `t^2 / 2^(8 * Nkc)`, which requires Nkc >= 32 for a security level of 128. There is no quantum speed-up here.
+- The remaining terms are negligible.
 
-The ML-BUA-sKEM key is 32 bytes, so this satisfies the requirements.
-
-ML-BUA-sKEM-1024 is built on ML-KEM-1024, whose failure probability is 2^-175.2. This is slightly too large, but we deem it acceptable: the chance that an adversary encounters a failure is purely statistical and very small.
-
+[[EDITOR'S NOTE: The bound in {{ABJ25}} includes the encoding's statistical distance in the public key uniformity advantage, which is multiplied by `q_ses * q_H1 * q_H2`. The requirement on the public key encoding above assumes a proof with a separate game hop for this distance, which still needs to be written down.]]
 
 ## Parameters for OQUAKE+ {#params-oquakeplus}
 
-OQUAKE+ adds password confirmation on top of OQUAKE, which introduces
-v, the KEM key-derivation seed, and the confirmation values. In addition to
-the requirements in {{params-oquake}}, we have:
+In addition to the terms of the symmetric PAKE ({{params-oquake}}), Theorem 3 of
+{{VJWYMS25}} bounds the PAKE-to-aPAKE transformation with the following terms.
+Here `q_pb` denotes the number of KSF evaluations.
 
-- Nseed * 8 + Nv * 8 >= 2 * qq + classical hardness
-- Nv * 8 >= qq + classical hardness
-- Nkc * 8 >= qq + classical hardness
-- KEM failure <= -qq - classical hardness
-- KEM ind vs classical <= -qq - classical hardness
-- KEM ind vs quantum <= -qq - quantum hardness
+- KEM security: the IND-CCA advantage of the KEM has a factor `q_ses`, which counts positions for a challenge instance, so we tighten this term. The KEM then needs b >= 128. ML-KEM-768, ML-KEM-1024, and X-Wing (which uses ML-KEM-768) achieve this against both classical and quantum attackers. The IND-CCA advantage also covers decryption failures.
+- Verifier collisions: `q_pb^2 / 2^(8 * Nv + 1)` requires Nv >= 32. Collision finding does not get a quantum speed-up.
+- Guessing: guessing v or a confirmation value contributes `q_ses / 2^(8 * Nv - 2)` and `q_ses / 2^(8 * Nkc - 2)`, which require Nv >= 16 and Nkc >= 16 to achieve a security level of 128.
 
-Here Nseed refers to KEM.Nseed, the seed length of the KEM used for password
-confirmation, and not to BUA-sKEM.Nseed. For the KEM in {{config-oquakeplus}} we
-have Nseed = 64, and for the KEM in {{config-cpaceoquakeplus}} we have Nseed = 32.
-For consistency, the spec uses Nv = 32.
-We ignore the KEM failure following the same reasoning as in {{params-oquake}}.
-
+[[EDITOR'S NOTE: The proof of this bound needs to be updated for the password confirmation in this document, which derives client_confirm from the encapsulated key.]]
 
 ## Parameters for CPace {#params-cpace}
 
-We refer to {{CPACE}} for the parameters of CPace.
-
+{{AHH21}} bounds CPace by `l^2 / p + 2 * l^2 * Adv_sSDH + Adv_sCDH`, where l is the number of queries to the hash-to-curve function and p is the group order. Since the factor `l^2` counts positions for a challenge instance and the Diffie-Hellman problem is random self-reducible, we tighten this term. Generic Diffie-Hellman attacks have an advantage of approximately `t^2 / p`, so CPace reaches λ of approximately log2(p)/2, which is roughly 126 for X25519 and 128 for P-256.
 
 ## Parameters for CPaceOQUAKE {#params-cpaceoquake}
 
-CPaceOQUAKE must provide:
+{{VJWYMS25}} gives two bounds, following {{HR24}}: one if CPace is secure, and the other if OQUAKE is secure. Against classical attackers, CPaceOQUAKE reaches the higher of the levels of CPace and OQUAKE, and against quantum attackers it reaches the level of OQUAKE.
 
-- CPaceOQUAKE vs classical <= classical hardness
-- CPaceOQUAKE vs quantum <= quantum hardness
-
-We have the following requirements when CPaceOQUAKE relies on CPace's security:
-
-- CPace vs classical <= classical hardness
-- Nkey * 8 >= qq + classical hardness
-- KEM failure <= -qq - classical hardness
-
-We have the following requirements when CPaceOQUAKE relies on OQUAKE's security:
-
-- OQUAKE vs classical <= classical hardness
-- OQUAKE vs quantum <= quantum hardness
-- Nkey * 8 >= 2*qq + classical hardness
-
-So, the smallest Nkey = 32.
-We ignore the KEM failure following the same reasoning as in {{params-oquake}}.
-
+Besides the advantage against CPace or OQUAKE, each bound has terms of order `q_H / 2^(8 * n)`, where n is the length of CPace's session key, of effective_PRS, or of the session key. These terms describe guessing a key, so against quantum attackers they become `t^2 / 2^(8 * n)`. To achieve a security level of 128, these keys must be at least 32 bytes, so Nkey >= 32, and we require a CPace hash output of at least 32 bytes.
 
 ## Parameters for CPaceOQUAKE+ {#params-cpaceoquakeplus}
 
-CPaceOQUAKE+ applies the PAKE-to-aPAKE transformation to CPaceOQUAKE, so its
-requirements are those in {{params-cpaceoquake}} together with the password
-confirmation requirements in {{params-oquakeplus}}. The transformation itself
-introduces no additional parameters.
+CPaceOQUAKE+ applies the PAKE-to-aPAKE transformation to CPaceOQUAKE, so its requirements are those described both in {{params-cpaceoquake}} and {{params-oquakeplus}}.
 
 
 # CPace Wrapper {#cpace}
