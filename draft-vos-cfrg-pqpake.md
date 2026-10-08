@@ -160,6 +160,14 @@ informative:
         name: Yixin Shen
       -
         name: Jean-Pierre Tillich
+  Kopis26:
+    title: "Kopis: A KEM for Obfuscation"
+    target: https://eprint.iacr.org/2026/2268
+    author:
+      -
+        name: Andrea Basso
+      -
+        name: Michael Rosenberg
   Ogilvie26:
     title: "On the Concrete Hardness Gap Between MLWE and LWE"
     target: https://eprint.iacr.org/2026/279
@@ -2141,7 +2149,10 @@ required to use it safely with ML-KEM {{TEMPO}}, the PAKE combiners used to hybr
 CPace {{HR24}}{{LL24}}, and closely related asymmetric PAKE compilers {{Gu24}}{{LLH24}} were all
 published in 2024 and 2025. {{GRSV25}} takes a different approach, constructing a hybrid PAKE
 from a combiner of obfuscated KEMs; this relies on a non-standard KEM with larger public keys and
-ciphertexts. The security analysis backing this document's specific composition
+ciphertexts. Kopis {{Kopis26}} is a recently proposed KEM based on Module Learning-with-Rounding and
+nearly identical to Saber, whose public keys and ciphertexts are pseudorandom byte strings and whose
+algorithms are efficient and constant time with respect to all inputs. A BUA-sKEM based on Kopis would not need
+the Kemeleon encoding ({{deps-BUA-sKEM}}), but Kopis has not been standardized. The security analysis backing this document's specific composition
 {{VJWYMS25}} is similarly new. Concretely, {{TEMPO}} identifies and fixes a timing side channel in
 OQUAKE's ML-KEM key-generation step (see {{timing-and-tempo}}) that was only discovered in 2025,
 after OQUAKE's core compiler had already been analyzed, illustrating that this design space is
