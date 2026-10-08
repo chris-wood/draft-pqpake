@@ -113,25 +113,20 @@ Table of Contents
    9.  Configurations
      9.1.  Common Parameters
      9.2.  OQUAKE
-       9.2.1.  OQUAKE with ML-KEM-1024 (oquake-1024)
-       9.2.2.  OQUAKE with ML-KEM-768 (oquake-768)
+       9.2.1.  OQUAKE with ML-KEM-1024
+       9.2.2.  OQUAKE with ML-KEM-768
      9.3.  OQUAKE+
-       9.3.1.  OQUAKE+ with ML-KEM-1024 (oquakeplus-1024)
-       9.3.2.  OQUAKE+ with ML-KEM-768 (oquakeplus-768)
+       9.3.1.  OQUAKE+ with ML-KEM-1024
+       9.3.2.  OQUAKE+ with ML-KEM-768
      9.4.  CPaceOQUAKE
        9.4.1.  CPaceOQUAKE with X25519 and ML-KEM-1024
-               (cpaceoquake-x25519-1024)
        9.4.2.  CPaceOQUAKE with X25519 and ML-KEM-768
-               (cpaceoquake-x25519-768)
        9.4.3.  CPaceOQUAKE with P-384 and ML-KEM-1024
-               (cpaceoquake-p384-1024)
      9.5.  CPaceOQUAKE+
-       9.5.1.  CPaceOQUAKE+ with P-384, ML-KEM-1024, and
-               MLKEM1024-P384 (cpaceoquakeplus-p384-1024)
-       9.5.2.  CPaceOQUAKE+ with X25519, ML-KEM-1024, and X-Wing
-               (cpaceoquakeplus-x25519-1024)
+       9.5.1.  CPaceOQUAKE+ with X25519, ML-KEM-1024, and X-Wing
+       9.5.2.  CPaceOQUAKE+ with P-384, ML-KEM-1024, and
+               MLKEM1024-P384
        9.5.3.  CPaceOQUAKE+ with X25519, ML-KEM-768, and X-Wing
-               (cpaceoquakeplus-x25519-768)
      9.6.  Defining New Configurations
    10. Implementation Considerations
    11. Security Considerations
@@ -384,7 +379,12 @@ Table of Contents
    CPaceOQUAKE+. The configurations in this specification (Section 9)
    use ML-KEM-768 and ML-KEM-1024 [FIPS203] for OQUAKE+, and the hybrid
    KEMs X-Wing [XWING] and MLKEM1024-P384 [CONCRETE-HYBRID-KEMS] for
-   CPaceOQUAKE+.
+   CPaceOQUAKE+. For these KEMs, DeriveKeyPair uses the seed directly,
+   as specified in [CONCRETE-HYBRID-KEMS]: for ML-KEM, it is
+   KeyGen_internal(seed[0:32], seed[32:64]) [FIPS203], and for X-Wing,
+   it is GenerateKeyPairDerand(seed) [XWING].  Implementations MUST NOT
+   use the HPKE-style DeriveKeyPair(ikm) of [XWING] instead, which first
+   hashes its input and therefore derives a different key pair.
 
 4.2.  Splittable binary KEM
 
@@ -1780,12 +1780,16 @@ def ResponderFinish(state, msg5):
    belong to the PAKE-to-aPAKE transformation (Section 8.1).
 
    This section gives RECOMMENDED configurations for each of the four
-   protocols specified in this document.  The first configuration of
-   each protocol is the one that fits best with the security analysis
-   (Appendix A.2) and with other specifications.  The second
-   configuration of each protocol is the simplest to implement: it uses
-   ML-KEM-768 throughout and, where CPace is used, X25519, with X-Wing
-   as the password confirmation KEM of CPaceOQUAKE+.
+   protocols specified in this document, in order of preference.  The
+   preferred configuration of each protocol uses ML-KEM-1024 in OQUAKE,
+   which provides a larger security margin (Appendix A.2).  Where CPace
+   is used, it uses X25519, CPace's primary recommended suite, and
+   CPaceOQUAKE+ uses X-Wing as the password confirmation KEM.  The
+   configurations with ML-KEM-768 can be considered when the bandwidth
+   cost would otherwise be too high.  Each configuration has an
+   identifier containing the protocol name, CPace group (if any), BUA-
+   sKEM, and password confirmation KEM (if any), each in lowercase and
+   without punctuation.
 
    The configurations are nested in the same way as the protocols
    themselves.  Each names only the components the protocol uses, and a
@@ -1822,9 +1826,11 @@ def ResponderFinish(state, msg5):
    verifier-deriving KSF nor the KEM used for password confirmation.
    Because only one KDF is present, no prefix is needed.
 
-9.2.1.  OQUAKE with ML-KEM-1024 (oquake-1024)
+9.2.1.  OQUAKE with ML-KEM-1024
 
-   This is the preferred configuration, see Section 9.1.
+   This is the preferred configuration (Appendix A.2).
+
+   *  Identifier: oquake-mlbuaskem1024
 
    *  BUA-sKEM: ML-BUA-sKEM-1024 (Table 1)
 
@@ -1834,10 +1840,12 @@ def ResponderFinish(state, msg5):
       "601ed384c5775ddd3021f51a4660fff24bf4eaa7845a958b2cade75289d184cd"
       (a randomly generated 32-byte string)
 
-9.2.2.  OQUAKE with ML-KEM-768 (oquake-768)
+9.2.2.  OQUAKE with ML-KEM-768
 
    This configuration can be considered when the bandwidth cost would
    otherwise be too high.
+
+   *  Identifier: oquake-mlbuaskem768
 
    *  BUA-sKEM: ML-BUA-sKEM-768 (Table 1)
 
@@ -1857,9 +1865,11 @@ def ResponderFinish(state, msg5):
    password confirmation KDF.  Both configurations use the same ML-KEM
    parameter set in OQUAKE and for password confirmation.
 
-9.3.1.  OQUAKE+ with ML-KEM-1024 (oquakeplus-1024)
+9.3.1.  OQUAKE+ with ML-KEM-1024
 
-   This is the preferred configuration, see Section 9.1.
+   This is the preferred configuration (Appendix A.2).
+
+   *  Identifier: oquakeplus-mlbuaskem1024-mlkem1024
 
    *  BUA-sKEM: ML-BUA-sKEM-1024 (Table 1)
 
@@ -1876,10 +1886,12 @@ def ResponderFinish(state, msg5):
       "284e89132c00ba4f49e66d0af9e63c4c8efa701ce4b66bb6fcf1ce9cc5c35be1"
       (a randomly generated 32-byte string)
 
-9.3.2.  OQUAKE+ with ML-KEM-768 (oquakeplus-768)
+9.3.2.  OQUAKE+ with ML-KEM-768
 
    This configuration can be considered when the bandwidth cost would
    otherwise be too high.
+
+   *  Identifier: oquakeplus-mlbuaskem768-mlkem768
 
    *  BUA-sKEM: ML-BUA-sKEM-768 (Table 1)
 
@@ -1904,12 +1916,13 @@ def ResponderFinish(state, msg5):
    uses P-384, the curve of the hybrid KEM in the corresponding
    CPaceOQUAKE+ configuration.
 
-9.4.1.  CPaceOQUAKE with X25519 and ML-KEM-1024 (cpaceoquake-
-        x25519-1024)
+9.4.1.  CPaceOQUAKE with X25519 and ML-KEM-1024
 
-   This is the preferred choice of ML-KEM, see Section 9.1, and it uses
-   a recommended CPace suite.  This corresponds to the oquake-1024
-   configuration.
+   This is the preferred configuration: it uses ML-KEM-1024 in OQUAKE
+   (Appendix A.2) and CPace's primary recommended suite.  This
+   corresponds to the oquake-mlbuaskem1024 configuration.
+
+   *  Identifier: cpaceoquake-x25519-mlbuaskem1024
 
    *  CPace-Group: CPACE-X25519-SHA512 Section 5 of [CPACE]
 
@@ -1923,11 +1936,13 @@ def ResponderFinish(state, msg5):
       "443e3089985f0f8dddfb20cc5e8618f447bdcfe6dd39abb23911cd784c075120"
       (a randomly generated 32-byte string)
 
-9.4.2.  CPaceOQUAKE with X25519 and ML-KEM-768 (cpaceoquake-x25519-768)
+9.4.2.  CPaceOQUAKE with X25519 and ML-KEM-768
 
    This configuration can be considered when the bandwidth cost would
-   otherwise be too high.  This corresponds to the oquake-768
+   otherwise be too high.  This corresponds to the oquake-mlbuaskem768
    configuration.
+
+   *  Identifier: cpaceoquake-x25519-mlbuaskem768
 
    *  CPace-Group: CPACE-X25519-SHA512 Section 5 of [CPACE]
 
@@ -1941,10 +1956,13 @@ def ResponderFinish(state, msg5):
       "c2ef9d7f73324735ec5614f331fa49c86c05be3430996c46816fca59d778380b"
       (a randomly generated 32-byte string)
 
-9.4.3.  CPaceOQUAKE with P-384 and ML-KEM-1024 (cpaceoquake-p384-1024)
+9.4.3.  CPaceOQUAKE with P-384 and ML-KEM-1024
 
-   This is the preferred choice when it is run as part of CPaceOQUAKE+.
-   This corresponds to the oquake-1024 configuration.
+   This configuration uses P-384, the curve of the hybrid KEM in
+   cpaceoquakeplus-p384-mlbuaskem1024-mlkem1024p384.  This corresponds
+   to the oquake-mlbuaskem1024 configuration.
+
+   *  Identifier: cpaceoquake-p384-mlbuaskem1024
 
    *  CPace-Group: CPACE-P384_XMD:SHA-384_SSWU_NU_-SHA384 Section 5 of
       [CPACE]
@@ -1963,21 +1981,45 @@ def ResponderFinish(state, msg5):
 
    CPaceOQUAKE+ (Section 8.3) applies the PAKE-to-aPAKE transformation
    to CPaceOQUAKE.  Since it targets hybrid security, its password
-   confirmation KEM is a hybrid KEM.  The preferred configuration uses
-   ML-KEM-1024 in OQUAKE and password confirmation.  The password
-   confirmation KEM can also use X-Wing, which uses ML-KEM-768, but then
-   implementations need both ML-KEM parameter sets.  The third
-   configuration uses the ML-KEM-768 parameter set and one curve
-   throughout.  The test vectors in this document correspond to the
-   first configuration.
+   confirmation KEM is a hybrid KEM.  The test vectors in this document
+   correspond to the first configuration.
 
-9.5.1.  CPaceOQUAKE+ with P-384, ML-KEM-1024, and MLKEM1024-P384
-        (cpaceoquakeplus-p384-1024)
+9.5.1.  CPaceOQUAKE+ with X25519, ML-KEM-1024, and X-Wing
 
-   This is the preferred configuration, see Section 9.1 and for the fact
-   that it uses the same ML-KEM parameters for the BUA-sKEM and password
-   confirmation KEM.  This corresponds to the cpaceoquake-p384-1024
+   This is the preferred configuration: it uses ML-KEM-1024 in OQUAKE
+   (Appendix A.2) and CPace's primary recommended suite.  This
+   corresponds to the cpaceoquake-x25519-mlbuaskem1024 configuration.
+   Note that it requires both ML-KEM-1024 and ML-KEM-768.  The latter is
+   used by X-Wing uses.
+
+   *  Identifier: cpaceoquakeplus-x25519-mlbuaskem1024-xwing
+
+   *  CPace-Group: CPACE-X25519-SHA512 Section 5 of [CPACE]
+
+   *  CPace-Hash: SHA-512
+
+   *  BUA-sKEM: ML-BUA-sKEM-1024 (Table 1)
+
+   *  PAKE-KDF: HKDF-SHA-256
+
+   *  KEM: X-Wing [XWING], where Nseed = 32, Nct = 1120, and Npk = 1216.
+
+   *  PC-KDF: HKDF-SHA-256
+
+   *  PC-KSF: scrypt(N = 32768, r = 8, p = 1)
+
+   *  DST:
+      "7de162c387ba1bad9c790e7e56bd245d6753d045185cbc3972eba34ddac1a9db"
+      (a randomly generated 32-byte string)
+
+9.5.2.  CPaceOQUAKE+ with P-384, ML-KEM-1024, and MLKEM1024-P384
+
+   This configuration can be considered when a single ML-KEM parameter
+   set and a single curve are preferred: it uses ML-KEM-1024 and P-384
+   throughout.  This corresponds to the cpaceoquake-p384-mlbuaskem1024
    configuration.
+
+   *  Identifier: cpaceoquakeplus-p384-mlbuaskem1024-mlkem1024p384
 
    *  CPace-Group: CPACE-P384_XMD:SHA-384_SSWU_NU_-SHA384 Section 5 of
       [CPACE]
@@ -1999,38 +2041,13 @@ def ResponderFinish(state, msg5):
       "d8fcdaf8c2c8c429a2ff93ff658d07050017487dc367d11cabb54f2a7dd2b5fd"
       (a randomly generated 32-byte string)
 
-9.5.2.  CPaceOQUAKE+ with X25519, ML-KEM-1024, and X-Wing
-        (cpaceoquakeplus-x25519-1024)
-
-   This configuration can be considered when the it is preferred to use
-   X-Wing over MLKEM1024-P384 [CONCRETE-HYBRID-KEMS].  This corresponds
-   to the cpaceoquake-x25519-1024 configuration.  Note that this
-   requires two different sets of ML-KEM parameters.
-
-   *  CPace-Group: CPACE-X25519-SHA512 Section 5 of [CPACE]
-
-   *  CPace-Hash: SHA-512
-
-   *  BUA-sKEM: ML-BUA-sKEM-1024 (Table 1)
-
-   *  PAKE-KDF: HKDF-SHA-256
-
-   *  KEM: X-Wing [XWING], where Nseed = 32, Nct = 1120, and Npk = 1216.
-
-   *  PC-KDF: HKDF-SHA-256
-
-   *  PC-KSF: scrypt(N = 32768, r = 8, p = 1)
-
-   *  DST:
-      "7de162c387ba1bad9c790e7e56bd245d6753d045185cbc3972eba34ddac1a9db"
-      (a randomly generated 32-byte string)
-
 9.5.3.  CPaceOQUAKE+ with X25519, ML-KEM-768, and X-Wing
-        (cpaceoquakeplus-x25519-768)
 
    This configuration can be considered when the bandwidth cost would
    otherwise be too high.  This corresponds to the cpaceoquake-
-   x25519-768 configuration.
+   x25519-mlbuaskem768 configuration.
+
+   *  Identifier: cpaceoquakeplus-x25519-mlbuaskem768-xwing
 
    *  CPace-Group: CPACE-X25519-SHA512 Section 5 of [CPACE]
 
@@ -2078,13 +2095,14 @@ def ResponderFinish(state, msg5):
 
        *  The CPace hash produces at least 32 bytes.
 
-       *  For ML-BUA-sKEM, the statistical distance parameter Kemeleon.t
-          >= 132, or it should achieve equivalent security.
+       *  For ML-BUA-sKEM, Kemeleon.t >= 132, or another encoding whose
+          statistical distance from uniform is at most 2^-128 per public
+          key (Appendix A.2).
 
-   We RECOMMEND using the same ML-KEM parameter set in OQUAKE and in the
-   password confirmation KEM to reduce code size.  Similarly, we
-   RECOMMEND to use the same curve in CPace and in the hybrid password
-   confirmation KEM in CPaceOQUAKE+.
+   It is RECOMMENDED that a configuration of CPaceOQUAKE+ use the same
+   curve in CPace and in the hybrid password confirmation KEM.  Using
+   the same ML-KEM parameter set in OQUAKE and in the password
+   confirmation KEM further reduces code size.
 
    For instance, one possible additional configuration for CPaceOQUAKE+
    uses P-256 throughout:
@@ -3194,30 +3212,31 @@ D.1.  Message Sizes
    The following table gives the size in octets of each protocol message
    under the RECOMMENDED configurations of CPaceOQUAKE+ (Section 9.5),
    excluding any framing added by the transport.  The columns correspond
-   to the configurations with X25519, ML-KEM-768, and X-Wing; with
-   X25519, ML-KEM-1024, and X-Wing; and with P-384, ML-KEM-1024, and
-   MLKEM1024-P384, respectively.  Messages msg1 to msg3 are also the
-   messages of the corresponding CPaceOQUAKE configurations.  Sizes for
-   the other configurations follow from their respective field lengths.
+   to cpaceoquakeplus-x25519-mlbuaskem1024-xwing, cpaceoquakeplus-
+   p384-mlbuaskem1024-mlkem1024p384, and cpaceoquakeplus-
+   x25519-mlbuaskem768-xwing, respectively.  Messages msg1 to msg3 are
+   also the messages of the corresponding CPaceOQUAKE configurations.
+   Sizes for the other configurations follow from their respective field
+   lengths.
 
-    +=========+================+=============+==============+========+
-    | Message | Fields         | X25519, 768 | X25519, 1024 | P-384, |
-    |         |                |             |              | 1024   |
-    +=========+================+=============+==============+========+
-    | msg1    | CPace Ya       | 34          | 34           | 99     |
-    +---------+----------------+-------------+--------------+--------+
-    | msg2    | CPace Yb, s,   | 1303        | 1694         | 1759   |
-    |         | T, ⍴           |             |              |        |
-    +---------+----------------+-------------+--------------+--------+
-    | msg3    | ct, h          | 1120        | 1600         | 1600   |
-    +---------+----------------+-------------+--------------+--------+
-    | msg4    | enc_c,         | 1152        | 1152         | 1697   |
-    |         | client_confirm |             |              |        |
-    +---------+----------------+-------------+--------------+--------+
-    | msg5    | server_confirm | 32          | 32           | 32     |
-    +---------+----------------+-------------+--------------+--------+
+    +=========+================+==============+=============+=========+
+    | Message | Fields         | X25519, 1024 | P-384, 1024 | X25519, |
+    |         |                |              |             | 768     |
+    +=========+================+==============+=============+=========+
+    | msg1    | CPace Ya       | 34           | 99          | 34      |
+    +---------+----------------+--------------+-------------+---------+
+    | msg2    | CPace Yb, s,   | 1694         | 1759        | 1303    |
+    |         | T, ⍴           |              |             |         |
+    +---------+----------------+--------------+-------------+---------+
+    | msg3    | ct, h          | 1600         | 1600        | 1120    |
+    +---------+----------------+--------------+-------------+---------+
+    | msg4    | enc_c,         | 1152         | 1697        | 1152    |
+    |         | client_confirm |              |             |         |
+    +---------+----------------+--------------+-------------+---------+
+    | msg5    | server_confirm | 32           | 32          | 32      |
+    +---------+----------------+--------------+-------------+---------+
 
-                                 Table 3
+                                  Table 3
 
    In each configuration, the largest message is msg2.
 
