@@ -4142,7 +4142,10 @@ required to use it safely with ML-KEM <span>[<a href="#TEMPO" class="cite xref">
 CPace <span>[<a href="#HR24" class="cite xref">HR24</a>]</span><span>[<a href="#LL24" class="cite xref">LL24</a>]</span>, and closely related asymmetric PAKE compilers <span>[<a href="#Gu24" class="cite xref">Gu24</a>]</span><span>[<a href="#LLH24" class="cite xref">LLH24</a>]</span> were all
 published in 2024 and 2025. <span>[<a href="#GRSV25" class="cite xref">GRSV25</a>]</span> takes a different approach, constructing a hybrid PAKE
 from a combiner of obfuscated KEMs; this relies on a non-standard KEM with larger public keys and
-ciphertexts. The security analysis backing this document's specific composition
+ciphertexts. Kopis <span>[<a href="#Kopis26" class="cite xref">Kopis26</a>]</span> is a recently proposed KEM based on Module Learning-with-Rounding and
+nearly identical to Saber, whose public keys and ciphertexts are pseudorandom byte strings and whose
+algorithms are efficient and constant time with respect to all inputs. A BUA-sKEM based on Kopis would not need
+the Kemeleon encoding (<a href="#deps-BUA-sKEM" class="auto internal xref">Section 4.2</a>), but Kopis has not been standardized. The security analysis backing this document's specific composition
 <span>[<a href="#VJWYMS25" class="cite xref">VJWYMS25</a>]</span> is similarly new. Concretely, <span>[<a href="#TEMPO" class="cite xref">TEMPO</a>]</span> identifies and fixes a timing side channel in
 OQUAKE's ML-KEM key-generation step (see <a href="#timing-and-tempo" class="auto internal xref">Section 11.5</a>) that was only discovered in 2025,
 after OQUAKE's core compiler had already been analyzed, illustrating that this design space is
@@ -4292,6 +4295,10 @@ engagement itself provides, rather than a prerequisite to starting that engageme
 <dt id="HR24">[HR24]</dt>
         <dd>
 <span class="refAuthor">Hesse, J.</span> and <span class="refAuthor">M. Rosenberg</span>, <span class="refTitle">"PAKE Combiners and Efficient Post-Quantum Instantiations"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1621">https://eprint.iacr.org/2024/1621</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="Kopis26">[Kopis26]</dt>
+        <dd>
+<span class="refAuthor">Basso, A.</span> and <span class="refAuthor">M. Rosenberg</span>, <span class="refTitle">"Kopis: A KEM for Obfuscation"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2026/2268">https://eprint.iacr.org/2026/2268</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="LL24">[LL24]</dt>
         <dd>

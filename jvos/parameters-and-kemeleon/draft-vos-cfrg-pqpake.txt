@@ -2443,17 +2443,23 @@ def ResponderFinish(state, msg5):
    PAKE compilers [Gu24][LLH24] were all published in 2024 and 2025.
    [GRSV25] takes a different approach, constructing a hybrid PAKE from
    a combiner of obfuscated KEMs; this relies on a non-standard KEM with
-   larger public keys and ciphertexts.  The security analysis backing
-   this document's specific composition [VJWYMS25] is similarly new.
-   Concretely, [TEMPO] identifies and fixes a timing side channel in
-   OQUAKE's ML-KEM key-generation step (see Section 11.5) that was only
-   discovered in 2025, after OQUAKE's core compiler had already been
-   analyzed, illustrating that this design space is still being hardened
-   rather than settled.  Likewise, this document currently carries an
-   open issue regarding whether OQUAKE's proof of security extends to
-   the UC bare PAKE model without requiring party or session identifiers
-   (see Section 11.3.1); this extension is believed to hold on the basis
-   of the existing NoIC/OQUAKE analysis in [ABJ25] but has not yet been
+   larger public keys and ciphertexts.  Kopis [Kopis26] is a recently
+   proposed KEM based on Module Learning-with-Rounding and nearly
+   identical to Saber, whose public keys and ciphertexts are
+   pseudorandom byte strings and whose algorithms are efficient and
+   constant time with respect to all inputs.  A BUA-sKEM based on Kopis
+   would not need the Kemeleon encoding (Section 4.2), but Kopis has not
+   been standardized.  The security analysis backing this document's
+   specific composition [VJWYMS25] is similarly new.  Concretely,
+   [TEMPO] identifies and fixes a timing side channel in OQUAKE's ML-KEM
+   key-generation step (see Section 11.5) that was only discovered in
+   2025, after OQUAKE's core compiler had already been analyzed,
+   illustrating that this design space is still being hardened rather
+   than settled.  Likewise, this document currently carries an open
+   issue regarding whether OQUAKE's proof of security extends to the UC
+   bare PAKE model without requiring party or session identifiers (see
+   Section 11.3.1); this extension is believed to hold on the basis of
+   the existing NoIC/OQUAKE analysis in [ABJ25] but has not yet been
    published.  Finally, no single compiler approach has yet converged as
    the preferred solution across the range of use cases in Section 2:
    designs optimized for case 3 (this document's target) make different
@@ -2595,6 +2601,9 @@ def ResponderFinish(state, msg5):
    [HR24]     Hesse, J. and M. Rosenberg, "PAKE Combiners and Efficient
               Post-Quantum Instantiations", n.d.,
               <https://eprint.iacr.org/2024/1621>.
+
+   [Kopis26]  Basso, A. and M. Rosenberg, "Kopis: A KEM for
+              Obfuscation", n.d., <https://eprint.iacr.org/2026/2268>.
 
    [LL24]     Lyu, Y. and S. Liu, "Hybrid Password Authentication Key
               Exchange in the UC Framework", n.d.,
