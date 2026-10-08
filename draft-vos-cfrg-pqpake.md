@@ -384,7 +384,7 @@ These additional properties are crucial for the security of OQUAKE. In
 other words, one MUST NOT use a KEM that has no uniform public keys
 and/or no anonymous ciphertexts in place of a UPK-ANO-KEM.
 
-In this specification, we also require a third property: the KEM must be splittable. A splittable KEM (sKEM) implements the `Split(pk) -> (t, ⍴)` function and its inverse, which takes a public key and splits it into a part `⍴` that is independent of the KEM's secret key and can therefore be made public, and a part `t` that does depend on the secret key. This property allows parties to perform variable-time operations on `⍴` without revealing information about the secret key. We use N⍴ to denote the byte-length of ⍴ and Nt to denote the byte-length of t. We use `Combine(t, ⍴) -> pk` to refer to the inverse operation of `Split`.
+In this specification, we also require a third property: the KEM must be splittable. A splittable KEM (sKEM) implements the `Split(pk) -> (ut, ⍴)` function and its inverse, which takes a public key and splits it into a part `⍴` that is independent of the KEM's secret key and can therefore be made public, and a part `ut` that does depend on the secret key. This property allows parties to perform variable-time operations on `⍴` without revealing information about the secret key. We use N⍴ to denote the byte-length of ⍴ and Nt to denote the byte-length of ut. We use `Combine(ut, ⍴) -> pk` to refer to the inverse operation of `Split`.
 
 In the remainder of this specification, we abbreviate 'splittable binary UPK-ANO-KEM' as BUA-sKEM.
 This specification uses a variant of ML-KEM-1024 {{FIPS203}}, which we therefore denote by ML-BUA-sKEM-1024.
@@ -661,7 +661,7 @@ def Init(PRS, public_context, secret_context):
   (sk, pk) = BUA-sKEM.DeriveKeyPair(seed)
   (ut, ⍴) = BUA-sKEM.Split(pk)
 
-  r = random(3 * Nsec)
+  r = random(Nr)
 
   // T = XOR(ut, H(public_context, effective_PRS, ⍴, r))
   prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || r)
@@ -670,7 +670,7 @@ def Init(PRS, public_context, secret_context):
 
   // s = XOR(r, H(public_context, effective_PRS, ⍴, T))
   prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || T)
-  s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
+  s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", Nr)
   s = XOR(r, s_pad)
 
   msg = (s, T, ⍴)
@@ -711,7 +711,7 @@ def Respond(PRS, public_context, secret_context, init_msg):
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || T)
-  s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
+  s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", Nr)
   r = XOR(s, s_pad)
 
   prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || r)
@@ -1673,7 +1673,7 @@ The RECOMMENDED parameters, common to all configurations below, are (see
 
 - Nv = 32 (used only by the augmented protocols, OQUAKE+ and CPaceOQUAKE+)
 - Nkc = 64
-- Nsec = 32
+- Nr = 64
 - Nkey = 32
 
 ## OQUAKE {#config-oquake}
@@ -2082,7 +2082,7 @@ The analysis of NoIC {{ABJ25}}, applied to the split public key of OQUAKE as in 
 - Attacker-chosen seeds: in an active attack, the responder encapsulates to a public key whose seed ρ was chosen by the attacker. The reduction in {{TEMPO}} loses a factor equal to the number of seeds tried by the attacker because they may pick the most favorable of many matrices. We are not aware of any attacks that benefit from this choice, but we choose to be conservative in this regard. As a margin in case such an attack is found, the configurations in this document use ML-KEM-1024: without tightening this term, it still achieves approximately 118 bits of security against classical and 104 bits against quantum attackers, compared with 86 and 75 bits for ML-KEM-768, respectively.
 - Public key encoding (Kemeleon): the public key uniformity advantage also includes the statistical distance between encoded KEM public keys and uniform bytestrings. An attacker can test this once per password guess, so this distance must be at most 2^-128 per public key. This treats the encoding's statistical distance separately from the public key uniformity of ML-KEM itself. In the paper, this would require an additional game hop that replaces all encoded public keys by uniform byte strings at a cost of at most t times the per-key distance. Kemeleon.EncodeEk meets this when we set Kemeleon's statistical distance parameter (Kemeleon.t) to at least 132 (Kemeleon allows values that match 76 + 8x).
 - Decryption failure: the term `q_ses * δ` requires a failure probability δ of at most 2^-128. ML-KEM's failure probability is below 2^-138 for all parameter sets {{FIPS203}}.
-- Randomness s: the proof requires that each message (s, T) sent by an attacker corresponds to at most one password guess. This fails when one of the attacker's hash outputs matches one of the roughly t^2 hash values it obtained earlier, which happens with probability approximately t^3 / 2^(8 * n) for an n-byte s. We treat this as a search for a target value, which a quantum attacker succeeds in with probability approximately t^4 / 2^(8 * n). To achieve a security level of 128 against quantum attackers, we need n >= 64.
+- Randomness s: the proof requires that each message (s, T) sent by an attacker corresponds to at most one password guess. This fails when one of the attacker's hash outputs matches one of the roughly t^2 hash values it obtained earlier, which happens with probability approximately t^3 / 2^(8 * Nr), where s has Nr bytes. We treat this as a search for a target value, which a quantum attacker succeeds in with probability approximately t^4 / 2^(8 * Nr). To achieve a security level of 128 against quantum attackers, we need Nr >= 64.
 - Tag h: collisions between tags occur with probability `t^2 / 2^(8 * Nkc)`, which requires Nkc >= 32 for a security level of 128. There is no quantum speed-up here.
 - The remaining terms are negligible.
 
@@ -2312,11 +2312,11 @@ OQUAKE.Respond ({{oquake}}), is encoded as:
 init_msg = s || T || ⍴
 ~~~
 
-where `s` has `3 * Nsec` bytes, `T` has `BUA-sKEM.Nt` bytes, and `⍴` has `N⍴`
+where `s` has `Nr` bytes, `T` has `BUA-sKEM.Nt` bytes, and `⍴` has `N⍴`
 bytes. On receipt, the fields are recovered as
-`s = init_msg[0 : (3 * Nsec)]`,
-`T = init_msg[(3 * Nsec) : (3 * Nsec) + BUA-sKEM.Nt]`, and
-`⍴ = init_msg[(3 * Nsec) + BUA-sKEM.Nt : (3 * Nsec) + BUA-sKEM.Nt + N⍴]`.
+`s = init_msg[0 : Nr]`,
+`T = init_msg[Nr : Nr + BUA-sKEM.Nt]`, and
+`⍴ = init_msg[Nr + BUA-sKEM.Nt : Nr + BUA-sKEM.Nt + N⍴]`.
 
 The OQUAKE responder message `(ct, h)`, produced by OQUAKE.Respond and consumed by
 OQUAKE.Finish, is encoded as:
