@@ -101,7 +101,7 @@ class XWingKEM(KEM):
         return Decapsulate(ct, sk)
     
     def _pk_len(self) -> int:
-        raise 1216
+        return 1216
 
     def _c_len(self) -> int:
         return 1120
