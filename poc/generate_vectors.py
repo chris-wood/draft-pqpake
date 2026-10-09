@@ -1,8 +1,8 @@
 """
 Generates the test vectors of draft-vos-cfrg-pqpake. It writes one JSON file per
-configuration with test vectors, ml-bua-skem.json with the vectors of
-ML-BUA-sKEM, and test-vectors.md, which renders all vectors for the Test Vectors
-section of the specification. All files are written to vectors/.
+configuration with test vectors and ml-bua-skem.json with the vectors of
+ML-BUA-sKEM. It also renders each vector in a Markdown file, which the Test
+Vectors section of the specification includes. All files are written to vectors/.
 """
 
 import json
@@ -140,7 +140,7 @@ def oquakeplus_vector(identifier, replay=None):
                    "secret_context": SECRET_CONTEXT},
         "randomness": run.randomness(),
         "intermediate": run.intermediate(["v", "seed", "pk", "oquake_upk", "oquake_k", "oquake_key", "oquake_th", "pc_k"]),
-        "messages": {"reg_msg": reg_msg, "init_msg": init_msg, "resp_msg": resp_msg, "response": response},
+        "messages": {"reg_msg": reg_msg, "msg1": init_msg, "msg2": resp_msg, "msg3": response},
         "outputs": {"key": key, "th": th},
     }
 
@@ -314,7 +314,7 @@ def render_vector(vector):
         lines = []
         for name, value in vector["render"].items():
             lines.extend(render_value(name, value))
-        return vector["summary"] + "\n\n~~~\n" + "\n".join(lines) + "\n~~~\n"
+        return "~~~\n" + "\n".join(lines) + "\n~~~\n"
     lines = []
     for group, title in [("inputs", "Inputs"), ("randomness", "Randomness"), ("intermediate", "Intermediate values"),
                          ("messages", "Messages"), ("outputs", "Outputs")]:
@@ -329,16 +329,31 @@ def render_vector(vector):
     return "~~~\n" + "\n".join(lines) + "\n~~~\n"
 
 
+# The file names of the rendered vectors that follow the first vector of a configuration
+SUFFIXES = {
+    "CPaceOQUAKE+ with an incorrect server_confirm": "-incorrect-server-confirm",
+    "CPaceOQUAKE+ with the wrong password": "-wrong-password",
+    "CPaceOQUAKE+ with the neutral element as Ya": "-neutral-element",
+}
+
+
+def write_rendering(name, vector):
+    with open(os.path.join(OUTPUT, name + ".md"), "w") as f:
+        f.write(render_vector(vector))
+
+
 if __name__ == "__main__":
     os.makedirs(OUTPUT, exist_ok=True)
-    markdown = []
+    for name in os.listdir(OUTPUT):
+        if name.endswith(".md"):
+            os.remove(os.path.join(OUTPUT, name))
 
     ml_bua_skem = [ml_bua_skem_vector(MLBUASKEM768()), ml_bua_skem_vector(MLBUASKEM1024())]
     with open(os.path.join(OUTPUT, "ml-bua-skem.json"), "w") as f:
         json.dump(to_json(ml_bua_skem), f, indent=2)
         f.write("\n")
     for vector in ml_bua_skem:
-        markdown.append("### " + vector["name"] + "\n\n" + render_vector(vector))
+        write_rendering(vector["name"].lower(), vector)
 
     for identifier, generate in [("oquake-mlbuaskem1024", lambda i: [oquake_vector(i)]),
                                  ("oquakeplus-mlbuaskem1024-mlkem1024", lambda i: [oquakeplus_vector(i)]),
@@ -349,10 +364,7 @@ if __name__ == "__main__":
             json.dump(to_json({"configuration": identifier, "vectors": vectors}), f, indent=2)
             f.write("\n")
         for vector in vectors:
-            markdown.append("### " + vector["name"] + "\n\nConfiguration: `" + identifier + "`\n\n" + render_vector(vector))
-
-    with open(os.path.join(OUTPUT, "test-vectors.md"), "w") as f:
-        f.write("\n".join(markdown))
+            write_rendering(identifier + SUFFIXES.get(vector["name"], ""), vector)
 
     for name in sorted(os.listdir(OUTPUT)):
         if name.endswith(".json"):

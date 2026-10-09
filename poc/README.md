@@ -11,8 +11,8 @@ suitable for production use.
   into `.cache/`.
 - `make vectors` generates the test vectors of the specification into
   `vectors/`: one JSON file per configuration with vectors, `ml-bua-skem.json`,
-  and `test-vectors.md`, which renders them for the specification. It then
-  checks that each vector can be reproduced from the randomness it lists.
+  and a Markdown rendering of each vector, which the specification includes. It
+  then checks that each vector can be reproduced from the randomness it lists.
 
 In the test vectors, byte strings are encoded in hexadecimal, and the Kemeleon
 randomness `kemeleon_m` of each polynomial is an integer in decimal.
