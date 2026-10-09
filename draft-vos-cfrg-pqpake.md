@@ -1091,7 +1091,8 @@ The challenge also contains client_confirm, which depends on SK and on the encap
 It lets the client check that the server knows both, which requires the full verifier (v, pk) or the password.
 
 The state returned by Challenge holds the server's candidate session key.
-Unless server_confirm is omitted as described in {{omit-confirmation}}, this key MUST NOT be released to the calling application, used to protect traffic, or otherwise acted upon before Verify has confirmed the client's response, and implementations SHOULD keep the state opaque so that server_key is reachable only as the return value of Verify.
+This key MUST NOT be released to the calling application, used to protect traffic, or otherwise acted upon before Verify has confirmed the client's response.
+Implementations SHOULD keep the state opaque so that server_key is reachable only as the return value of Verify.
 
 ~~~
 PC.Challenge
@@ -1202,26 +1203,10 @@ def Verify(state, server_confirm_target):
   return server_key, th_out
 ~~~
 
-### Omitting Key Confirmation Values {#omit-confirmation}
-
-Some applications may want to perform session key confirmation themselves, for example, by exchanging messages authenticated with keys derived from it or using message integrity codes.
-Such an application MAY omit server_confirm, client_confirm, or both, but then it MUST confirm the session key in the same direction and all of the following conditions MUST hold:
-
-1. The keys used for the application's confirmation are derived from the session key using a KDF, and are distinct from the keys used to protect application data.
-2. Neither party treats its peer as authenticated before it has verified the peer's confirmation.
-3. The server MUST treat a failed or missing confirmation from the client as a failed password attempt for the purpose of rate limiting password guesses.
-4. Which values are omitted is fixed by the application in advance, and this is not negotiated during the protocol.
-
-If server_confirm is omitted, the client does not send it, and the server outputs the server_key and th_out held in the state, returned by Challenge instead of calling Verify.
-OQUAKE+ then takes two messages, and CPaceOQUAKE+ takes four messages.
-If client_confirm is omitted, the challenge consists of enc_c only, and the client does not compare client_confirm with a received value. All other values MUST be derived as specified in {{pwconf}}, and th_out MUST be computed with the empty string in place of each omitted value.
-The resulting variant of OQUAKE+ or CPaceOQUAKE+ only achieves implicit key confirmation.
-
 ## OQUAKE+ Protocol {#oquakeplus}
 
 OQUAKE+ is the augmented PAKE obtained by applying the transformation of {{apake-transform}} to OQUAKE ({{oquake}}).
 The client initiates OQUAKE, and the server sends its password confirmation challenge together with its OQUAKE response, so the protocol consists of three messages.
-An application may omit the last message; see {{omit-confirmation}}.
 
 A high level overview of OQUAKE+ is below.
 
@@ -1284,7 +1269,7 @@ def Init(PRS, salt, U, S, public_context, secret_context):
 ### Response
 
 The server responds to OQUAKE and challenges the client to confirm its password.
-As described in {{pwconf}}, the server_key held in the returned state MUST NOT be used before Verify succeeds, unless server_confirm is omitted ({{omit-confirmation}}).
+As described in {{pwconf}}, the server_key held in the returned state MUST NOT be used before Verify succeeds.
 
 ~~~
 OQUAKE+.Respond
@@ -1374,7 +1359,6 @@ def Verify(state, response):
 CPaceOQUAKE+ is the hybrid aPAKE obtained by applying the transformation of {{apake-transform}} to CPaceOQUAKE ({{CPaceOQUAKE}}).
 It is a five-message aPAKE that provides security against both classical and quantum-capable attackers.
 The first three messages are entirely CPaceOQUAKE, while the last two messages are the password confirmation protocol.
-An application can omit the last message; see {{omit-confirmation}}.
 To ensure hybrid post-quantum security, the KEM used during password confirmation must be a hybrid KEM.
 
 Upon successful completion of the entire protocol, the client and server will share a
@@ -1508,7 +1492,7 @@ def InitiatorContinue(state, msg2):
 ### Server Continue
 
 ResponderContinue completes CPaceOQUAKE and challenges the client to confirm its password, using the password confirmation protocol as described in {{pwconf}}.
-The server_key held in the returned state MUST NOT be used before ResponderFinish succeeds, unless server_confirm is omitted ({{omit-confirmation}}).
+The server_key held in the returned state MUST NOT be used before ResponderFinish succeeds.
 
 ~~~
 CPaceOQUAKE+.ResponderContinue
@@ -2383,9 +2367,8 @@ Such a mapping MUST satisfy the following requirements.
    incorrect length, and MUST abort in that case, providing the same protection as
    the length and framing checks required by {{encodings}}.
 4. The mapping MUST NOT alter the number of protocol messages, the direction in
-   which each is sent, or the order in which they are processed, other than by
-   omitting confirmation values as described in {{omit-confirmation}}. Only the
-   framing of a message is at the mapping's discretion.
+   which each is sent, or the order in which they are processed. Only the framing
+   of a message is at the mapping's discretion.
 5. The public context MUST be encoded as specified in {{public-context-encoding}},
    since it is an input to key derivation.
 
