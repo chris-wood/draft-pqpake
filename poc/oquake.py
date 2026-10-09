@@ -1,105 +1,129 @@
-from random import randbytes
-from typing import Any, Optional, Tuple
-from kemeleon import DecodePk, EncodePk
-from util import xor
+from typing import Any, Tuple
+
 from drbg import UnsafeDRBG
-from util import wrap_print, to_hex
-
-from params import OQUAKEParameters, quake_params_default
-
-
-def oquake_init(params: OQUAKEParameters, PRS: bytes, SID: bytes, U: Optional[bytes], S: Optional[bytes], seed: bytes) -> Tuple[Any, bytes]:
-    while True:
-        pk, sk = params.mlkem.KeyGen()
-        uniform_pk = EncodePk(params.mlkem.params(), pk)
-        if uniform_pk is not None:
-            break
-
-    r = randbytes(params.Nrandomness)
-
-    prk_T = params.KDF.Extract(b"OQUAKE", PRS + SID + r)
-    T = xor(uniform_pk, params.KDF.Expand(prk_T, b"T", params.NpkUni))
-
-    prk_s = params.KDF.Extract(b"OQUAKE", PRS + SID + T)
-    s = xor(r, params.KDF.Expand(prk_s, b"s", params.Nrandomness))
-    init_msg = s + T
-
-    if U is None:
-        U = b""
-    if S is None:
-        S = b""
-    prk_tx = params.KDF.Extract(b"OQUAKE", SID + init_msg + PRS + U + S)
-
-    return (sk, prk_tx), init_msg
+from util import EncodePublicContext, lv_encode, xor, wrap_print, to_hex
+from deps import TH
 
 
-def oquake_respond(params: OQUAKEParameters, PRS: bytes, SID: bytes, init_msg: bytes, U: Optional[bytes], S: Optional[bytes], seed: bytes) -> Tuple[bytes, bytes]:
-    s = init_msg[0:params.Nrandomness]
-    T = init_msg[params.Nrandomness:params.Nrandomness+params.NpkUni]
+def decode_oquake_init(params, init_msg: bytes) -> Tuple[bytes, bytes, bytes]:
+    Nr, Nt, Nrho = params.Nr, params.BUA_sKEM.Nt, params.BUA_sKEM.Nrho
+    if len(init_msg) != Nr + Nt + Nrho:
+        raise ValueError("OQUAKE initiator message has an invalid length")
+    return init_msg[0:Nr], init_msg[Nr:Nr + Nt], init_msg[Nr + Nt:Nr + Nt + Nrho]
 
-    prk_s = params.KDF.Extract(b"OQUAKE", PRS + SID + T)
-    r = xor(s, params.KDF.Expand(prk_s, b"s", params.Nrandomness))
 
-    prk_T = params.KDF.Extract(b"OQUAKE", PRS + SID + r)
-    uniform_pk = xor(T, params.KDF.Expand(prk_T, b"T", params.NpkUni))
-    pk = DecodePk(params.mlkem.params(), uniform_pk)
-    
-    (ct, k) = params.mlkem.Encaps(pk, seed)
+def decode_oquake_resp(params, resp_msg: bytes) -> Tuple[bytes, bytes]:
+    Nct = params.BUA_sKEM.Nct
+    if len(resp_msg) != Nct + params.Nkc:
+        raise ValueError("OQUAKE responder message has an invalid length")
+    return resp_msg[0:Nct], resp_msg[Nct:]
 
-    if U is None:
-        U = b""
-    if S is None:
-        S = b""
-    prk_tx = params.KDF.Extract(b"OQUAKE", SID + init_msg + PRS + U + S)
-    prk_key = params.KDF.Extract(b"OQUAKE", prk_tx + ct + k)
-    key = params.KDF.Expand(prk_key, b"key", 32)
-    h = params.KDF.Expand(prk_key, b"h", 24)
+
+def derive_effective_PRS(params, PRS: bytes, public_context: bytes, secret_context: bytes) -> bytes:
+    prk_ePRS = params.KDF.Extract(PRS, params.DST + b"OQUAKE-context" +
+                                  lv_encode(public_context) + lv_encode(secret_context))
+    return params.KDF.Expand(prk_ePRS, params.DST + b"effective_PRS", params.Nkey)
+
+
+def oquake_init(params, PRS: bytes, public_context: bytes, secret_context: bytes, rng) -> Tuple[Any, bytes]:
+    effective_PRS = derive_effective_PRS(params, PRS, public_context, secret_context)
+
+    (sk, pk) = params.BUA_sKEM.KeyGen(rng)
+    (ut, rho) = params.BUA_sKEM.Split(pk)
+
+    r = rng.random_bytes(params.Nr, "oquake_r")
+
+    # T = XOR(ut, H(public_context, effective_PRS, rho, r))
+    prk_T_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) + rho + r)
+    T_pad = params.KDF.Expand(prk_T_pad, params.DST + b"T_pad", params.BUA_sKEM.Nt)
+    T = xor(ut, T_pad)
+
+    # s = XOR(r, H(public_context, effective_PRS, rho, T))
+    prk_s_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) + rho + T)
+    s_pad = params.KDF.Expand(prk_s_pad, params.DST + b"s_pad", params.Nr)
+    s = xor(r, s_pad)
+
+    init_msg = s + T + rho
+
+    return (effective_PRS, sk, pk, rho, s, T, public_context), init_msg
+
+
+def oquake_respond(params, PRS: bytes, public_context: bytes, secret_context: bytes, init_msg: bytes, rng) -> Tuple[bytes, bytes, bytes]:
+    (s, T, rho) = decode_oquake_init(params, init_msg)
+
+    effective_PRS = derive_effective_PRS(params, PRS, public_context, secret_context)
+
+    prk_s_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) + rho + T)
+    s_pad = params.KDF.Expand(prk_s_pad, params.DST + b"s_pad", params.Nr)
+    r = xor(s, s_pad)
+
+    prk_T_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) + rho + r)
+    T_pad = params.KDF.Expand(prk_T_pad, params.DST + b"T_pad", params.BUA_sKEM.Nt)
+    ut = xor(T, T_pad)
+
+    pk = params.BUA_sKEM.Combine(ut, rho)
+    (k, ct) = params.BUA_sKEM.Encaps(pk, rng)
+
+    prk_sk = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) +
+                                s + T + pk + ct + k)
+    h = params.KDF.Expand(prk_sk, params.DST + b"confirm", params.Nkc)
+    key = params.KDF.Expand(prk_sk, params.DST + b"key", params.Nkey)
 
     resp_msg = ct + h
-    return key, resp_msg
+    th = TH(params.KDF, params.DST, b"OQUAKE", public_context, s, T, rho, ct, h)
+
+    return resp_msg, key, th
 
 
-def oquake_finish(params: OQUAKEParameters, context, resp_msg: bytes) -> bytes:
-    (sk, prk_tx) = context
+def oquake_finish(params, state: Any, resp_msg: bytes, rng) -> Tuple[bytes, bytes]:
+    (effective_PRS, sk, pk, rho, s, T, public_context) = state
+    (ct, h) = decode_oquake_resp(params, resp_msg)
 
-    ct = resp_msg[0:-24]
-    h = resp_msg[-24:]
-    k = params.mlkem.Decaps(sk, ct)
+    th = TH(params.KDF, params.DST, b"OQUAKE", public_context, s, T, rho, ct, h)
 
-    prk_key = params.KDF.Extract(b"OQUAKE", prk_tx + ct + k)
-    key = params.KDF.Expand(prk_key, b"key", 32)
-    hp = params.KDF.Expand(prk_key, b"h", 24)
+    # ML-BUA-sKEM uses implicit rejection, so decapsulating a ciphertext of the
+    # correct length does not fail.
+    k = params.BUA_sKEM.Decaps(ct, sk)
 
-    if h != hp:
-        raise Exception("AuthenticationError")
+    prk_sk = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) +
+                                s + T + pk + ct + k)
+    h_expected = params.KDF.Expand(prk_sk, params.DST + b"confirm", params.Nkc)
+    if h != h_expected:
+        return rng.random_bytes(params.Nkey, "random_key"), th
 
-    return key
+    key = params.KDF.Expand(prk_sk, params.DST + b"key", params.Nkey)
+    return key, th
 
 
-def run_OQUAKE(rng: UnsafeDRBG):
+def run_OQUAKE(params, rng: UnsafeDRBG):
     print("OQUAKE")
     PRS = rng.random_bytes(16)
-    SID = rng.random_bytes(16)
-    U = rng.random_bytes(16)
-    S = rng.random_bytes(16)
-    init_seed = rng.random_bytes(64)
-    respond_seed = rng.random_bytes(32)
+    public_context = EncodePublicContext(rng.random_bytes(16), rng.random_bytes(16), rng.random_bytes(16))
+    secret_context = rng.random_bytes(16)
 
-    ctx, init_msg = oquake_init(quake_params_default, PRS, SID, U, S, init_seed)
-    ss_server, resp_msg = oquake_respond(quake_params_default, PRS, SID, init_msg, U, S, respond_seed)
-    ss_client = oquake_finish(quake_params_default, ctx, resp_msg)
-    assert ss_server == ss_client
+    state, init_msg = oquake_init(params, PRS, public_context, secret_context, rng)
+    resp_msg, key_responder, th_responder = oquake_respond(params, PRS, public_context, secret_context, init_msg, rng)
+    key_initiator, th_initiator = oquake_finish(params, state, resp_msg, rng)
+    assert (key_initiator, th_initiator) == (key_responder, th_responder)
 
     wrap_print("PRS:", to_hex(PRS))
-    wrap_print("SID: ", to_hex(SID))
-    wrap_print("U: ", to_hex(U))
-    wrap_print("S: ", to_hex(S))
-    wrap_print("init_msg: ", to_hex(init_msg))
-    wrap_print("resp_msg: ", to_hex(resp_msg))
-    wrap_print("key: ", to_hex(ss_server))
+    wrap_print("public_context:", to_hex(public_context))
+    wrap_print("secret_context:", to_hex(secret_context))
+    wrap_print("init_msg:", to_hex(init_msg))
+    wrap_print("resp_msg:", to_hex(resp_msg))
+    wrap_print("key:", to_hex(key_responder))
+    wrap_print("th:", to_hex(th_responder))
     print()
 
 
 if __name__ == "__main__":
+    from params import oquake_params_default as params
+
     rng = UnsafeDRBG()
-    run_OQUAKE(rng)
+    run_OQUAKE(params, rng)
+
+    # With different passwords, both parties obtain unrelated keys, but the same transcript hash.
+    state, init_msg = oquake_init(params, b"password", b"", b"", rng)
+    resp_msg, key_responder, th_responder = oquake_respond(params, b"other password", b"", b"", init_msg, rng)
+    key_initiator, th_initiator = oquake_finish(params, state, resp_msg, rng)
+    assert key_initiator != key_responder and th_initiator == th_responder

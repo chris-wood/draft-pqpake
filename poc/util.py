@@ -55,6 +55,15 @@ def lv_encode(x):
     assert len(x) < (1 << 16)
     return I2OSP(len(x), 2) + x
 
+def lv_decode(x):
+    if len(x) < 2 or OS2IP(x[0:2]) != len(x) - 2:
+        raise ValueError("lv_decode: invalid length")
+    return x[2:]
+
+def EncodePublicContext(sid=None, U=None, S=None):
+    sid, U, S = sid or b"", U or b"", S or b""
+    return I2OSP(len(sid), 4) + sid + I2OSP(len(U), 4) + U + I2OSP(len(S), 4) + S
+
 def wrap_print(arg, *args):
     line_length = 69
     string = arg + " " + " ".join(args)
