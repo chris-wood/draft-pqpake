@@ -1055,7 +1055,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 8 April 2027</td>
+<td class="center">Expires 12 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1068,12 +1068,12 @@ svg {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-05" class="published">5 October 2026</time>
+<time datetime="2026-10-09" class="published">9 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-08">8 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-12">12 April 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1139,7 +1139,7 @@ also provides recommended configurations for each protocol.<a href="#section-abs
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 12 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1246,9 +1246,6 @@ also provides recommended configurations for each protocol.<a href="#section-abs
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1.2.2">
                     <p id="section-toc.1-1.8.2.1.2.2.1"><a href="#section-8.1.2" class="auto internal xref">8.1.2</a>.  <a href="#name-password-confirmation" class="internal xref">Password Confirmation</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1.2.3">
-                    <p id="section-toc.1-1.8.2.1.2.3.1"><a href="#section-8.1.3" class="auto internal xref">8.1.3</a>.  <a href="#name-omitting-key-confirmation-v" class="internal xref">Omitting Key Confirmation Values</a></p>
 </li>
                 </ul>
 </li>
@@ -2655,7 +2652,8 @@ It does so by deriving the KEM's secret decapsulation key from the seed.
 The challenge also contains client_confirm, which depends on SK and on the encapsulated key.
 It lets the client check that the server knows both, which requires the full verifier (v, pk) or the password.<a href="#section-8.1.2-1" class="pilcrow">¶</a></p>
 <p id="section-8.1.2-2">The state returned by Challenge holds the server's candidate session key.
-Unless server_confirm is omitted as described in <a href="#omit-confirmation" class="auto internal xref">Section 8.1.3</a>, this key <span class="bcp14">MUST NOT</span> be released to the calling application, used to protect traffic, or otherwise acted upon before Verify has confirmed the client's response, and implementations <span class="bcp14">SHOULD</span> keep the state opaque so that server_key is reachable only as the return value of Verify.<a href="#section-8.1.2-2" class="pilcrow">¶</a></p>
+This key <span class="bcp14">MUST NOT</span> be released to the calling application, used to protect traffic, or otherwise acted upon before Verify has confirmed the client's response.
+Implementations <span class="bcp14">SHOULD</span> keep the state opaque so that server_key is reachable only as the return value of Verify.<a href="#section-8.1.2-2" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-8.1.2-3">
 <pre>
 PC.Challenge
@@ -2768,33 +2766,6 @@ def Verify(state, server_confirm_target):
 </div>
 </section>
 </div>
-<div id="omit-confirmation">
-<section id="section-8.1.3">
-          <h4 id="name-omitting-key-confirmation-v">
-<a href="#section-8.1.3" class="section-number selfRef">8.1.3. </a><a href="#name-omitting-key-confirmation-v" class="section-name selfRef">Omitting Key Confirmation Values</a>
-          </h4>
-<p id="section-8.1.3-1">Some applications may want to perform session key confirmation themselves, for example, by exchanging messages authenticated with keys derived from it or using message integrity codes.
-Such an application <span class="bcp14">MAY</span> omit server_confirm, client_confirm, or both, but then it <span class="bcp14">MUST</span> confirm the session key in the same direction and all of the following conditions <span class="bcp14">MUST</span> hold:<a href="#section-8.1.3-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-8.1.3-2">
-<li id="section-8.1.3-2.1">
-              <p id="section-8.1.3-2.1.1">The keys used for the application's confirmation are derived from the session key using a KDF, and are distinct from the keys used to protect application data.<a href="#section-8.1.3-2.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li id="section-8.1.3-2.2">
-              <p id="section-8.1.3-2.2.1">Neither party treats its peer as authenticated before it has verified the peer's confirmation.<a href="#section-8.1.3-2.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li id="section-8.1.3-2.3">
-              <p id="section-8.1.3-2.3.1">The server <span class="bcp14">MUST</span> treat a failed or missing confirmation from the client as a failed password attempt for the purpose of rate limiting password guesses.<a href="#section-8.1.3-2.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li id="section-8.1.3-2.4">
-              <p id="section-8.1.3-2.4.1">Which values are omitted is fixed by the application in advance, and this is not negotiated during the protocol.<a href="#section-8.1.3-2.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ol>
-<p id="section-8.1.3-3">If server_confirm is omitted, the client does not send it, and the server outputs the server_key and th_out held in the state, returned by Challenge instead of calling Verify.
-OQUAKE+ then takes two messages, and CPaceOQUAKE+ takes four messages.
-If client_confirm is omitted, the challenge consists of enc_c only, and the client does not compare client_confirm with a received value. All other values <span class="bcp14">MUST</span> be derived as specified in <a href="#pwconf" class="auto internal xref">Section 8.1.2</a>, and th_out <span class="bcp14">MUST</span> be computed with the empty string in place of each omitted value.
-The resulting variant of OQUAKE+ or CPaceOQUAKE+ only achieves implicit key confirmation.<a href="#section-8.1.3-3" class="pilcrow">¶</a></p>
-</section>
-</div>
 </section>
 </div>
 <div id="oquakeplus">
@@ -2803,8 +2774,7 @@ The resulting variant of OQUAKE+ or CPaceOQUAKE+ only achieves implicit key conf
 <a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-oquake-protocol" class="section-name selfRef">OQUAKE+ Protocol</a>
         </h3>
 <p id="section-8.2-1">OQUAKE+ is the augmented PAKE obtained by applying the transformation of <a href="#apake-transform" class="auto internal xref">Section 8.1</a> to OQUAKE (<a href="#oquake" class="auto internal xref">Section 6</a>).
-The client initiates OQUAKE, and the server sends its password confirmation challenge together with its OQUAKE response, so the protocol consists of three messages.
-An application may omit the last message; see <a href="#omit-confirmation" class="auto internal xref">Section 8.1.3</a>.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+The client initiates OQUAKE, and the server sends its password confirmation challenge together with its OQUAKE response, so the protocol consists of three messages.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 <p id="section-8.2-2">A high level overview of OQUAKE+ is below.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
 <div id="section-8.2-3">
           <div class="alignLeft art-svg artwork" id="section-8.2-3.1">
@@ -2899,7 +2869,7 @@ def Init(PRS, salt, U, S, public_context, secret_context):
 <a href="#section-8.2.2" class="section-number selfRef">8.2.2. </a><a href="#name-response-2" class="section-name selfRef">Response</a>
           </h4>
 <p id="section-8.2.2-1">The server responds to OQUAKE and challenges the client to confirm its password.
-As described in <a href="#pwconf" class="auto internal xref">Section 8.1.2</a>, the server_key held in the returned state <span class="bcp14">MUST NOT</span> be used before Verify succeeds, unless server_confirm is omitted (<a href="#omit-confirmation" class="auto internal xref">Section 8.1.3</a>).<a href="#section-8.2.2-1" class="pilcrow">¶</a></p>
+As described in <a href="#pwconf" class="auto internal xref">Section 8.1.2</a>, the server_key held in the returned state <span class="bcp14">MUST NOT</span> be used before Verify succeeds.<a href="#section-8.2.2-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-8.2.2-2">
 <pre>
 OQUAKE+.Respond
@@ -3006,7 +2976,6 @@ def Verify(state, response):
 <p id="section-8.3-1">CPaceOQUAKE+ is the hybrid aPAKE obtained by applying the transformation of <a href="#apake-transform" class="auto internal xref">Section 8.1</a> to CPaceOQUAKE (<a href="#CPaceOQUAKE" class="auto internal xref">Section 7</a>).
 It is a five-message aPAKE that provides security against both classical and quantum-capable attackers.
 The first three messages are entirely CPaceOQUAKE, while the last two messages are the password confirmation protocol.
-An application can omit the last message; see <a href="#omit-confirmation" class="auto internal xref">Section 8.1.3</a>.
 To ensure hybrid post-quantum security, the KEM used during password confirmation must be a hybrid KEM.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
 <p id="section-8.3-2">Upon successful completion of the entire protocol, the client and server will share a
 symmetric key that was authenticated by knowledge of the password. The protocol
@@ -3190,7 +3159,7 @@ def InitiatorContinue(state, msg2):
 <a href="#section-8.3.4" class="section-number selfRef">8.3.4. </a><a href="#name-server-continue" class="section-name selfRef">Server Continue</a>
           </h4>
 <p id="section-8.3.4-1">ResponderContinue completes CPaceOQUAKE and challenges the client to confirm its password, using the password confirmation protocol as described in <a href="#pwconf" class="auto internal xref">Section 8.1.2</a>.
-The server_key held in the returned state <span class="bcp14">MUST NOT</span> be used before ResponderFinish succeeds, unless server_confirm is omitted (<a href="#omit-confirmation" class="auto internal xref">Section 8.1.3</a>).<a href="#section-8.3.4-1" class="pilcrow">¶</a></p>
+The server_key held in the returned state <span class="bcp14">MUST NOT</span> be used before ResponderFinish succeeds.<a href="#section-8.3.4-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-8.3.4-2">
 <pre>
 CPaceOQUAKE+.ResponderContinue
@@ -4443,9 +4412,8 @@ the length and framing checks required by <a href="#encodings" class="auto inter
 </li>
         <li id="appendix-D-3.4">
           <p id="appendix-D-3.4.1">The mapping <span class="bcp14">MUST NOT</span> alter the number of protocol messages, the direction in
-which each is sent, or the order in which they are processed, other than by
-omitting confirmation values as described in <a href="#omit-confirmation" class="auto internal xref">Section 8.1.3</a>. Only the
-framing of a message is at the mapping's discretion.<a href="#appendix-D-3.4.1" class="pilcrow">¶</a></p>
+which each is sent, or the order in which they are processed. Only the framing
+of a message is at the mapping's discretion.<a href="#appendix-D-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="appendix-D-3.5">
           <p id="appendix-D-3.5.1">The public context <span class="bcp14">MUST</span> be encoded as specified in <a href="#public-context-encoding" class="auto internal xref">Appendix C.1</a>,
