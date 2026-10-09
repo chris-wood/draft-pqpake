@@ -454,6 +454,8 @@ This specification uses a KDF with the following API and parameters:
   into `L` bytes of output keying material.
 - Nx: The output size of the `Extract()` function in bytes.
 
+Where an input to a KDF or KSF concatenates several fields, each variable-length field is encoded with `lv_encode`, so that distinct field values always yield distinct inputs.
+
 The security analysis of the protocols in this document models the KDF as a random
 oracle. The KDF MUST therefore be one that is reasonably modeled as a random oracle,
 such as HKDF {{!RFC5869}} instantiated with SHA-256.
@@ -499,6 +501,32 @@ information by prepending or appending it to the returned value. The byte-level
 encoding produced by `EncodePublicContext`, along with the encodings of all
 protocol messages, is specified in {{encodings}}; the main body of this document
 describes protocol messages abstractly as tuples of named fields.
+
+Along with its session key, each PAKE outputs a transcript hash th, computed with the TH function below.
+The th publicly binds to the public_context and to all protocol messages of
+the session.
+When a protocol in this document sequentially composes two sub-protocols, the later protocol uses the preceding's th as its public_context, binding them together.
+Applications can also use th to bind a higher-level protocol to a PAKE session.
+An implementation does not need to expose th to its callers.
+
+~~~
+TH
+
+Input:
+- label, a byte string identifying the protocol
+- f_1, ..., f_n, the fields to hash, byte strings
+
+Output:
+- th, a transcript hash of KDF.Nx bytes
+
+Parameters:
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
+
+def TH(label, f_1, ..., f_n):
+  return KDF.Extract(DST || "TH-" || label,
+                     lv_encode(f_1) || ... || lv_encode(f_n))
+~~~
 
 # Post-Quantum PAKE: OQUAKE {#oquake}
 
@@ -565,9 +593,8 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def Init(PRS, public_context, secret_context):
-  if secret_context is None:
-    secret_context = b""
-  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || public_context || secret_context)
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" ||
+                         lv_encode(public_context) || lv_encode(secret_context))
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   seed = random(BUA-sKEM.Nseed)
@@ -577,25 +604,25 @@ def Init(PRS, public_context, secret_context):
   r = random(3 * Nsec)
 
   // T = XOR(ut, H(public_context, effective_PRS, ⍴, r))
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || r)
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   T = XOR(ut, T_pad)
 
   // s = XOR(r, H(public_context, effective_PRS, ⍴, T))
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || T)
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   s = XOR(r, s_pad)
 
   msg = (s, T, ⍴)
 
-  return State(effective_PRS, sk, pk, ⍴, s, T, public_context, secret_context), msg
+  return State(effective_PRS, sk, pk, ⍴, s, T, public_context), msg
 ~~~
 
 ## Response
 
 Respond takes as input the PRS, a public_context, a secret_context, and the initiator's protocol message.
-It produces a protocol message intended to be sent to the initiator and an Nkey-byte symmetric key. Its implementation
-is as follows.
+It produces a protocol message intended to be sent to the initiator, an Nkey-byte symmetric key, and a transcript hash.
+Its implementation is as follows.
 
 ~~~
 OQUAKE.Respond
@@ -609,6 +636,7 @@ Input:
 Output:
 - resp_msg, a protocol message for the responder to send to the initiator
 - key, output shared secret, a byte string of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - BUA-sKEM, a BUA-sKEM instance
@@ -618,41 +646,37 @@ Parameters:
 def Respond(PRS, public_context, secret_context, init_msg):
   (s, T, ⍴) = init_msg
 
-  if secret_context is None:
-    secret_context = b""
-  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" || public_context || secret_context)
+  prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" ||
+                         lv_encode(public_context) || lv_encode(secret_context))
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || T)
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", 3 * Nsec)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || ⍴ || r)
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   ut = XOR(T, T_pad)
 
   pk = BUA-sKEM.Combine(ut, ⍴)
   (k, ct) = BUA-sKEM.Encaps(pk)
 
-  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || s || T || pk || ct || k)
-  intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
-
-  transcript = s || T || ⍴ || ct
-  prk_final = KDF.Extract(intermediate_key, DST || "final_key" || public_context || secret_context || transcript)
-  key = KDF.Expand(prk_final, DST || "key", Nkey)
-
+  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) ||
+                       s || T || pk || ct || k)
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
+  key = KDF.Expand(prk_sk, DST || "key", Nkey)
 
   resp_msg = (ct, h)
+  th = TH("OQUAKE", public_context, s, T, ⍴, ct, h)
 
-  return resp_msg, key
+  return resp_msg, key, th
 ~~~
 
 ## Finish {#quake-finish}
 
 Finish takes as input the initiator-created state that is output from Init
 as well as the responder's reply message resp\_msg. It produces a symmetric key
-that is output to the initiator.
+and a transcript hash that are output to the initiator.
 
 Finish does not raise an error when key confirmation or decapsulation fails.
 Instead, it returns a freshly sampled random key, so that a party that does not
@@ -672,6 +696,7 @@ Input:
 
 Output:
 - key, output shared secret, a byte string of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - BUA-sKEM, a BUA-sKEM instance
@@ -679,26 +704,24 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def Finish(state, resp_msg):
-  (effective_PRS, sk, pk, ⍴, s, T, public_context, secret_context) = state
+  (effective_PRS, sk, pk, ⍴, s, T, public_context) = state
   (ct, h) = resp_msg
+
+  th = TH("OQUAKE", public_context, s, T, ⍴, ct, h)
 
   try:
     k = BUA-sKEM.Decaps(ct, sk)
-    prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || public_context || s || T || pk || ct || k)
-
-    intermediate_key = KDF.Expand(prk_sk, DST || "sk", Nkey)
-
-    transcript = s || T || ⍴ || ct
-    prk_final = KDF.Extract(intermediate_key, DST || "final_key" || public_context || secret_context || transcript)
-    key = KDF.Expand(prk_final, DST || "key", Nkey)
-
-    h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
-    if h != h_expected:
-      return random(Nkey)
-
-    return key
   catch DecapsError:
-    return random(Nkey)
+    return random(Nkey), th
+
+  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) ||
+                       s || T || pk || ct || k)
+  h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
+  if h != h_expected:
+    return random(Nkey), th
+
+  key = KDF.Expand(prk_sk, DST || "key", Nkey)
+  return key, th
 ~~~
 
 # Hybrid PAKE: CPaceOQUAKE {#CPaceOQUAKE}
@@ -717,8 +740,9 @@ The reason a parallel combination of CPace and OQUAKE does not achieve best-of-b
 For more information, see {{hybrid-design}}.
 
 The sequential combiner overcomes this limitation: it only requires Stage 1's PAKE to unconditionally hide the password.
-The combiner first runs Stage 1, establishing session key SK1, and then runs Stage 2 with secret_context=SK1.
-Stage 2 derives an effective password from (PRS, SK1) and uses it throughout, producing the final session key.
+The combiner first runs Stage 1, establishing session key SK1 and transcript hash th1, and then runs Stage 2 with secret_context=SK1 and public_context=th1.
+Stage 2 derives an effective password from (PRS, th1, SK1) and uses it throughout.
+The final session key is derived from Stage 2's session key, SK1, and Stage 2's transcript hash, which covers both stages.
 See the diagram below.
 
 ~~~ aasvg
@@ -729,7 +753,7 @@ See the diagram below.
      PRS ---->+---->|  PAKE   |<-----+<---- PRS
               |     +---------+      |
               |          |           |
-              |    sec_ctx=SK1       |
+              |       SK1, th1       |
               |          |           |
               |     +---------+      |
               |     | Stage 2 |      |
@@ -752,7 +776,8 @@ The server sends its CPace response along with its first OQUAKE message.
 After that, the client finishes CPace and responds to OQUAKE.
 
 Unlike OQUAKE, CPaceOQUAKE does not require a shared session identifier sid, although this is strongly recommended.
-The public_context of OQUAKE is prefixed with an extended session identifier derived from random nonces s1 and s2 contributed by both parties, so that it is unique to the session even if the application provides no sid.
+The public_context of OQUAKE is CPace's transcript hash, which covers the public_context and the messages Ya and Yb.
+Since each party contributes a fresh Ya or Yb, it is unique to the session even if the application provides no sid.
 
 See the diagram below for an overview of the protocol flow.
 There are four functions: Init and InitiatorFinish are intended to be called by the client, and Respond and ResponderFinish are intended to be called by the server.
@@ -773,14 +798,14 @@ CPaceOQUAKE.Init(PRS,pub_ctx,sec_ctx)      |
              |           msg2              |
              |<----------------------------|
              |                             |
-     client_key, msg3 =                    |
+     client_key, msg3, th =                |
 CPaceOQUAKE.InitiatorFinish(               |
   PRS,pub_ctx,sec_ctx,ctx,msg2)            |
              |                             |
              |           msg3              |
              |---------------------------->|
              |                             |
-             |                  server_key =
+             |              server_key, th =
              |     CPaceOQUAKE.ResponderFinish(ctx,msg3)
              |                             |
         -----------------------------------------
@@ -808,16 +833,13 @@ Parameters:
 
 def Init(PRS, public_context, secret_context):
   ctx1, Ya = CPace.Init(PRS, public_context, secret_context)
-  s1 = random(32)
-  msg = (s1, Ya)
-
-  return State(ctx1, s1), msg
+  return ctx1, Ya
 ~~~
 
 ## Server Response
 
-The server finishes CPace and initiates OQUAKE (Stage 2) using the CPace session key as the
-secret_context for OQUAKE.
+The server finishes CPace and initiates OQUAKE (Stage 2), using the CPace session key as OQUAKE's
+secret_context and the CPace transcript hash as OQUAKE's public_context.
 The server MUST abort if its received message does not have the correct length.
 
 ~~~
@@ -836,29 +858,23 @@ Output:
 Parameters:
 - CPace, parameterized instance of CPace
 - OQUAKE, parameterized instance of OQUAKE
-- KDF, a KDF instance
-- DST, domain separation tag, a byte string
 
 def Respond(PRS, public_context, secret_context, init_msg):
-  (s1, Ya) = init_msg
+  Ya = init_msg
 
-  key1, Yb = CPace.Respond(PRS, public_context, secret_context, Ya)
+  key1, Yb, th1 = CPace.Respond(PRS, public_context, secret_context, Ya)
+  ctx2, oquake_init = OQUAKE.Init(PRS, th1, key1)
 
-  s2 = random(32)
-  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
+  resp_msg = (Yb, oquake_init)
 
-  ctx2, oquake_init = OQUAKE.Init(PRS, extended_sid || public_context, key1)
-
-  resp_msg = (s2, Yb, oquake_init)
-
-  return ctx2, resp_msg
+  return State(ctx2, key1), resp_msg
 ~~~
 
 ## Client Finish
 
 The client finishes CPace and responds to OQUAKE.
-OQUAKE's resulting session key is the CPaceOQUAKE session key.
+It derives the session key from OQUAKE's session key, the CPace session key, and OQUAKE's transcript hash,
+which is also the CPaceOQUAKE transcript hash.
 The client MUST abort if its received message does not have the correct length.
 
 ~~~
@@ -874,6 +890,7 @@ Input:
 Output:
 - key, a shared secret of Nkey bytes
 - msg, a protocol message for the initiator to send to the responder
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - CPace, parameterized instance of CPace
@@ -882,24 +899,21 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def InitiatorFinish(PRS, public_context, secret_context, state, resp_msg):
-  (ctx1, s1) = state
-  (s2, Yb, oquake_init) = resp_msg
+  ctx1 = state
+  (Yb, oquake_init) = resp_msg
 
-  key1 = CPace.Finish(ctx1, public_context, Yb)
+  key1, th1 = CPace.Finish(ctx1, public_context, Yb)
+  msg, key2, th2 = OQUAKE.Respond(PRS, th1, key1, oquake_init)
 
-  prk_extended_sid = KDF.Extract(s1 || s2, DST || "CPaceOQUAKE")
-  extended_sid = KDF.Expand(prk_extended_sid, DST || "SID", 32)
+  prk = KDF.Extract(key2, DST || "CPaceOQUAKE" || th2 || key1)
+  client_key = KDF.Expand(prk, DST || "key", Nkey)
 
-  msg, client_key = OQUAKE.Respond(PRS, extended_sid || public_context, key1,
-                                   oquake_init)
-
-  return client_key, msg
+  return client_key, msg, th2
 ~~~
 
 ## Server Finish
 
-The server finishes OQUAKE.
-OQUAKE's resulting session key is the CPaceOQUAKE session key.
+The server finishes OQUAKE and derives the session key in the same way as the client.
 The server MUST abort if its received message does not have the correct length.
 
 ~~~
@@ -911,13 +925,21 @@ Input:
 
 Output:
 - key, a shared secret of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - OQUAKE, parameterized instance of OQUAKE
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 def ResponderFinish(state, msg3):
-  server_key = OQUAKE.Finish(state, msg3)
-  return server_key
+  (ctx2, key1) = state
+  key2, th2 = OQUAKE.Finish(ctx2, msg3)
+
+  prk = KDF.Extract(key2, DST || "CPaceOQUAKE" || th2 || key1)
+  server_key = KDF.Expand(prk, DST || "key", Nkey)
+
+  return server_key, th2
 ~~~
 
 
@@ -935,12 +957,12 @@ server stores a verifier for the client's password, instead of the password itse
 It is a close variant of the `augmented PAKE' constructions presented in {{LLH24}} and in {{Gu24}}.
 
 The verifier consists of two parts that are derived by computing a key stretching function on the client's password.
-The first Nverifier bytes of the KSF output are denoted v, which makes up the first part of the verifier.
+The first Nv bytes of the KSF output are denoted v, which makes up the first part of the verifier.
 The remaining KEM.Nseed bytes, which we call the seed, are used to derive a KEM key pair, of which the public key is the second part of the verifier.
 This KEM does not have to be a BUA-sKEM.
 
-In each session, the client and server first run the symmetric PAKE with v instead of the PRS, yielding session key SK.
-The server then uses SK and the KEM public key pk to challenge the client to prove knowledge of the seed ({{pwconf}}).
+In each session, the client and server first run the symmetric PAKE with v instead of the PRS, yielding session key SK and transcript hash th.
+The server then uses SK, th, and the KEM public key pk to challenge the client to prove knowledge of the seed ({{pwconf}}).
 Password confirmation relies on SK for confidentiality, so it cannot be used as a standalone protocol and SHOULD NOT be used outside of this transformation.
 
 ~~~ aasvg
@@ -951,7 +973,7 @@ Password confirmation relies on SK for confidentiality, so it cannot be used as 
        v ---->+---->|     PAKE     |<-----+<---- v
               |     +--------------+      |
               |            |              |
-              |            SK             |
+              |          SK, th           |
               |            |              |
               |     +--------------+      |
               |     |   Password   |      |
@@ -963,7 +985,7 @@ Password confirmation relies on SK for confidentiality, so it cannot be used as 
 
 ### Offline Registration
 
-This subsection specifies functions for generating the verifiers and
+This subsection specifies functions for generating a verifier and
 a protocol for registering clients.
 
 #### Generating Verifiers {#gen-verifiers}
@@ -971,7 +993,7 @@ a protocol for registering clients.
 Verifiers are random-looking values derived from password-related strings from which it is computationally impractical to derive the password-related string.
 To make verifiers unique between different users with the same password or servers that they interact with, we employ a salt, a user account identifier, and an optional server identifier.
 These identifiers identify the registration and do not have to be equal to any identifiers in the public_context; see {{asymmetric-identities}}.
-The material required for the verifiers is generated as follows:
+The material required for the verifier is generated as follows:
 
 ~~~
 GenVerifierMaterial
@@ -982,7 +1004,7 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- verifier, a byte string of Nverifier bytes
+- v, the first part of the verifier, a byte string of Nv bytes
 - seed, a KEM key-derivation seed, a byte string of KEM.Nseed bytes
 
 Parameters:
@@ -991,16 +1013,17 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def GenVerifierMaterial(PRS, salt, U, S):
-  verifier_seed = KSF.Stretch(DST || PRS || U || S, salt, Nverifier + KEM.Nseed)
-  verifier = verifier_seed[0:Nverifier]
-  seed = verifier_seed[Nverifier:Nverifier + KEM.Nseed]
-  return verifier, seed
+  material = KSF.Stretch(DST || lv_encode(PRS) || lv_encode(U) || lv_encode(S),
+                         salt, Nv + KEM.Nseed)
+  v = material[0:Nv]
+  seed = material[Nv:Nv + KEM.Nseed]
+  return v, seed
 ~~~
 
-To derive an actual public key from the verifier material, we use the following function:
+To derive the verifier (v, pk), we use the following function:
 
 ~~~
-GenVerifiers
+GenVerifier
 
 Input:
 - PRS, password-related string, a byte string
@@ -1008,16 +1031,16 @@ Input:
 - U and S, client and server identifiers
 
 Output:
-- verifier, a byte string of Nverifier bytes
-- pk, a KEM public key
+- v, the first part of the verifier, a byte string of Nv bytes
+- pk, the second part of the verifier, a KEM public key
 
 Parameters:
 - KEM, a KEM instance
 
-def GenVerifiers(PRS, salt, U, S):
-  verifier, seed = GenVerifierMaterial(PRS, salt, U, S)
+def GenVerifier(PRS, salt, U, S):
+  v, seed = GenVerifierMaterial(PRS, salt, U, S)
   (sk, pk) = KEM.DeriveKeyPair(seed)
-  return verifier, pk
+  return v, pk
 ~~~
 
 The server MUST store pk; it MUST NOT store seed.
@@ -1028,12 +1051,12 @@ The stored (v, seed) SHOULD be protected in the same way as PRS, since it allows
 #### Client Registration
 
 The registration phase consists of one message sent from the client to the server. This message
-contains the verifier, a public key, and 32-byte salt.
+contains the verifier (v, pk) and a 32-byte salt.
 The server stores this information corresponding to the client for future use in the verification flow.
-This phase requires a secure channel from client to server in order to transfer the password verifier and public key.
+This phase requires a secure channel from client to server in order to transfer the verifier.
 The salt can be sent in plain text.
 In some cases, there may not be a secure channel, but the server may already know the password.
-In such cases, the server MAY instead choose the salt, compute the verifier on behalf of the client using GenVerifiers, store it, and erase the password and the seed.
+In such cases, the server MAY instead choose the salt, compute the verifier on behalf of the client using GenVerifier, store it, and erase the password and the seed.
 
 We recommend that the salt is a random byte string: `salt = random(32)`.
 The client needs the salt before it sends its first protocol message, since the symmetric PAKE already runs over v.
@@ -1046,7 +1069,7 @@ A high level flow overview of the registration flow is below.
 ~~~aasvg
 Client: PRS, salt, U, S              Server: N/A
        ---------------------------------------
- (v, pk) = GenVerifiers(PRS, salt, U, S)
+ (v, pk) = GenVerifier(PRS, salt, U, S)
             |                           |
             |    salt, v, pk, U, S      |
             |-------------------------->|
@@ -1059,11 +1082,13 @@ Client: PRS, salt, U, S              Server: N/A
 ### Password Confirmation {#pwconf}
 
 Password confirmation is a challenge-response exchange after the symmetric PAKE finishes.
-Both parties input key SK output by the symmetric PAKE and a public_context.
+Both parties input the key SK and the transcript hash th output by the symmetric PAKE.
 The server must also input the client's registered public key pk, while the client inputs the corresponding seed.
 The server creates a challenge in the form of a KEM ciphertext encapsulated for that pk, and encrypted with SK.
 The client decrypts the ciphertext using SK and proves that it can decapsulate it.
 It does so by deriving the KEM's secret decapsulation key from the seed.
+The challenge also contains client_confirm, which depends on SK and on the encapsulated key.
+It lets the client check that the server knows both, which requires the full verifier (v, pk) or the password.
 
 The state returned by Challenge holds the server's candidate session key.
 This key MUST NOT be released to the calling application, used to protect traffic, or otherwise acted upon before Verify has confirmed the client's response.
@@ -1074,8 +1099,8 @@ PC.Challenge
 
 Input:
 - SK, the key output by the symmetric PAKE, a byte string
-- public_context, optional public context, a byte string
-- pk, client-registered public key, a KEM public key
+- th, the transcript hash output by the symmetric PAKE, a byte string
+- pk, part of the client's registered verifier, a KEM public key
 
 Output:
 - state, opaque state for the server to store
@@ -1086,42 +1111,39 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Challenge(SK, public_context, pk):
+def Challenge(SK, th, pk):
   (k, c) = KEM.Encaps(pk)
   r = KDF.Expand(SK, DST || "OTP", Nct)
   enc_c = XOR(c, r)
 
-  confirm_input = public_context || enc_c
+  prk_pc = KDF.Extract(SK, DST || "PC" || th || enc_c || k)
+  client_confirm = KDF.Expand(prk_pc, DST || "client_confirm", Nkc)
+  server_confirm = KDF.Expand(prk_pc, DST || "server_confirm", Nkc)
+  server_key = KDF.Expand(prk_pc, DST || "key", Nkey)
 
-  prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
-  prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
-
-  client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
-
-  server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
-  server_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
-
+  th_out = TH("PC", th, enc_c, client_confirm, server_confirm)
   challenge = (enc_c, client_confirm)
 
-  return State(server_confirm, server_key), challenge
+  return State(server_confirm, server_key, th_out), challenge
 ~~~
 
 The client decrypts the KEM ciphertext using SK, re-derives the KEM key pair from the seed, and decapsulates the ciphertext to derive the password confirmation values and its session key.
 It aborts if the server-provided confirmation value does not match its own.
-Otherwise, it returns its session key and its own confirmation value.
+Otherwise, it returns its session key, its own confirmation value, and the transcript hash.
 
 ~~~
 PC.Respond
 
 Input:
 - SK, the key output by the symmetric PAKE, a byte string
-- public_context, optional public context, a byte string
+- th, the transcript hash output by the symmetric PAKE, a byte string
 - seed, seed used to derive the KEM key pair during registration
 - challenge, the server's password confirmation challenge
 
 Output:
 - client_key, a byte string of Nkey bytes
 - response, a protocol message for the client to send to the server
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
@@ -1131,7 +1153,7 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Respond(SK, public_context, seed, challenge):
+def Respond(SK, th, seed, challenge):
   (enc_c, client_confirm_target) = challenge
 
   r = KDF.Expand(SK, DST || "OTP", Nct)
@@ -1141,28 +1163,24 @@ def Respond(SK, public_context, seed, challenge):
 
   try:
     k = KEM.Decaps(c, sk)
-
-    confirm_input = public_context || enc_c
-
-    prk_k_h1 = KDF.Extract(SK, DST || "h1" || confirm_input)
-    prk_k_h2 = KDF.Extract(SK, DST || "h2" || confirm_input || k)
-
-    client_confirm = KDF.Expand(prk_k_h1, DST || "client_confirm", Nkc)
-
-    server_confirm = KDF.Expand(prk_k_h2, DST || "server_confirm", Nkc)
-    client_key = KDF.Expand(prk_k_h2, DST || "key", Nkey)
-
-    if client_confirm != client_confirm_target:
-      raise AuthenticationError
-
-    return client_key, server_confirm
   catch DecapsError:
     raise AuthenticationError
+
+  prk_pc = KDF.Extract(SK, DST || "PC" || th || enc_c || k)
+  client_confirm = KDF.Expand(prk_pc, DST || "client_confirm", Nkc)
+  if client_confirm != client_confirm_target:
+    raise AuthenticationError
+
+  server_confirm = KDF.Expand(prk_pc, DST || "server_confirm", Nkc)
+  client_key = KDF.Expand(prk_pc, DST || "key", Nkey)
+  th_out = TH("PC", th, enc_c, client_confirm, server_confirm)
+
+  return client_key, server_confirm, th_out
 ~~~
 
 Upon receipt of the response, the server validates that the password confirmation
 value matches its own value. If the value does not match, the server aborts.
-Otherwise, the server outputs its session key.
+Otherwise, the server outputs its session key and the transcript hash.
 
 ~~~
 PC.Verify
@@ -1173,15 +1191,16 @@ Input:
 
 Output:
 - server_key, a byte string of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
 
 def Verify(state, server_confirm_target):
-  (server_confirm, server_key) = state
+  (server_confirm, server_key, th_out) = state
   if server_confirm != server_confirm_target:
     raise AuthenticationError
-  return server_key
+  return server_key, th_out
 ~~~
 
 ## OQUAKE+ Protocol {#oquakeplus}
@@ -1205,12 +1224,13 @@ ctx, msg1 = OQUAKE+.Init(                      |
             |               msg2               |
             |<---------------------------------|
             |                                  |
-client_key, msg3 = OQUAKE+.Finish(ctx,msg2)    |
+client_key, msg3, th =                         |
+  OQUAKE+.Finish(ctx,msg2)                     |
             |                                  |
             |               msg3               |
             |--------------------------------->|
             |                                  |
-            |        server_key = OQUAKE+.Verify(ctx,msg3)
+            |    server_key, th = OQUAKE+.Verify(ctx,msg3)
             |                                  |
           ----------------------------------------
       output client_key                 output server_key
@@ -1243,7 +1263,7 @@ Parameters:
 def Init(PRS, salt, U, S, public_context, secret_context):
   (v, seed) = GenVerifierMaterial(PRS, salt, U, S)
   ctx, msg = OQUAKE.Init(v, public_context, secret_context)
-  return State(ctx, seed, public_context), msg
+  return State(ctx, seed), msg
 ~~~
 
 ### Response
@@ -1255,11 +1275,11 @@ As described in {{pwconf}}, the server_key held in the returned state MUST NOT b
 OQUAKE+.Respond
 
 Input:
-- v, client-registered verifier, a byte string of Nverifier bytes
+- v, part of the client's registered verifier, a byte string of Nv bytes
 - public_context, optional public context, a byte string
 - secret_context, optional secret context, a byte string
 - init_msg, the initiator's protocol message
-- pk, client-registered public key, a KEM public key
+- pk, part of the client's registered verifier, a KEM public key
 
 Output:
 - state, opaque state for the server to store values to complete the protocol
@@ -1270,8 +1290,8 @@ Parameters:
 - PC, password confirmation ({{pwconf}})
 
 def Respond(v, public_context, secret_context, init_msg, pk):
-  oquake_resp, SK = OQUAKE.Respond(v, public_context, secret_context, init_msg)
-  state, challenge = PC.Challenge(SK, public_context, pk)
+  oquake_resp, SK, th = OQUAKE.Respond(v, public_context, secret_context, init_msg)
+  state, challenge = PC.Challenge(SK, th, pk)
   resp_msg = (oquake_resp, challenge)
   return state, resp_msg
 ~~~
@@ -1291,6 +1311,7 @@ Input:
 Output:
 - client_key, a byte string of Nkey bytes
 - response, a protocol message for the client to send to the server
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
@@ -1300,17 +1321,17 @@ Parameters:
 - PC, password confirmation ({{pwconf}})
 
 def Finish(state, resp_msg):
-  (ctx, seed, public_context) = state
+  (ctx, seed) = state
   (oquake_resp, challenge) = resp_msg
 
-  SK = OQUAKE.Finish(ctx, oquake_resp)
+  SK, th = OQUAKE.Finish(ctx, oquake_resp)
 
-  return PC.Respond(SK, public_context, seed, challenge)
+  return PC.Respond(SK, th, seed, challenge)
 ~~~
 
 ### Verify {#oquakeplus-verify}
 
-Verify checks the client's password confirmation value and outputs the server's session key.
+Verify checks the client's password confirmation value and outputs the server's session key and the transcript hash.
 
 ~~~
 OQUAKE+.Verify
@@ -1321,6 +1342,7 @@ Input:
 
 Output:
 - server_key, a byte string of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
@@ -1371,12 +1393,12 @@ ctx, msg1 = CPaceOQUAKE+.Init(                 |
             |               msg4               |
             |<---------------------------------|
             |                                  |
-  client_key, msg5 = CPaceOQUAKE+.InitiatorFinish(
+  client_key, msg5, th = CPaceOQUAKE+.InitiatorFinish(
      ctx,msg4)                                 |
             |               msg5               |
             |--------------------------------->|
             |                                  |
-            |  server_key = CPaceOQUAKE+.ResponderFinish(ctx,msg5)
+            |  server_key, th = CPaceOQUAKE+.ResponderFinish(ctx,msg5)
             |                                  |
           ----------------------------------------
       output client_key                 output server_key
@@ -1423,7 +1445,7 @@ Respond responds to CPaceOQUAKE using the verifier's v instead of PRS.
 CPaceOQUAKE+.Respond
 
 Input:
-- v, client-registered verifier, a byte string of Nverifier bytes
+- v, part of the client's registered verifier, a byte string of Nv bytes
 - public_context, optional public context, a byte string
 - secret_context, optional secret context, a byte string
 - init_msg, the message received from the client
@@ -1437,13 +1459,13 @@ Parameters:
 
 def Respond(v, public_context, secret_context, init_msg):
   ctx, msg = CPaceOQUAKE.Respond(v, public_context, secret_context, init_msg)
-  return State(ctx, public_context), msg
+  return ctx, msg
 ~~~
 
 ### Client Continue
 
 InitiatorContinue completes CPaceOQUAKE.
-The client retains the resulting key SK for password confirmation.
+The client retains the resulting key SK and transcript hash th for password confirmation.
 SK MUST NOT be used as a session key.
 
 ~~~
@@ -1462,9 +1484,9 @@ Parameters:
 
 def InitiatorContinue(state, msg2):
   (ctx, v, seed, public_context, secret_context) = state
-  SK, msg = CPaceOQUAKE.InitiatorFinish(v, public_context, secret_context,
-                                        ctx, msg2)
-  return State(SK, seed, public_context), msg
+  SK, msg, th = CPaceOQUAKE.InitiatorFinish(v, public_context, secret_context,
+                                            ctx, msg2)
+  return State(SK, th, seed), msg
 ~~~
 
 ### Server Continue
@@ -1478,7 +1500,7 @@ CPaceOQUAKE+.ResponderContinue
 Input:
 - state, the state generated by CPaceOQUAKE+.Respond
 - msg3, the message received from the client
-- pk, client-registered public key, a KEM public key
+- pk, part of the client's registered verifier, a KEM public key
 
 Output:
 - state, opaque state for the responder to store
@@ -1489,14 +1511,13 @@ Parameters:
 - PC, password confirmation ({{pwconf}})
 
 def ResponderContinue(state, msg3, pk):
-  (ctx, public_context) = state
-  SK = CPaceOQUAKE.ResponderFinish(ctx, msg3)
-  return PC.Challenge(SK, public_context, pk)
+  SK, th = CPaceOQUAKE.ResponderFinish(state, msg3)
+  return PC.Challenge(SK, th, pk)
 ~~~
 
 ### Client Finish
 
-The client responds to the password confirmation challenge, obtaining the CPaceOQUAKE+ session key and the confirmation value it sends to the server.
+The client responds to the password confirmation challenge, obtaining the CPaceOQUAKE+ session key, the confirmation value it sends to the server, and the transcript hash.
 The client aborts if the server's password confirmation value does not verify.
 
 ~~~
@@ -1509,6 +1530,7 @@ Input:
 Output:
 - client_key, a shared secret of Nkey bytes
 - msg, a protocol message for the initiator to send to the responder
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
@@ -1517,13 +1539,13 @@ Parameters:
 - PC, password confirmation ({{pwconf}})
 
 def InitiatorFinish(state, msg4):
-  (SK, seed, public_context) = state
-  return PC.Respond(SK, public_context, seed, msg4)
+  (SK, th, seed) = state
+  return PC.Respond(SK, th, seed, msg4)
 ~~~
 
 ### Server Finish
 
-The server finishes the protocol by verifying the client's password confirmation value.
+The server finishes the protocol by verifying the client's password confirmation value, and outputs the session key and the transcript hash.
 
 ~~~
 CPaceOQUAKE+.ResponderFinish
@@ -1534,6 +1556,7 @@ Input:
 
 Output:
 - server_key, a shared secret of Nkey bytes
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
 - AuthenticationError, raised when the password confirmation values do not match
@@ -1572,7 +1595,7 @@ password confirmation alike.
 The RECOMMENDED parameters, common to all configurations below, are (see
 {{params}}):
 
-- Nverifier = 32 (used only by the augmented protocols, OQUAKE+ and CPaceOQUAKE+)
+- Nv = 32 (used only by the augmented protocols, OQUAKE+ and CPaceOQUAKE+)
 - Nkc = 64
 - Nsec = 32
 - Nkey = 32
@@ -1591,7 +1614,7 @@ no prefix is needed.
 
 OQUAKE+ ({{oquakeplus}}) applies the PAKE-to-aPAKE transformation to OQUAKE, which
 introduces the KEM used to carry the confirmation challenge and the KSF used to
-derive the verifier and seed at registration. It therefore extends
+derive v and the seed at registration. It therefore extends
 {{config-oquake}} with the "PC-" entries, and the OQUAKE KDF takes the "PAKE-"
 prefix to distinguish it from the password confirmation KDF.
 
@@ -1599,7 +1622,7 @@ prefix to distinguish it from the password confirmation KDF.
 - PAKE-KDF: HKDF-SHA-256
 - KEM: ML-KEM-768 {{FIPS203}}, where Nseed = 64, Nct = 1088, and Npk = 1184.
 - PC-KDF: HKDF-SHA-256
-- PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nverifier + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
+- PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nv + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
 - DST: "72bc7dff23f85f771e1475165f32387db27f5082d49bdb79a2abb29623a9f3e8" (a randomly generated 32-byte string)
 
 ## CPaceOQUAKE {#config-cpaceoquake}
@@ -1626,7 +1649,7 @@ test vectors in this document correspond.
 - PAKE-KDF: HKDF-SHA-256
 - KEM: X-Wing {{XWING}}, where Nseed = 32, Nct = 1120, and Npk = 1216.
 - PC-KDF: HKDF-SHA-256
-- PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nverifier + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
+- PC-KSF: Argon2id(S = zeroes(16), p = 4, T = Nv + KEM.Nseed, m = 2^21, t = 1, v = 0x13, K = nil, X = nil, y = 2) {{!ARGON2=RFC9106}}
 - DST: "1b3abc3cd05e8054e8399bc38dfcbc1321d2e1b02da335ed1e8031ef5199f672" (a randomly generated 32-byte string)
 
 ## Defining New Configurations
@@ -1668,6 +1691,10 @@ surfaced as a DecapsError. As described in {{quake-finish}}, OQUAKE.Finish retur
 a random key in that case so that a failure is indistinguishable from a mismatched
 password. Implementations SHOULD NOT convert this into a distinguishable error, as
 doing so would leak whether the peer holds the correct PRS.
+
+The KEMs in the configurations of this document use implicit rejection: decapsulating a
+ciphertext of the correct length does not fail, but yields an unrelated key. A DecapsError
+therefore only results from malformed input.
 
 Beyond these explicit errors, CPaceOQUAKE+ implementations can produce implicit errors.
 For example, if protocol messages sent between client and server do not match
@@ -1845,6 +1872,15 @@ many registered clients, this change can be expensive. Applications therefore
 ought to consider the longevity and uniqueness of their party identifiers
 when instantiating these protocols.
 
+## Verifier Compromise {#verifier-compromise}
+
+An attacker that obtains a client's verifier (v, pk) can perform an offline password guessing attack against it, and it can impersonate the server to that client.
+This is inherent to augmented PAKEs.
+Such an attacker, however, cannot impersonate the client without first recovering the password, which requires the seed (or a decapsulation key for this pk).
+An attacker that knows v but not pk can complete the symmetric PAKE, but it cannot pass password confirmation for a client that it tries to impersonate:
+computing client_confirm requires the key encapsulated to pk, and computing server_confirm requires the seed.
+Since an attacker that knows v can send the client ciphertexts of its choice, the KEM must be IND-CCA secure ({{deps-kem}}).
+
 ## Timing Attacks and Tempo {#timing-and-tempo}
 
 OQUAKE (without the fix from {{TEMPO}}) is subject to a timing attack
@@ -1955,12 +1991,12 @@ ML-BUA-sKEM-1024 is built on ML-KEM-1024, whose failure probability is 2^-175.2.
 
 ## Parameters for OQUAKE+ {#params-oquakeplus}
 
-OQUAKE+ adds password confirmation on top of OQUAKE, which introduces the
-verifier, the KEM key-derivation seed, and the confirmation values. In addition to
+OQUAKE+ adds password confirmation on top of OQUAKE, which introduces
+v, the KEM key-derivation seed, and the confirmation values. In addition to
 the requirements in {{params-oquake}}, we have:
 
-- Nseed * 8 + Nverifier * 8 >= 2 * qq + classical hardness
-- Nverifier * 8 >= qq + classical hardness
+- Nseed * 8 + Nv * 8 >= 2 * qq + classical hardness
+- Nv * 8 >= qq + classical hardness
 - Nkc * 8 >= qq + classical hardness
 - KEM failure <= -qq - classical hardness
 - KEM ind vs classical <= -qq - classical hardness
@@ -1969,7 +2005,7 @@ the requirements in {{params-oquake}}, we have:
 Here Nseed refers to KEM.Nseed, the seed length of the KEM used for password
 confirmation, and not to BUA-sKEM.Nseed. For the KEM in {{config-oquakeplus}} we
 have Nseed = 64, and for the KEM in {{config-cpaceoquakeplus}} we have Nseed = 32.
-For consistency, the spec uses Nverifier = 32.
+For consistency, the spec uses Nv = 32.
 We ignore the KEM failure following the same reasoning as in {{params-oquake}}.
 
 
@@ -2032,6 +2068,7 @@ The functions below are parameterized by a group environment G and a hash functi
 specified in {{CPACE}}. From G, they use `G.calculate_generator`, `G.sample_scalar`,
 `G.scalar_mult`, and `G.scalar_mult_vfy`, the neutral element `G.I`, and the domain-separation
 identifier `G.DSI`. From H, they use `H.hash`.
+The transcript hash TH ({{overview}}) uses the KDF and DST of the configuration.
 
 ## Initiation
 
@@ -2070,7 +2107,7 @@ CPace.Finish binds the full protocol transcript, which includes both Ya and Yb.
 
 The responder performs the same actions as the initiator.
 Since it already received the initiator's message, it can immediately finish its execution of the protocol.
-It outputs the shared secret and a message Yb intended to be sent to the initiator.
+It outputs the shared secret, a message Yb intended to be sent to the initiator, and a transcript hash.
 
 ~~~
 CPace.Respond
@@ -2084,10 +2121,13 @@ Input:
 Output:
 - ISK, the established shared secret
 - Yb, public point, intended to be sent to the initiator
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - G, a group environment as specified in CPace
 - H, a hash function as specified in CPace
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 Exceptions:
 - CPaceError, raised when an invalid value was encountered in CPace
@@ -2100,17 +2140,18 @@ def Respond(PRS, public_context, secret_context, Ya):
   K = G.scalar_mult_vfy(yb, Ya)
   If K = G.I, raise CPaceError
 
-  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript(Ya, Yb))
+  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript_ir(Ya, b"", Yb, b""))
+  th = TH("CPace", public_context, Ya, Yb)
 
-  return ISK, Yb
+  return ISK, Yb, th
 ~~~
 
-The functions `lv_cat` and `transcript` are defined in {{CPACE}}.
+The functions `lv_cat` and `transcript_ir` are defined in {{CPACE}}. This document does not use CPace's associated data, so ADa and ADb are empty.
 
 ## Finish
 
-The initiator finishes the protocol by combining the state generated by CPace.Init and the message Yb received
-from the responder.
+The initiator finishes the protocol by combining the state generated by CPace.Init and the message Yb received from the responder.
+It outputs the shared secret and a transcript hash.
 
 ~~~
 CPace.Finish
@@ -2122,10 +2163,13 @@ Input:
 
 Output:
 - ISK, the established shared secret
+- th, transcript hash, a byte string of KDF.Nx bytes
 
 Parameters:
 - G, a group environment as specified in CPace
 - H, a hash function as specified in CPace
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
 Exceptions:
 - CPaceError, raised when an invalid value was encountered in CPace
@@ -2136,9 +2180,10 @@ def Finish(state, public_context, Yb):
   K = G.scalar_mult_vfy(ya, Yb)
   If K = G.I, raise CPaceError
 
-  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript(Ya, Yb))
+  ISK = H.hash(lv_cat(G.DSI || b"_ISK", public_context, K) || transcript_ir(Ya, b"", Yb, b""))
+  th = TH("CPace", public_context, Ya, Yb)
 
-  return ISK
+  return ISK, th
 ~~~
 
 # Message Encodings {#encodings}
@@ -2246,27 +2291,23 @@ The OQUAKE+ response message is a password confirmation response.
 
 ## CPaceOQUAKE Message Encoding
 
-The CPaceOQUAKE initiator message `(s1, Ya)`, produced by CPaceOQUAKE.Init
-({{CPaceOQUAKE}}), is encoded as:
+The CPaceOQUAKE initiator message `Ya`, produced by CPaceOQUAKE.Init ({{CPaceOQUAKE}}), is encoded as:
 
 ~~~
-init_msg = s1 || lv_encode(Ya)
+init_msg = lv_encode(Ya)
 ~~~
 
-where `s1` has 32 bytes and `Ya` is a CPace initiator message. On receipt,
-`s1 = init_msg[0..32]` and `Ya = lv_decode(init_msg[32..])`.
+where `Ya` is a CPace initiator message. On receipt, `Ya = lv_decode(init_msg)`.
 
-The CPaceOQUAKE responder message `(s2, Yb, oquake_init)`, produced by
-CPaceOQUAKE.Respond, is encoded as:
+The CPaceOQUAKE responder message `(Yb, oquake_init)`, produced by CPaceOQUAKE.Respond, is encoded as:
 
 ~~~
-resp_msg = s2 || lv_encode(Yb) || oquake_init
+resp_msg = lv_encode(Yb) || oquake_init
 ~~~
 
-where `s2` has 32 bytes, `Yb` is a CPace responder message, and `oquake_init` is
-an OQUAKE initiator message. On receipt, `s2 = resp_msg[0..32]`,
-`L = bytes_to_int(resp_msg[32..34])`, `Yb = resp_msg[34..34+L]`, and
-`oquake_init = resp_msg[34+L..]`.
+where `Yb` is a CPace responder message and `oquake_init` is an OQUAKE initiator
+message. On receipt, `L = bytes_to_int(resp_msg[0..2])`, `Yb = resp_msg[2..2+L]`,
+and `oquake_init = resp_msg[2+L..]`.
 
 The CPaceOQUAKE message `msg3`, produced by CPaceOQUAKE.InitiatorFinish, is an
 OQUAKE responder message, encoded as described in the OQUAKE message encoding
@@ -2285,17 +2326,17 @@ message encoding above.
 
 ## Registration Message Encoding
 
-The registration message described in {{oquakeplus}}, carrying the client's salt,
-verifier, public key, and identifiers, is encoded as:
+The registration message described in {{apake-transform}}, carrying the client's salt,
+verifier (v, pk), and identifiers, is encoded as:
 
 ~~~
 reg_msg = salt || v || pk || lv_encode(U) || lv_encode(S)
 ~~~
 
-where `salt` has 32 bytes, `v` has `Nverifier` bytes, and `pk` has `KEM.Npk`
+where `salt` has 32 bytes, `v` has `Nv` bytes, and `pk` has `KEM.Npk`
 bytes. On receipt, the fields are recovered as `salt = reg_msg[0 : 32]`,
-`v = reg_msg[32 : 32 + Nverifier]`,
-`pk = reg_msg[32 + Nverifier : 32 + Nverifier + KEM.Npk]`, and the identifiers by
+`v = reg_msg[32 : 32 + Nv]`,
+`pk = reg_msg[32 + Nv : 32 + Nv + KEM.Npk]`, and the identifiers by
 successive `lv_decode` calls over the remainder.
 
 # Transport Mappings {#transport-mappings}
@@ -2306,8 +2347,9 @@ protocol data unit. A specification that maps these protocols onto such a transp
 can define its own framing, including carrying the fields of a single protocol message
 in more than one transport message or PDU. This is possible because no value derived
 by these protocols depends on how a message is framed: every key, confirmation value,
-and transcript is computed from individual named fields -- `s`, `T`, `⍴`, `ct`, `enc_c`, `k`,
-the public and secret contexts -- and never from the concatenated message as a whole.
+and transcript hash is computed from individual named fields -- `Ya`, `Yb`, `s`, `T`, `⍴`,
+`ct`, `h`, `enc_c`, `k`, `client_confirm`, `server_confirm`, the public and secret contexts --
+and never from the concatenated message as a whole.
 Re-framing a message therefore cannot change any derived value, and does not
 affect the security analysis of the protocol.
 
@@ -2347,13 +2389,13 @@ field lengths.
 
 | Message | Fields | Octets |
 |---|---|---|
-| msg1 | s1, CPace Ya | 66 |
-| msg2 | s2, CPace Yb, s, T, ⍴ | 1756 |
+| msg1 | CPace Ya | 34 |
+| msg2 | CPace Yb, s, T, ⍴ | 1724 |
 | msg3 | ct, h | 1632 |
 | msg4 | enc_c, client_confirm | 1184 |
 | msg5 | server_confirm | 64 |
 
-The largest message is msg2, at 1756 octets.
+The largest message is msg2, at 1724 octets.
 
 <!--
 
