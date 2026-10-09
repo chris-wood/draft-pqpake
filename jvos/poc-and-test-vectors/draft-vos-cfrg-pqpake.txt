@@ -4718,7 +4718,7 @@ E.5.2.  Incorrect server_confirm
 
    This test vector uses the inputs, randomness, and messages msg1 to
    msg4 of Appendix E.5.1.  A server that receives the following msg5
-   MUST raise an AuthenticationError.
+   raises an AuthenticationError.
 
    msg5:
    65dd7da93090d6c9b6be74fcef7781937a1e7a42bd3216ef75068d428f982a6f
@@ -4727,8 +4727,8 @@ E.5.3.  Wrong Password
 
    In this test vector, the client runs the protocol with client_PRS
    instead of the registered PRS.  OQUAKE.Finish at the server returns
-   random_key, and the client MUST raise an AuthenticationError on
-   receipt of msg4.
+   random_key, and the client raises an AuthenticationError on receipt
+   of msg4.
 
    # Inputs
    PRS: 70617373776f7264
@@ -4966,7 +4966,7 @@ E.5.3.  Wrong Password
 E.5.4.  Neutral Element
 
    A server that receives the following msg1, in which Ya is the neutral
-   element of G_X25519, MUST raise a CPaceError, regardless of its other
+   element of G_X25519, raises a CPaceError, regardless of its other
    inputs.  [CPACE] lists further points for which CPace must abort.
 
    msg1:

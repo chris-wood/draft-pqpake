@@ -6469,7 +6469,7 @@ th: 416469dc909b2d5b9c4de30c6aadd506998eb592dfde8617d3a70dc10694a997
 <a href="#appendix-E.5.2" class="section-number selfRef">E.5.2. </a><a href="#name-incorrect-server_confirm" class="section-name selfRef">Incorrect server_confirm</a>
           </h4>
 <p id="appendix-E.5.2-1">This test vector uses the inputs, randomness, and messages msg1 to msg4 of <a href="#tv-cpaceoquakeplus-success" class="auto internal xref">Appendix E.5.1</a>.
-A server that receives the following msg5 <span class="bcp14">MUST</span> raise an AuthenticationError.<a href="#appendix-E.5.2-1" class="pilcrow">¶</a></p>
+A server that receives the following msg5 raises an AuthenticationError.<a href="#appendix-E.5.2-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="appendix-E.5.2-2">
 <pre>
 msg5:
@@ -6484,7 +6484,7 @@ msg5:
 <a href="#appendix-E.5.3" class="section-number selfRef">E.5.3. </a><a href="#name-wrong-password" class="section-name selfRef">Wrong Password</a>
           </h4>
 <p id="appendix-E.5.3-1">In this test vector, the client runs the protocol with client_PRS instead of the registered PRS.
-OQUAKE.Finish at the server returns random_key, and the client <span class="bcp14">MUST</span> raise an AuthenticationError on receipt of msg4.<a href="#appendix-E.5.3-1" class="pilcrow">¶</a></p>
+OQUAKE.Finish at the server returns random_key, and the client raises an AuthenticationError on receipt of msg4.<a href="#appendix-E.5.3-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="appendix-E.5.3-2">
 <pre>
 # Inputs
@@ -6728,7 +6728,7 @@ AuthenticationError, raised by the client on receipt of msg4
           <h4 id="name-neutral-element">
 <a href="#appendix-E.5.4" class="section-number selfRef">E.5.4. </a><a href="#name-neutral-element" class="section-name selfRef">Neutral Element</a>
           </h4>
-<p id="appendix-E.5.4-1">A server that receives the following msg1, in which Ya is the neutral element of G_X25519, <span class="bcp14">MUST</span> raise a CPaceError, regardless of its other inputs.
+<p id="appendix-E.5.4-1">A server that receives the following msg1, in which Ya is the neutral element of G_X25519, raises a CPaceError, regardless of its other inputs.
 <span>[<a href="#CPACE" class="cite xref">CPACE</a>]</span> lists further points for which CPace must abort.<a href="#appendix-E.5.4-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="appendix-E.5.4-2">
 <pre>
