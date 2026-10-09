@@ -1,7 +1,7 @@
 from typing import Any, Tuple
 
 from drbg import UnsafeDRBG
-from util import EncodePublicContext, lv_encode, xor, wrap_print, to_hex
+from util import EncodePublicContext, assert_raises, lv_encode, trace, xor, wrap_print, to_hex
 from deps import TH
 
 
@@ -30,6 +30,7 @@ def oquake_init(params, PRS: bytes, public_context: bytes, secret_context: bytes
 
     (sk, pk) = params.BUA_sKEM.KeyGen(rng)
     (ut, rho) = params.BUA_sKEM.Split(pk)
+    trace("oquake_upk", pk)
 
     r = rng.random_bytes(params.Nr, "oquake_r")
 
@@ -71,6 +72,9 @@ def oquake_respond(params, PRS: bytes, public_context: bytes, secret_context: by
 
     resp_msg = ct + h
     th = TH(params.KDF, params.DST, b"OQUAKE", public_context, s, T, rho, ct, h)
+    trace("oquake_k", k)
+    trace("oquake_key", key)
+    trace("oquake_th", th)
 
     return resp_msg, key, th
 
@@ -84,6 +88,8 @@ def oquake_finish(params, state: Any, resp_msg: bytes, rng) -> Tuple[bytes, byte
     # ML-BUA-sKEM uses implicit rejection, so decapsulating a ciphertext of the
     # correct length does not fail.
     k = params.BUA_sKEM.Decaps(ct, sk)
+    trace("oquake_k", k)
+    trace("oquake_th", th)
 
     prk_sk = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) +
                                 s + T + pk + ct + k)
@@ -92,6 +98,7 @@ def oquake_finish(params, state: Any, resp_msg: bytes, rng) -> Tuple[bytes, byte
         return rng.random_bytes(params.Nkey, "random_key"), th
 
     key = params.KDF.Expand(prk_sk, params.DST + b"key", params.Nkey)
+    trace("oquake_key", key)
     return key, th
 
 
@@ -127,3 +134,7 @@ if __name__ == "__main__":
     resp_msg, key_responder, th_responder = oquake_respond(params, b"other password", b"", b"", init_msg, rng)
     key_initiator, th_initiator = oquake_finish(params, state, resp_msg, rng)
     assert key_initiator != key_responder and th_initiator == th_responder
+
+    # Messages of the wrong length are rejected.
+    assert_raises(ValueError, oquake_respond, params, b"password", b"", b"", init_msg[:-1], rng)
+    assert_raises(ValueError, oquake_finish, params, state, resp_msg + b"\x00", rng)

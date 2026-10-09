@@ -1,7 +1,7 @@
 from typing import Any, Tuple
 
 from deps import AuthenticationError, TH
-from util import OS2IP, lv_encode, xor
+from util import OS2IP, lv_encode, trace, xor
 
 
 def GenVerifierMaterial(params, PRS: bytes, salt: bytes, U: bytes, S: bytes) -> Tuple[bytes, bytes]:
@@ -9,6 +9,8 @@ def GenVerifierMaterial(params, PRS: bytes, salt: bytes, U: bytes, S: bytes) -> 
                                   salt, params.Nv + params.KEM.Nseed)
     v = material[0:params.Nv]
     seed = material[params.Nv:params.Nv + params.KEM.Nseed]
+    trace("v", v)
+    trace("seed", seed)
     return v, seed
 
 
@@ -21,6 +23,7 @@ def GenVerifier(params, PRS: bytes, salt: bytes, U: bytes, S: bytes, rng) -> Tup
     v, seed = GenVerifierMaterial(params, PRS, salt, U, S)
     kem_blind = rng.random_bytes(32, "kem_blind")
     (sk, pk) = params.KEM.DeriveKeyPair(DeriveKEMSeed(params, seed, kem_blind))
+    trace("pk", pk)
     return v, pk, kem_blind
 
 
@@ -52,6 +55,7 @@ def decode_registration(params, reg_msg: bytes) -> Tuple[bytes, bytes, bytes, by
 
 def pwconf_challenge(params, SK: bytes, th: bytes, pk: bytes, kem_blind: bytes, rng) -> Tuple[Any, bytes]:
     (k, c) = params.KEM.Encaps(pk, rng)
+    trace("pc_k", k)
     r = params.KDF.Expand(SK, params.DST + b"OTP", params.KEM.Nct + 32)
     enc_c = xor(c + kem_blind, r)
 
@@ -82,6 +86,7 @@ def pwconf_respond(params, SK: bytes, th: bytes, seed: bytes, challenge: bytes) 
     # The KEMs of the configurations use implicit rejection, so decapsulating a
     # ciphertext of the correct length does not fail.
     k = params.KEM.Decaps(c, sk)
+    trace("pc_k", k)
 
     prk_pc = params.KDF.Extract(SK, params.DST + b"PC" + th + enc_c + k)
     client_confirm = params.KDF.Expand(prk_pc, params.DST + b"client_confirm", params.Nkc)

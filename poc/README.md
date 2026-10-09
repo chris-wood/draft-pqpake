@@ -9,6 +9,13 @@ suitable for production use.
 - `make check` checks ML-KEM, X-Wing, CPace, HKDF, and scrypt against their
   published test vectors, downloading those of ML-KEM, X-Wing, and CPace once
   into `.cache/`.
+- `make vectors` generates the test vectors of the specification into
+  `vectors/`: one JSON file per configuration with vectors, `ml-bua-skem.json`,
+  and `test-vectors.md`, which renders them for the specification. It then
+  checks that each vector can be reproduced from the randomness it lists.
+
+In the test vectors, byte strings are encoded in hexadecimal, and the Kemeleon
+randomness `kemeleon_m` of each polynomial is an integer in decimal.
 
 `mlkem.py`, `x25519.py`, and `xwing.py` are taken from the reference
 specifications of FIPS 203 (https://github.com/bwesterb/draft-schwabe-cfrg-kyber)

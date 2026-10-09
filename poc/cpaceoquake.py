@@ -1,9 +1,10 @@
 from typing import Any, Tuple
 
 from drbg import UnsafeDRBG
-from util import EncodePublicContext, OS2IP, lv_decode, lv_encode, wrap_print, to_hex
+from util import EncodePublicContext, OS2IP, assert_raises, lv_decode, lv_encode, trace, wrap_print, to_hex
 from cpace import cpace_init, cpace_respond, cpace_finish, run_CPace
 from oquake import oquake_init, oquake_respond, oquake_finish, run_OQUAKE
+from deps import CPaceError
 
 
 def decode_cpaceoquake_resp(params, resp_msg: bytes) -> Tuple[bytes, bytes]:
@@ -42,6 +43,7 @@ def cpaceoquake_initiator_finish(params, PRS: bytes, public_context: bytes, secr
 
     prk = params.KDF.Extract(key2, params.DST + b"CPaceOQUAKE" + th2 + key1)
     client_key = params.KDF.Expand(prk, params.DST + b"key", params.Nkey)
+    trace("cpaceoquake_key", client_key)
 
     return client_key, msg, th2
 
@@ -52,6 +54,7 @@ def cpaceoquake_responder_finish(params, state: Any, msg3: bytes, rng) -> Tuple[
 
     prk = params.KDF.Extract(key2, params.DST + b"CPaceOQUAKE" + th2 + key1)
     server_key = params.KDF.Expand(prk, params.DST + b"key", params.Nkey)
+    trace("cpaceoquake_key", server_key)
 
     return server_key, th2
 
@@ -94,3 +97,12 @@ if __name__ == "__main__":
     client_key, finish_msg, _ = cpaceoquake_initiator_finish(params, b"password", b"", b"", client_state, resp_msg, rng)
     server_key, _ = cpaceoquake_responder_finish(params, server_state, finish_msg, rng)
     assert client_key != server_key
+
+    # Messages of the wrong length are rejected, and so is the neutral element as Ya or Yb.
+    neutral = lv_encode(params.cpace_params.G.I)
+    assert_raises(ValueError, cpaceoquake_respond, params, b"password", b"", b"", init_msg[:-1], rng)
+    assert_raises(CPaceError, cpaceoquake_respond, params, b"password", b"", b"", neutral, rng)
+    assert_raises(ValueError, cpaceoquake_initiator_finish, params, b"password", b"", b"", client_state, resp_msg[:-1], rng)
+    assert_raises(CPaceError, cpaceoquake_initiator_finish, params, b"password", b"", b"", client_state,
+                  neutral + resp_msg[len(neutral):], rng)
+    assert_raises(ValueError, cpaceoquake_responder_finish, params, server_state, finish_msg + b"\x00", rng)
