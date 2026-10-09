@@ -49,8 +49,34 @@ class KEM(ABC):
         pass
 
 
-class BUKEM(KEM):
-    pass
+class BUASKEM(ABC):
+    """Splittable binary KEM with uniform public keys and anonymous ciphertexts."""
+
+    def __init__(self, name):
+        self.name = name
+
+    @abstractmethod
+    def KeyGen(self, rng) -> Tuple[bytes, bytes]:
+        """Returns (sk, pk)."""
+        pass
+
+    @abstractmethod
+    def Split(self, pk: bytes) -> Tuple[bytes, bytes]:
+        """Returns (ut, rho)."""
+        pass
+
+    @abstractmethod
+    def Combine(self, ut: bytes, rho: bytes) -> bytes:
+        pass
+
+    @abstractmethod
+    def Encaps(self, pk: bytes, rng) -> Tuple[bytes, bytes]:
+        """Returns (k, ct)."""
+        pass
+
+    @abstractmethod
+    def Decaps(self, ct: bytes, sk: bytes) -> bytes:
+        pass
 
 
 class MLKEM(KEM):

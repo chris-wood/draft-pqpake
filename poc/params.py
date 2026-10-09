@@ -2,8 +2,8 @@
 # vim: syntax=python
 
 import hashlib
-from ml_bua_skem import MLBUKEM768
-from deps import BUKEM, KDF, KEM, KSF, MLKEM, MLKEM768, XWingKEM, HKDF, SHA256KeyStretchingFunction
+from ml_bua_skem import MLBUASKEM768, MLBUASKEM1024
+from deps import BUASKEM, KDF, KEM, KSF, MLKEM, MLKEM768, XWingKEM, HKDF, SHA256KeyStretchingFunction
 
 from sagelib.RFC7748_X448_X25519 import *
 from sagelib.CPace_string_utils import *
