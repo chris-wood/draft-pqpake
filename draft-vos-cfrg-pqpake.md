@@ -1043,13 +1043,14 @@ The transformation transforms a symmetric PAKE into an asymmetric (augmented) PA
 server stores a verifier for the client's password, instead of the password itself.
 It is a close variant of the `augmented PAKE' constructions presented in {{LLH24}} and in {{Gu24}}.
 
-The verifier consists of two parts that are derived by computing a key stretching function on the client's password.
+The verifier consists of three parts, derived from the output of a key stretching function on the client's password and a random secret.
 The first Nv bytes of the KSF output are denoted v, which makes up the first part of the verifier.
-The remaining KEM.Nseed bytes, which we call the seed, are used to derive a KEM key pair, of which the public key is the second part of the verifier.
+The remaining KEM.Nseed bytes, which we call the seed, are combined with kem_blind, a secret random blinding value, to derive a KEM key pair.
+The public key of this key pair and kem_blind are the second and third parts of the verifier.
 This KEM does not have to be a BUA-sKEM.
 
 In each session, the client and server first run the symmetric PAKE with v instead of the PRS, yielding session key SK and transcript hash th.
-The server then uses SK, th, and the KEM public key pk to challenge the client to prove knowledge of the seed ({{pwconf}}).
+The server then uses SK, th, the KEM public key pk, and kem_blind to challenge the client to prove knowledge of the seed ({{pwconf}}).
 Password confirmation relies on SK for confidentiality, so it cannot be used as a standalone protocol and SHOULD NOT be used outside of this transformation.
 
 ~~~ aasvg
@@ -1064,7 +1065,7 @@ Password confirmation relies on SK for confidentiality, so it cannot be used as 
               |            |              |
               |     +--------------+      |
               |     |   Password   |      |
-    seed ---->+---->| confirmation |<-----+<---- pk
+    seed ---->+---->| confirmation |<-----+<---- pk, kem_blind
               |     +--------------+      |
                        |        |
   client_key <---------+        +-------> server_key
@@ -1107,7 +1108,29 @@ def GenVerifierMaterial(PRS, salt, U, S):
   return v, seed
 ~~~
 
-To derive the verifier (v, pk), we use the following function:
+The KEM key pair is derived from the seed and kem_blind as follows:
+
+~~~
+DeriveKEMSeed
+
+Input:
+- seed, a KEM key derivation seed, a byte string of KEM.Nseed bytes
+- kem_blind, a secret blinding value of 32 bytes
+
+Output:
+- kem_seed, the seed for KEM.DeriveKeyPair, a byte string of KEM.Nseed bytes
+
+Parameters:
+- KEM, a KEM instance
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
+
+def DeriveKEMSeed(seed, kem_blind):
+  prk = KDF.Extract(seed, DST || "KEMSeed" || kem_blind)
+  return KDF.Expand(prk, DST || "kem_seed", KEM.Nseed)
+~~~
+
+To derive the verifier (v, pk, kem_blind), we use the following function:
 
 ~~~
 GenVerifier
@@ -1120,17 +1143,21 @@ Input:
 Output:
 - v, the first part of the verifier, a byte string of Nv bytes
 - pk, the second part of the verifier, a KEM public key
+- kem_blind, the third part of the verifier, a secret blinding value of 32 bytes
 
 Parameters:
 - KEM, a KEM instance
 
 def GenVerifier(PRS, salt, U, S):
   v, seed = GenVerifierMaterial(PRS, salt, U, S)
-  (sk, pk) = KEM.DeriveKeyPair(seed)
-  return v, pk
+  kem_blind = random(32)
+  (sk, pk) = KEM.DeriveKeyPair(DeriveKEMSeed(seed, kem_blind))
+  return v, pk, kem_blind
 ~~~
 
-The server MUST store pk; it MUST NOT store seed.
+The server MUST store pk and kem_blind; it MUST NOT store seed.
+A fresh kem_blind MUST be generated for each registration.
+The server sends kem_blind to the client only in encrypted form during password confirmation ({{pwconf}}), so the client does not need to store it.
 
 Because the KSF is deliberately expensive, a client MAY compute (v, seed) once and store it in place of PRS, and use the stored values instead of calling GenVerifierMaterial when initiating the protocol.
 The stored (v, seed) SHOULD be protected in the same way as PRS, since it allows authenticating as the client to that server.
@@ -1138,7 +1165,7 @@ The stored (v, seed) SHOULD be protected in the same way as PRS, since it allows
 #### Client Registration
 
 The registration phase consists of one message sent from the client to the server. This message
-contains the verifier (v, pk) and a 32-byte salt.
+contains the verifier (v, pk, kem_blind) and a 32-byte salt.
 The server stores this information corresponding to the client for future use in the verification flow.
 This phase requires a secure channel from client to server in order to transfer the verifier.
 The salt can be sent in plain text.
@@ -1156,12 +1183,12 @@ A high level flow overview of the registration flow is below.
 ~~~aasvg
 Client: PRS, salt, U, S              Server: N/A
        ---------------------------------------
- (v, pk) = GenVerifier(PRS, salt, U, S)
+ (v, pk, kem_blind) = GenVerifier(PRS, salt, U, S)
             |                           |
-            |    salt, v, pk, U, S      |
+            | salt,v,pk,kem_blind,U,S   |
             |-------------------------->|
             |                           |
-            |                Store (salt, v, pk, U, S)
+            |                Store (salt, v, pk, kem_blind, U, S)
             |                           |
        ---------------------------------------
 ~~~
@@ -1170,12 +1197,13 @@ Client: PRS, salt, U, S              Server: N/A
 
 Password confirmation is a challenge-response exchange after the symmetric PAKE finishes.
 Both parties input the key SK and the transcript hash th output by the symmetric PAKE.
-The server must also input the client's registered public key pk, while the client inputs the corresponding seed.
-The server creates a challenge in the form of a KEM ciphertext encapsulated for that pk, and encrypted with SK.
-The client decrypts the ciphertext using SK and proves that it can decapsulate it.
-It does so by deriving the KEM's secret decapsulation key from the seed.
+The server must also input the client's registered public key pk and kem_blind, while the client inputs the corresponding seed.
+The server creates a challenge in the form of a KEM ciphertext encapsulated for that pk, which it encrypts together with kem_blind using SK.
+The client decrypts both using SK and proves that it can decapsulate the ciphertext.
+It does so by deriving the KEM's secret decapsulation key from the seed and kem_blind.
+Since kem_blind reaches the client in encrypted form, the time the client takes to derive the KEM key pair does not help an attacker that does not know the verifier to perform offline password guessing ({{timing-and-tempo}}).
 The challenge also contains client_confirm, which depends on SK and on the encapsulated key.
-It lets the client check that the server knows both, which requires the full verifier (v, pk) or the password.
+It lets the client check that the server knows both, which requires the full verifier (v, pk, kem_blind) or the password.
 
 The state returned by Challenge holds the server's candidate session key.
 This key MUST NOT be released to the calling application, used to protect traffic, or otherwise acted upon before Verify has confirmed the client's response.
@@ -1188,6 +1216,7 @@ Input:
 - SK, the key output by the symmetric PAKE, a byte string
 - th, the transcript hash output by the symmetric PAKE, a byte string
 - pk, part of the client's registered verifier, a KEM public key
+- kem_blind, part of the client's registered verifier, a byte string of 32 bytes
 
 Output:
 - state, opaque state for the server to store
@@ -1198,10 +1227,10 @@ Parameters:
 - KDF, a KDF instance
 - DST, domain separation tag, a byte string
 
-def Challenge(SK, th, pk):
+def Challenge(SK, th, pk, kem_blind):
   (k, c) = KEM.Encaps(pk)
-  r = KDF.Expand(SK, DST || "OTP", Nct)
-  enc_c = XOR(c, r)
+  r = KDF.Expand(SK, DST || "OTP", Nct + 32)
+  enc_c = XOR(c || kem_blind, r)
 
   prk_pc = KDF.Extract(SK, DST || "PC" || th || enc_c || k)
   client_confirm = KDF.Expand(prk_pc, DST || "client_confirm", Nkc)
@@ -1214,7 +1243,7 @@ def Challenge(SK, th, pk):
   return State(server_confirm, server_key, th_out), challenge
 ~~~
 
-The client decrypts the KEM ciphertext using SK, re-derives the KEM key pair from the seed, and decapsulates the ciphertext to derive the password confirmation values and its session key.
+The client decrypts the KEM ciphertext and kem_blind using SK, re-derives the KEM key pair from the seed and kem_blind, and decapsulates the ciphertext to derive the password confirmation values and its session key.
 It aborts if the server-provided confirmation value does not match its own.
 Otherwise, it returns its session key, its own confirmation value, and the transcript hash.
 
@@ -1243,10 +1272,12 @@ Parameters:
 def Respond(SK, th, seed, challenge):
   (enc_c, client_confirm_target) = challenge
 
-  r = KDF.Expand(SK, DST || "OTP", Nct)
-  c = XOR(enc_c, r)
+  r = KDF.Expand(SK, DST || "OTP", Nct + 32)
+  c_and_blind = XOR(enc_c, r)
+  c = c_and_blind[0:Nct]
+  kem_blind = c_and_blind[Nct:Nct + 32]
 
-  (sk, pk) = KEM.DeriveKeyPair(seed)
+  (sk, pk) = KEM.DeriveKeyPair(DeriveKEMSeed(seed, kem_blind))
 
   try:
     k = KEM.Decaps(c, sk)
@@ -1298,7 +1329,8 @@ The client initiates OQUAKE, and the server sends its password confirmation chal
 A high level overview of OQUAKE+ is below.
 
 ~~~aasvg
-Client: PRS,salt,U,S,pub_ctx,sec_ctx   Server: v,pk,pub_ctx,sec_ctx
+Client: PRS,salt,U,S,pub_ctx,sec_ctx   Server: v,pk,kem_blind,
+                                               pub_ctx,sec_ctx
           ----------------------------------------
 ctx, msg1 = OQUAKE+.Init(                      |
   PRS,salt,U,S,pub_ctx,sec_ctx)                |
@@ -1306,7 +1338,7 @@ ctx, msg1 = OQUAKE+.Init(                      |
             |--------------------------------->|
             |                                  |
             |                 ctx, msg2 = OQUAKE+.Respond(
-            |                   v,pub_ctx,sec_ctx,msg1,pk)
+            |                   v,pub_ctx,sec_ctx,msg1,pk,kem_blind)
             |                                  |
             |               msg2               |
             |<---------------------------------|
@@ -1367,6 +1399,7 @@ Input:
 - secret_context, optional secret context, a byte string
 - init_msg, the initiator's protocol message
 - pk, part of the client's registered verifier, a KEM public key
+- kem_blind, part of the client's registered verifier, a byte string of 32 bytes
 
 Output:
 - state, opaque state for the server to store values to complete the protocol
@@ -1376,9 +1409,9 @@ Parameters:
 - OQUAKE, parameterized instance of OQUAKE
 - PC, password confirmation ({{pwconf}})
 
-def Respond(v, public_context, secret_context, init_msg, pk):
+def Respond(v, public_context, secret_context, init_msg, pk, kem_blind):
   oquake_resp, SK, th = OQUAKE.Respond(v, public_context, secret_context, init_msg)
-  state, challenge = PC.Challenge(SK, th, pk)
+  state, challenge = PC.Challenge(SK, th, pk, kem_blind)
   resp_msg = (oquake_resp, challenge)
   return state, resp_msg
 ~~~
@@ -1456,7 +1489,8 @@ A complete protocol flow is shown below. The client needs the salt before the
 protocol starts; see {{gen-verifiers}}.
 
 ~~~aasvg
-Client: PRS,salt,U,S,pub_ctx,sec_ctx   Server: v,pk,pub_ctx,sec_ctx
+Client: PRS,salt,U,S,pub_ctx,sec_ctx   Server: v,pk,kem_blind,
+                                               pub_ctx,sec_ctx
           ----------------------------------------
 ctx, msg1 = CPaceOQUAKE+.Init(                 |
   PRS,salt,U,S,pub_ctx,sec_ctx)                |
@@ -1475,7 +1509,7 @@ ctx, msg1 = CPaceOQUAKE+.Init(                 |
             |--------------------------------->|
             |                                  |
             |       ctx, msg4 = CPaceOQUAKE+.ResponderContinue(
-            |         ctx,msg3,pk)
+            |         ctx,msg3,pk,kem_blind)
             |                                  |
             |               msg4               |
             |<---------------------------------|
@@ -1588,6 +1622,7 @@ Input:
 - state, the state generated by CPaceOQUAKE+.Respond
 - msg3, the message received from the client
 - pk, part of the client's registered verifier, a KEM public key
+- kem_blind, part of the client's registered verifier, a byte string of 32 bytes
 
 Output:
 - state, opaque state for the responder to store
@@ -1597,9 +1632,9 @@ Parameters:
 - CPaceOQUAKE, parameterized instance of CPaceOQUAKE
 - PC, password confirmation ({{pwconf}})
 
-def ResponderContinue(state, msg3, pk):
+def ResponderContinue(state, msg3, pk, kem_blind):
   SK, th = CPaceOQUAKE.ResponderFinish(state, msg3)
-  return PC.Challenge(SK, th, pk)
+  return PC.Challenge(SK, th, pk, kem_blind)
 ~~~
 
 ### Client Finish
@@ -2077,11 +2112,11 @@ when instantiating these protocols.
 
 ## Verifier Compromise {#verifier-compromise}
 
-An attacker that obtains a client's verifier (v, pk) can perform an offline password guessing attack against it, and it can impersonate the server to that client.
+An attacker that obtains a client's verifier (v, pk, kem_blind) can perform an offline password guessing attack against it, and it can impersonate the server to that client.
 This is inherent to augmented PAKEs.
 Such an attacker, however, cannot impersonate the client without first recovering the password, which requires the seed (or a decapsulation key for this pk).
-An attacker that knows v but not pk can complete the symmetric PAKE, but it cannot pass password confirmation for a client that it tries to impersonate:
-computing client_confirm requires the key encapsulated to pk, and computing server_confirm requires the seed.
+An attacker that knows v but not both pk and kem_blind can complete the symmetric PAKE, but it cannot pass password confirmation in either role:
+computing client_confirm requires encapsulating to the key pair that the client derives, which requires pk and kem_blind, and computing server_confirm requires the seed.
 Since an attacker that knows v can send the client ciphertexts of its choice, the KEM must be IND-CCA secure ({{deps-kem}}).
 
 ## Timing Attacks and Tempo {#timing-and-tempo}
@@ -2099,6 +2134,14 @@ compare it against the known timing target.
 
 The Tempo fix addresses this issue by ensuring that input to SampleNTT is not
 secret-dependent.
+
+The PAKE-to-aPAKE transformation ({{apake-transform}}) faces a similar issue.
+The client derives its KEM key pair from a seed that is derived from the password, and for the ML-KEM-based KEMs in this document, both key derivation and decapsulation expand a matrix derived from that seed using variable-time rejection sampling.
+If the seed depended only on public information and the password, then an attacker that measures this time could perform an offline password guessing attack.
+The PAKE-to-aPAKE transformation therefore derives the key pair from the seed and kem_blind, a secret random part of the verifier that the server sends to the client.
+To ensure that the attacker does not observe kem_blind, it is encrypted with a key derived from the symmetric PAKE's session key ({{pwconf}}).
+An attacker that does not hold the verifier does not know kem_blind and cannot relate the timing to a password guess.
+Note that an attacker that knows v can make the client use a kem_blind of its choice, but such an attacker can already perform an offline password guessing attack against v.
 
 ## Related Work {#related-work}
 
@@ -2227,8 +2270,9 @@ Here `q_pb` denotes the number of KSF evaluations.
 - KEM security: the IND-CCA advantage of the KEM has a factor `q_ses`, which counts positions for a challenge instance, so we tighten this term. The KEM then needs b >= 128. ML-KEM-768, ML-KEM-1024, and the hybrid KEMs X-Wing and MLKEM768-P256 (which use ML-KEM-768) and MLKEM1024-P384 (which uses ML-KEM-1024) achieve this against both classical and quantum attackers. The IND-CCA advantage also covers decryption failures.
 - Verifier collisions: `q_pb^2 / 2^(8 * Nv + 1)` requires Nv >= 32. Collision finding does not get a quantum speed-up.
 - Guessing: guessing v or a confirmation value contributes `q_ses / 2^(8 * Nv - 2)` and `q_ses / 2^(8 * Nkc - 2)`, which require Nv >= 16 and Nkc >= 16 to achieve a security level of 128.
+- Secret kem_blind: an attacker that does not hold the verifier would have to guess kem_blind to relate the timing of the client's key derivation to a password guess ({{timing-and-tempo}}). This is a search for a target value, so a 32-byte kem_blind achieves a security level of 128 against all attackers.
 
-[[EDITOR'S NOTE: The proof of this bound needs to be updated for the password confirmation in this document, which derives client_confirm from the encapsulated key.]]
+[[EDITOR'S NOTE: The proof of this bound needs to be updated for the password confirmation in this document, which derives client_confirm from the encapsulated key, and derives the KEM key pair from the seed and kem_blind.]]
 
 ## Parameters for CPace {#params-cpace}
 
@@ -2469,9 +2513,9 @@ PC.Challenge and consumed by PC.Respond ({{pwconf}}), is encoded as:
 challenge = enc_c || client_confirm
 ~~~
 
-where `enc_c` has `Nct` bytes (the KEM ciphertext length) and `client_confirm` has
-`Nkc` bytes. On receipt, `enc_c = challenge[0 : Nct]` and
-`client_confirm = challenge[Nct :]`. The password confirmation response is the
+where `enc_c` has `Nct + 32` bytes (the KEM ciphertext length plus the length of kem_blind)
+and `client_confirm` has `Nkc` bytes. On receipt, `enc_c = challenge[0 : Nct + 32]` and
+`client_confirm = challenge[Nct + 32 :]`. The password confirmation response is the
 `server_confirm` value, a byte string of `Nkc` bytes.
 
 The OQUAKE+ responder message `(oquake_resp, challenge)`, produced by
@@ -2527,16 +2571,17 @@ message encoding above.
 ## Registration Message Encoding
 
 The registration message described in {{apake-transform}}, carrying the client's salt,
-verifier (v, pk), and identifiers, is encoded as:
+verifier (v, pk, kem_blind), and identifiers, is encoded as:
 
 ~~~
-reg_msg = salt || v || pk || lv_encode(U) || lv_encode(S)
+reg_msg = salt || v || pk || kem_blind || lv_encode(U) || lv_encode(S)
 ~~~
 
-where `salt` has 32 bytes, `v` has `Nv` bytes, and `pk` has `KEM.Npk`
-bytes. On receipt, the fields are recovered as `salt = reg_msg[0 : 32]`,
+where `salt` has 32 bytes, `v` has `Nv` bytes, `pk` has `KEM.Npk` bytes, and `kem_blind`
+has 32 bytes. On receipt, the fields are recovered as `salt = reg_msg[0 : 32]`,
 `v = reg_msg[32 : 32 + Nv]`,
-`pk = reg_msg[32 + Nv : 32 + Nv + KEM.Npk]`, and the identifiers by
+`pk = reg_msg[32 + Nv : 32 + Nv + KEM.Npk]`,
+`kem_blind = reg_msg[32 + Nv + KEM.Npk : 64 + Nv + KEM.Npk]`, and the identifiers by
 successive `lv_decode` calls over the remainder.
 
 # Transport Mappings {#transport-mappings}
@@ -2593,7 +2638,7 @@ for the other configurations follow from their respective field lengths.
 |  msg1   | CPace Ya              |      34      |      99     |      34     |
 |  msg2   | CPace Yb, s, T, ⍴     |     1694     |     1759    |     1303    |
 |  msg3   | ct, h                 |     1600     |     1600    |     1120    |
-|  msg4   | enc_c, client_confirm |     1152     |     1697    |     1152    |
+|  msg4   | enc_c, client_confirm |     1184     |     1729    |     1184    |
 |  msg5   | server_confirm        |      32      |      32     |      32     |
 
 In each configuration, the largest message is msg2.
