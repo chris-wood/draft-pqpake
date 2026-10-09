@@ -1,6 +1,3 @@
-#!/usr/local/bin/sage
-# vim: syntax=python
-
 from random import randbytes
 from typing import Any, Optional, Tuple
 from kemeleon import DecodePk, EncodePk

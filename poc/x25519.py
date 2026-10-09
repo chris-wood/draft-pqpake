@@ -1,6 +1,10 @@
 # WARNING This is a specification of X25519; not a production-ready
 # implementation. It is slow and does not run in constant time.
 
+# Taken from the reference specification in draft-connolly-cfrg-xwing-kem
+# (https://github.com/dconnolly/draft-connolly-cfrg-xwing-kem, spec/x25519.py),
+# modified to mask the most significant bit of u, as RFC 7748 requires.
+
 p = 2**255 - 19
 a24 = 121665
 
@@ -8,6 +12,11 @@ BASE = b'\x09' + b'\x00'*31
 
 def decode(bs):
     return sum(bs[i] << 8*i for i in range(32)) % p
+
+def decodeUCoordinate(u):
+    bs = list(u)
+    bs[31] &= 127
+    return decode(bs)
 
 def decodeScalar(k):
     bs = list(k)
@@ -22,7 +31,7 @@ def X(k, u):
     assert len(u) == 32
 
     k = decodeScalar(k)
-    u = decode(u)
+    u = decodeUCoordinate(u)
     x1, x2, x3, z2, z3, swap = u, 1, u, 0, 1, 0
 
     for t in range(255, -1, -1):

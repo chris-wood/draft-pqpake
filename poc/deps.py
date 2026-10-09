@@ -1,6 +1,3 @@
-#!/usr/local/bin/sage
-# vim: syntax=python
-
 from abc import ABC, abstractmethod
 import hmac
 import hashlib
@@ -8,6 +5,7 @@ import math
 import functools
 from random import randbytes
 from typing import Tuple
+from util import lv_encode
 from xwing import GenerateKeyPairDerand, EncapsulateDerand, Decapsulate
 import mlkem
 
@@ -178,6 +176,16 @@ class HKDF(KDF):
             return a + b
         T = functools.reduce(concat, map(lambda c: c, Ts))
         return T[0:L]
+
+
+def TH(KDF: KDF, DST: bytes, label: bytes, *fields: bytes) -> bytes:
+    """The transcript hash TH, computed with the KDF and DST of the configuration."""
+    return KDF.Extract(DST + b"TH-" + label, b"".join(lv_encode(f) for f in fields))
+
+
+class CPaceError(Exception):
+    """An invalid value, such as a point that yields the group identity, was encountered in CPace."""
+    pass
 
 
 class MAC(object):
