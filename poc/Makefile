@@ -5,6 +5,8 @@ test:
 	python3 cpace.py
 	python3 oquake.py
 	python3 cpaceoquake.py
+	python3 oquake_plus.py
+	python3 cpaceoquake_plus.py
 
 .PHONY: check
 check:

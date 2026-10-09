@@ -6,8 +6,9 @@ the standard library. It is slow, does not run in constant time, and is not
 suitable for production use.
 
 - `make test` runs the self-tests of the modules.
-- `make check` checks ML-KEM, X-Wing, and CPace against their published test
-  vectors, which it downloads once into `.cache/`.
+- `make check` checks ML-KEM, X-Wing, CPace, HKDF, and scrypt against their
+  published test vectors, downloading those of ML-KEM, X-Wing, and CPace once
+  into `.cache/`.
 
 `mlkem.py`, `x25519.py`, and `xwing.py` are taken from the reference
 specifications of FIPS 203 (https://github.com/bwesterb/draft-schwabe-cfrg-kyber)

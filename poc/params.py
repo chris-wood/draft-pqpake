@@ -1,7 +1,14 @@
 import hashlib
 from cpace import G_X25519, H_SHA512
 from ml_bua_skem import MLBUASKEM768, MLBUASKEM1024
-from deps import BUASKEM, KDF, KEM, KSF, MLKEM, MLKEM768, XWingKEM, HKDF, SHA256KeyStretchingFunction
+from deps import BUASKEM, KDF, KEM, KSF, MLKEM768, MLKEM1024, XWingKEM, HKDF, Scrypt
+
+
+# Common parameters of all configurations
+Nv = 32
+Nkc = 32
+Nr = 64
+Nkey = 32
 
 
 class CPaceParameters:
@@ -36,10 +43,21 @@ class CPaceOQUAKEParameters:
 
 class PasswordConfirmationParameters:
 
-    def __init__(self, KEM: KEM, KDF: KDF, KSF: KSF):
+    def __init__(self, KEM: KEM, KDF: KDF, KSF: KSF, DST: bytes, Nv: int, Nkc: int, Nkey: int):
         self.KEM = KEM
         self.KDF = KDF
         self.KSF = KSF
+        self.DST = DST
+        self.Nv = Nv
+        self.Nkc = Nkc
+        self.Nkey = Nkey
+
+
+class OQUAKEPlusParameters:
+
+    def __init__(self, oquake_params: OQUAKEParameters, pwconf_params: PasswordConfirmationParameters):
+        self.oquake_params = oquake_params
+        self.pwconf_params = pwconf_params
 
 
 class CPaceOQUAKEPlusParameters:
@@ -49,15 +67,39 @@ class CPaceOQUAKEPlusParameters:
         self.pwconf_params = pwconf_params
 
 
-# Configurations oquake-mlbuaskem1024 and cpaceoquake-x25519-mlbuaskem1024. The DST of
-# CPaceOQUAKE also applies within CPace and OQUAKE.
-DST_OQUAKE = bytes.fromhex("601ed384c5775ddd3021f51a4660fff24bf4eaa7845a958b2cade75289d184cd")
-DST_CPACEOQUAKE = bytes.fromhex("443e3089985f0f8dddfb20cc5e8618f447bdcfe6dd39abb23911cd784c075120")
-cpace_params_default = CPaceParameters(G_X25519(), H_SHA512(), HKDF(hashlib.sha256), DST_CPACEOQUAKE)
-oquake_params_default = OQUAKEParameters(MLBUASKEM1024(), HKDF(hashlib.sha256), DST_OQUAKE, 64, 32, 32)
-cpaceoquake_params_default = CPaceOQUAKEParameters(
-    cpace_params_default,
-    OQUAKEParameters(MLBUASKEM1024(), HKDF(hashlib.sha256), DST_CPACEOQUAKE, 64, 32, 32),
-    HKDF(hashlib.sha256), DST_CPACEOQUAKE, 32)
-pwconf_params_default = PasswordConfirmationParameters(XWingKEM(), HKDF(hashlib.sha256), SHA256KeyStretchingFunction())
-cpaceoquakeplus_params_default = CPaceOQUAKEPlusParameters(cpaceoquake_params_default, pwconf_params_default)
+# The following functions build the parameters of each protocol from its
+# components. The DST of the outermost protocol applies throughout.
+
+def oquake_configuration(BUA_sKEM: BUASKEM, DST: bytes) -> OQUAKEParameters:
+    return OQUAKEParameters(BUA_sKEM, HKDF(hashlib.sha256), DST, Nr, Nkc, Nkey)
+
+
+def cpaceoquake_configuration(G, H, BUA_sKEM: BUASKEM, DST: bytes) -> CPaceOQUAKEParameters:
+    return CPaceOQUAKEParameters(CPaceParameters(G, H, HKDF(hashlib.sha256), DST),
+                                 oquake_configuration(BUA_sKEM, DST), HKDF(hashlib.sha256), DST, Nkey)
+
+
+def pwconf_configuration(KEM: KEM, DST: bytes) -> PasswordConfirmationParameters:
+    return PasswordConfirmationParameters(KEM, HKDF(hashlib.sha256), Scrypt(32768, 8, 1), DST, Nv, Nkc, Nkey)
+
+
+def oquakeplus_configuration(BUA_sKEM: BUASKEM, KEM: KEM, DST: bytes) -> OQUAKEPlusParameters:
+    return OQUAKEPlusParameters(oquake_configuration(BUA_sKEM, DST), pwconf_configuration(KEM, DST))
+
+
+def cpaceoquakeplus_configuration(G, H, BUA_sKEM: BUASKEM, KEM: KEM, DST: bytes) -> CPaceOQUAKEPlusParameters:
+    return CPaceOQUAKEPlusParameters(cpaceoquake_configuration(G, H, BUA_sKEM, DST), pwconf_configuration(KEM, DST))
+
+
+# The preferred configuration of each protocol: oquake-mlbuaskem1024,
+# cpaceoquake-x25519-mlbuaskem1024, oquakeplus-mlbuaskem1024-mlkem1024, and
+# cpaceoquakeplus-x25519-mlbuaskem1024-xwing
+oquake_params_default = oquake_configuration(
+    MLBUASKEM1024(), bytes.fromhex("601ed384c5775ddd3021f51a4660fff24bf4eaa7845a958b2cade75289d184cd"))
+cpaceoquake_params_default = cpaceoquake_configuration(
+    G_X25519(), H_SHA512(), MLBUASKEM1024(), bytes.fromhex("443e3089985f0f8dddfb20cc5e8618f447bdcfe6dd39abb23911cd784c075120"))
+oquakeplus_params_default = oquakeplus_configuration(
+    MLBUASKEM1024(), MLKEM1024(), bytes.fromhex("284e89132c00ba4f49e66d0af9e63c4c8efa701ce4b66bb6fcf1ce9cc5c35be1"))
+cpaceoquakeplus_params_default = cpaceoquakeplus_configuration(
+    G_X25519(), H_SHA512(), MLBUASKEM1024(), XWingKEM(), bytes.fromhex("7de162c387ba1bad9c790e7e56bd245d6753d045185cbc3972eba34ddac1a9db"))
+cpace_params_default = cpaceoquake_params_default.cpace_params

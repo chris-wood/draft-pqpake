@@ -1,6 +1,8 @@
 """
 Checks the primitives of this proof of concept against their published test
-vectors. The vector files are downloaded once, at pinned commits, into .cache/.
+vectors. The vector files of ML-KEM, X-Wing, and CPace are downloaded once, at
+pinned commits, into .cache/; the short vectors of RFC 5869 and RFC 7914 are
+included below.
 """
 
 import json
@@ -8,7 +10,10 @@ import os
 import sys
 import urllib.request
 
+import hashlib
+
 import cpace
+import deps
 import mlkem
 import xwing
 
@@ -30,6 +35,29 @@ CPACE_X25519_Q = {
     "Invalid Y10": "e062dcd5376d58297be2618c7498f55baa07d7e03184e8aada20bca28888bf7a",
     "Invalid Y11": "993c6ad11c4c29da9a56f7691fd0ff8d732e49de6250b6c2e80003ff4629a175",
 }
+
+# Test cases 1 and 3 of RFC 5869 (HKDF-SHA-256): IKM, salt, info, L, PRK, OKM
+HKDF_SHA256_VECTORS = [
+    ("0b" * 22, "000102030405060708090a0b0c", "f0f1f2f3f4f5f6f7f8f9", 42,
+     "077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5",
+     "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865"),
+    ("0b" * 22, "", "", 42,
+     "19ef24a32c717b167f33a91d6f648bdf96596776afdb6377ac434c1c293ccb04",
+     "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d9d201395faa4b61a96c8"),
+]
+
+# Test vectors of Section 12 of RFC 7914 (scrypt): P, S, N, r, p, DK
+SCRYPT_VECTORS = [
+    (b"", b"", 16, 1, 1,
+     "77d6576238657b203b19ca42c18a0497f16b4844e3074ae8dfdffa3fede21442"
+     "fcd0069ded0948f8326a753a0fc81f17e8d3e0fb2e0d3628cf35e20c38d18906"),
+    (b"password", b"NaCl", 1024, 8, 16,
+     "fdbabe1c9d3472007856e7190d01e9fe7c6ad7cbc8237830e77376634b373162"
+     "2eaf30d92e22a3886ff109279d9830dac727afb94a83ee6d8360cbdfa2cc0640"),
+    (b"pleaseletmein", b"SodiumChloride", 16384, 8, 1,
+     "7023bdcb3afd7348461c06cd81fd38ebfda8fbba904f8e3ea9b543f6545da1f2"
+     "d5432955613f0fcf62d49705242a9af9e61e85dc0d651e40dfcf017b45575887"),
+]
 
 MLKEM_PARAMS = {
     "ML-KEM-512": mlkem.params512,
@@ -132,9 +160,34 @@ def check_cpace():
     return passed, failed
 
 
+def check_hkdf():
+    passed = failed = 0
+    h = bytes.fromhex
+    kdf = deps.HKDF(hashlib.sha256)
+    for ikm, salt, info, L, prk, okm in HKDF_SHA256_VECTORS:
+        if kdf.Extract(h(salt), h(ikm)) == h(prk) and kdf.Expand(h(prk), h(info), L) == h(okm):
+            passed += 1
+        else:
+            failed += 1
+            print("HKDF failed:", prk)
+    return passed, failed
+
+
+def check_scrypt():
+    passed = failed = 0
+    for P, S, N, r, p, dk in SCRYPT_VECTORS:
+        if deps.Scrypt(N, r, p).Stretch(P, S, 64) == bytes.fromhex(dk):
+            passed += 1
+        else:
+            failed += 1
+            print("scrypt failed:", P)
+    return passed, failed
+
+
 if __name__ == "__main__":
     total_failed = 0
-    for name, check in [("ML-KEM", check_mlkem), ("X-Wing", check_xwing), ("CPace", check_cpace)]:
+    for name, check in [("ML-KEM", check_mlkem), ("X-Wing", check_xwing), ("CPace", check_cpace),
+                        ("HKDF", check_hkdf), ("scrypt", check_scrypt)]:
         passed, failed = check()
         total_failed += failed
         print(f"{name}: {passed} passed, {failed} failed")
