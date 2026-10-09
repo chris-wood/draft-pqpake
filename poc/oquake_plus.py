@@ -4,7 +4,7 @@ from deps import AuthenticationError
 from drbg import UnsafeDRBG
 from oquake import oquake_init, oquake_respond, oquake_finish
 from pwconf import GenVerifier, GenVerifierMaterial, pwconf_challenge, pwconf_respond, pwconf_verify
-from util import EncodePublicContext, wrap_print, to_hex
+from util import EncodePublicContext, assert_raises, wrap_print, to_hex
 
 
 def oquakeplus_init(params, PRS: bytes, salt: bytes, U: bytes, S: bytes, public_context: bytes, secret_context: bytes, rng) -> Tuple[Any, bytes]:
@@ -79,18 +79,15 @@ if __name__ == "__main__":
     # A client with the wrong password fails password confirmation.
     client_state, init_msg = oquakeplus_init(params, b"other password", salt, b"U", b"S", b"", b"", rng)
     server_state, resp_msg = oquakeplus_respond(params, v, b"", b"", init_msg, pk, kem_blind, rng)
-    try:
-        oquakeplus_finish(params, client_state, resp_msg, rng)
-        assert False
-    except AuthenticationError:
-        pass
+    assert_raises(AuthenticationError, oquakeplus_finish, params, client_state, resp_msg, rng)
 
     # The server rejects an incorrect confirmation value.
     client_state, init_msg = oquakeplus_init(params, b"password", salt, b"U", b"S", b"", b"", rng)
     server_state, resp_msg = oquakeplus_respond(params, v, b"", b"", init_msg, pk, kem_blind, rng)
     _, response, _ = oquakeplus_finish(params, client_state, resp_msg, rng)
-    try:
-        oquakeplus_verify(server_state, bytes(len(response)))
-        assert False
-    except AuthenticationError:
-        pass
+    assert_raises(AuthenticationError, oquakeplus_verify, server_state, bytes(len(response)))
+
+    # A challenge of the wrong length is rejected.
+    client_state, init_msg = oquakeplus_init(params, b"password", salt, b"U", b"S", b"", b"", rng)
+    server_state, resp_msg = oquakeplus_respond(params, v, b"", b"", init_msg, pk, kem_blind, rng)
+    assert_raises(ValueError, oquakeplus_finish, params, client_state, resp_msg[:-1], rng)

@@ -7,10 +7,15 @@ test:
 	python3 cpaceoquake.py
 	python3 oquake_plus.py
 	python3 cpaceoquake_plus.py
+	python3 params.py
 
 .PHONY: check
 check:
 	python3 check_vectors.py
+
+.PHONY: vectors
+vectors:
+	python3 generate_vectors.py
 
 .PHONY: clean
 clean:

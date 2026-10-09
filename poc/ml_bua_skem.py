@@ -21,7 +21,7 @@ class MLBUASKEM(BUASKEM):
         self.Nct = 32 * (params.du * params.k + params.dv)
 
     def KeyGen(self, rng) -> Tuple[bytes, bytes]:
-        (ek, dk) = mlkem.KeyGen(rng.random_bytes(64, "mlkem_keygen_seed"), self.params)
+        (ek, dk) = mlkem.KeyGen(rng.random_bytes(64, "keygen_seed"), self.params)
         upk = kemeleon.EncodeEk(ek, self.params, KEMELEON_T, rng)
         return dk, upk
 
@@ -40,7 +40,7 @@ class MLBUASKEM(BUASKEM):
         return ut + rho
 
     def Encaps(self, upk: bytes, rng) -> Tuple[bytes, bytes]:
-        return self.EncapsDerand(upk, rng.random_bytes(32, "mlkem_encaps_m"))
+        return self.EncapsDerand(upk, rng.random_bytes(32, "encaps_m"))
 
     def EncapsDerand(self, upk: bytes, m: bytes) -> Tuple[bytes, bytes]:
         """Encaps, with the ML-KEM randomness m given as input."""
@@ -78,7 +78,7 @@ if __name__ == "__main__":
             assert kem.Combine(*kem.Split(pk)) == pk
 
             # KeyGenDerand reproduces KeyGen from the randomness that KeyGen consumed.
-            seed = [value for label, value in rng.draws if label == "mlkem_keygen_seed"][0]
+            seed = [value for label, value in rng.draws if label == "keygen_seed"][0]
             ms = [value for label, value in rng.draws if label == "kemeleon_m"]
             assert kem.KeyGenDerand(seed, ms) == (sk, pk)
 

@@ -64,6 +64,22 @@ def EncodePublicContext(sid=None, U=None, S=None):
     sid, U, S = sid or b"", U or b"", S or b""
     return I2OSP(len(sid), 4) + sid + I2OSP(len(U), 4) + U + I2OSP(len(S), 4) + S
 
+# When TRACE is a list, trace() appends (label, value) to it. The test vector
+# generator uses this to list intermediate values of the protocols.
+TRACE = None
+
+def trace(label, value):
+    if TRACE is not None:
+        TRACE.append((label, value))
+
+def assert_raises(exception, f, *args):
+    # Used by the self-tests to check exceptional cases.
+    try:
+        f(*args)
+    except exception:
+        return
+    raise AssertionError("expected " + exception.__name__)
+
 def wrap_print(arg, *args):
     line_length = 69
     string = arg + " " + " ".join(args)

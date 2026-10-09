@@ -7,7 +7,7 @@ from typing import Any, Tuple
 import x25519
 from deps import TH, CPaceError
 from drbg import UnsafeDRBG
-from util import wrap_print, to_hex
+from util import assert_raises, trace, wrap_print, to_hex
 
 
 # String utility functions of draft-irtf-cfrg-cpace
@@ -132,6 +132,8 @@ def cpace_respond(params, PRS: bytes, public_context: bytes, secret_context: byt
 
     ISK = params.H.hash(lv_cat(params.G.DSI + b"_ISK", public_context, K) + transcript_ir(Ya, b"", Yb, b""))
     th = TH(params.KDF, params.DST, b"CPace", public_context, Ya, Yb)
+    trace("cpace_ISK", ISK)
+    trace("cpace_th", th)
 
     return ISK, Yb, th
 
@@ -145,6 +147,8 @@ def cpace_finish(params, state: Any, public_context: bytes, Yb: bytes) -> Tuple[
 
     ISK = params.H.hash(lv_cat(params.G.DSI + b"_ISK", public_context, K) + transcript_ir(Ya, b"", Yb, b""))
     th = TH(params.KDF, params.DST, b"CPace", public_context, Ya, Yb)
+    trace("cpace_ISK", ISK)
+    trace("cpace_th", th)
 
     return ISK, th
 
@@ -175,9 +179,8 @@ if __name__ == "__main__":
     rng = UnsafeDRBG()
     run_CPace(cpace_params_default, rng)
 
-    # A point that yields the neutral element makes the responder abort.
-    try:
-        cpace_respond(cpace_params_default, b"PRS", b"", b"", cpace_params_default.G.I, rng)
-        assert False
-    except CPaceError:
-        pass
+    # A point that yields the neutral element makes either party abort.
+    params = cpace_params_default
+    assert_raises(CPaceError, cpace_respond, params, b"PRS", b"", b"", params.G.I, rng)
+    state, Ya = cpace_init(params, b"PRS", b"", b"", rng)
+    assert_raises(CPaceError, cpace_finish, params, state, b"", params.G.I)

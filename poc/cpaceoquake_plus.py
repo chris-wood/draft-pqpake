@@ -3,8 +3,8 @@ from typing import Any, Tuple
 from cpaceoquake import cpaceoquake_init, cpaceoquake_initiator_finish, cpaceoquake_respond, cpaceoquake_responder_finish
 from deps import AuthenticationError
 from drbg import UnsafeDRBG
-from pwconf import GenVerifier, GenVerifierMaterial, encode_registration, pwconf_challenge, pwconf_respond, pwconf_verify
-from util import EncodePublicContext, to_hex, wrap_print
+from pwconf import GenVerifier, GenVerifierMaterial, decode_registration, encode_registration, pwconf_challenge, pwconf_respond, pwconf_verify
+from util import EncodePublicContext, assert_raises, to_hex, wrap_print
 
 
 def cpaceoquakeplus_init(params, PRS: bytes, salt: bytes, U: bytes, S: bytes, public_context: bytes, secret_context: bytes, rng) -> Tuple[Any, bytes]:
@@ -90,11 +90,7 @@ if __name__ == "__main__":
     server_state, msg2 = cpaceoquakeplus_respond(params, v, b"", b"", msg1, rng)
     client_state, msg3 = cpaceoquakeplus_initiator_continue(params, client_state, msg2, rng)
     server_state, msg4 = cpaceoquakeplus_responder_continue(params, server_state, msg3, pk, kem_blind, rng)
-    try:
-        cpaceoquakeplus_initiator_finish(params, client_state, msg4)
-        assert False
-    except AuthenticationError:
-        pass
+    assert_raises(AuthenticationError, cpaceoquakeplus_initiator_finish, params, client_state, msg4)
 
     # The server rejects an incorrect confirmation value.
     client_state, msg1 = cpaceoquakeplus_init(params, b"password", salt, b"U", b"S", b"", b"", rng)
@@ -102,8 +98,11 @@ if __name__ == "__main__":
     client_state, msg3 = cpaceoquakeplus_initiator_continue(params, client_state, msg2, rng)
     server_state, msg4 = cpaceoquakeplus_responder_continue(params, server_state, msg3, pk, kem_blind, rng)
     _, msg5, _ = cpaceoquakeplus_initiator_finish(params, client_state, msg4)
-    try:
-        cpaceoquakeplus_responder_finish(server_state, bytes(len(msg5)))
-        assert False
-    except AuthenticationError:
-        pass
+    assert_raises(AuthenticationError, cpaceoquakeplus_responder_finish, server_state, bytes(len(msg5)))
+
+    # A challenge of the wrong length is rejected, and so are malformed registration messages.
+    assert_raises(ValueError, cpaceoquakeplus_initiator_finish, params, client_state, msg4[:-1])
+    reg_msg = encode_registration(salt, v, pk, kem_blind, b"U", b"S")
+    assert decode_registration(params.pwconf_params, reg_msg) == (salt, v, pk, kem_blind, b"U", b"S")
+    assert_raises(ValueError, decode_registration, params.pwconf_params, reg_msg[:-1])
+    assert_raises(ValueError, decode_registration, params.pwconf_params, reg_msg + b"\x00")
