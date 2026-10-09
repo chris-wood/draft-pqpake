@@ -4,7 +4,7 @@ from random import randint, randbytes
 from typing import List, Sequence, Tuple
 
 import mlkem
-from crypto import BUKEM
+from deps import BUKEM
 from mlkem import params768
 from util import to_hex, wrap_print
 
