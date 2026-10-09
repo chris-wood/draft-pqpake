@@ -1,30 +1,18 @@
 # WARNING This is a specification of Kyber; not a production ready
 # implementation. It is slow and does not run in constant time.
 
-# Requires the CryptoDome for SHAKE. To install, run
-#
-#   pip install pycryptodome pytest
-from Crypto.Hash import SHAKE128, SHAKE256
+# Taken from the FIPS 203 reference specification at
+# https://github.com/bwesterb/draft-schwabe-cfrg-kyber (branch standard),
+# modified to use hashlib instead of pycryptodome for SHAKE.
 
-
-def to_hex_string(octet_string):
-    if isinstance(octet_string, str):
-        return "".join("{:02x}".format(ord(c)) for c in octet_string)
-    assert isinstance(octet_string, (bytes, bytearray))
-    return "".join("{:02x}".format(c) for c in octet_string)
-
-def to_hex(octet_string):
-    if isinstance(octet_string, list):
-        return ",".join([to_hex_string(x) for x in octet_string])
-    return to_hex_string(octet_string)
-
+import io
 import hashlib
+import functools
 import collections
 
 from math import floor
 
 q = 3329
-kyberN = 256
 nBits = 8
 zeta = 17
 eta2 = 2
@@ -180,22 +168,27 @@ def CBD(a, eta):
         b = b[2*eta:]
     return Poly(cs)
 
+class XOFStream:
+    """ Reads the output of a hashlib SHAKE instance incrementally. """
+    def __init__(self, shake):
+        self.shake = shake
+        self.offset = 0
+
+    def read(self, length):
+        out = self.shake.digest(self.offset + length)[self.offset:]
+        self.offset += length
+        return out
+
 def XOF(seed, j, i):
-    h = SHAKE128.new()
-    h.update(seed + bytes([j, i]))
-    return h
+    return XOFStream(hashlib.shake_128(seed + bytes([j, i])))
 
 def PRF1(seed, nonce):
     assert len(seed) == 32
-    h = SHAKE256.new()
-    h.update(seed + bytes([nonce]))
-    return h
+    return XOFStream(hashlib.shake_256(seed + bytes([nonce])))
 
 def PRF2(seed, msg):
     assert len(seed) == 32
-    h = SHAKE256.new()
-    h.update(seed + msg)
-    return h.read(32)
+    return hashlib.shake_256(seed + msg).digest(32)
 
 def G(seed):
     h = hashlib.sha3_512(seed).digest()
@@ -273,7 +266,7 @@ def constantTimeSelectOnEquality(a, b, ifEq, ifNeq):
 
 def InnerKeyGen(seed, params):
     assert len(seed) == 32
-    rho, sigma = G(seed)
+    rho, sigma = G(seed + bytes([params.k]))
     A = sampleMatrix(rho, params.k)
     s = sampleNoise(sigma, params.eta1, 0, params.k)
     e = sampleNoise(sigma, params.eta1, params.k, params.k)
@@ -287,6 +280,8 @@ def InnerKeyGen(seed, params):
 def InnerEnc(pk, msg, seed, params):
     assert len(msg) == 32
     tHat = DecodeVec(pk[:-32], params.k, 12)
+    if EncodeVec(tHat, 12) != pk[:-32]:
+        raise Exception("ML-KEM public key not normalized")
     rho = pk[-32:]
     A = sampleMatrix(rho, params.k)
     r = sampleNoise(seed, params.eta1, 0, params.k)

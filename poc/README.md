@@ -8,6 +8,3 @@ Make sure your GitHub public key is also loaded into ssh-agent
 make clean
 make 
 make vectors
-
-sage --pip install -r requirements.txt
-

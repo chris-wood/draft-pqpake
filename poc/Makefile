@@ -49,6 +49,10 @@ test: pyfiles
 	sage cpaceoquake.py
 	sage cpaceoquake_plus.py
 
+.PHONY: check
+check:
+	python3 check_vectors.py
+
 vectors: pyfiles
 	@echo "Removing vectors folder, if present"
 	@rm -rf vectors
@@ -65,4 +69,4 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	rm -rf vectors ascii
+	rm -rf vectors ascii .cache
