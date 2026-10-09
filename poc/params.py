@@ -1,24 +1,16 @@
-#!/usr/local/bin/sage
-# vim: syntax=python
-
 import hashlib
+from cpace import G_X25519, H_SHA512
 from ml_bua_skem import MLBUASKEM768, MLBUASKEM1024
 from deps import BUASKEM, KDF, KEM, KSF, MLKEM, MLKEM768, XWingKEM, HKDF, SHA256KeyStretchingFunction
-
-from sagelib.RFC7748_X448_X25519 import *
-from sagelib.CPace_string_utils import *
-from sagelib.CPace_hashing import *
-from sagelib.CPace_coffee import *
-from sagelib.CPace_weierstrass import *
-from sagelib.CPace_montgomery import *
-from sagelib.test_vectors_X448_X25519 import *
 
 
 class CPaceParameters:
 
-    def __init__(self, G, H):
+    def __init__(self, G, H, KDF: KDF, DST: bytes):
         self.G = G
         self.H = H
+        self.KDF = KDF
+        self.DST = DST
 
 
 class OQUAKEParameters:
@@ -53,7 +45,9 @@ class CPaceOQUAKEPlusParameters:
         self.pwconf_params = pwconf_params
 
 
-cpace_params_default = CPaceParameters(G_ShortWeierstrass(cpace_map_for_nist_p384), H_SHA384())
+# DST of cpaceoquake-x25519-mlbuaskem1024
+cpace_params_default = CPaceParameters(G_X25519(), H_SHA512(), HKDF(hashlib.sha256),
+                                       bytes.fromhex("443e3089985f0f8dddfb20cc5e8618f447bdcfe6dd39abb23911cd784c075120"))
 quake_params_default = OQUAKEParameters(MLKEM768(), HKDF(hashlib.sha256), 1156, 24)
 cpaceoquake_params_default = CPaceOQUAKEParameters(cpace_params_default, quake_params_default, HKDF(hashlib.sha256))
 pwconf_params_default = PasswordConfirmationParameters(XWingKEM(), HKDF(hashlib.sha256), SHA256KeyStretchingFunction())

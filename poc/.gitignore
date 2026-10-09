@@ -1,4 +1,2 @@
-sagelib
-*.sage.py
 .cache
 __pycache__

@@ -51,6 +51,10 @@ def OS2IP(octets, skip_assert=False):
         assert octets == I2OSP(ret, len(octets))
     return ret
 
+def lv_encode(x):
+    assert len(x) < (1 << 16)
+    return I2OSP(len(x), 2) + x
+
 def wrap_print(arg, *args):
     line_length = 69
     string = arg + " " + " ".join(args)
