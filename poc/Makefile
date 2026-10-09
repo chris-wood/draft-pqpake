@@ -3,6 +3,8 @@ test:
 	python3 kemeleon.py
 	python3 ml_bua_skem.py
 	python3 cpace.py
+	python3 oquake.py
+	python3 cpaceoquake.py
 
 .PHONY: check
 check:
