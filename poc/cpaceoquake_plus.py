@@ -1,89 +1,109 @@
-from typing import Any, Optional, Tuple
+from typing import Any, Tuple
 
 from cpaceoquake import cpaceoquake_init, cpaceoquake_initiator_finish, cpaceoquake_respond, cpaceoquake_responder_finish
+from deps import AuthenticationError
 from drbg import UnsafeDRBG
-from params import CPaceOQUAKEPlusParameters, cpaceoquakeplus_params_default, pwconf_params_default
-from pwconf import GenVerifierMaterial, GenVerifiers, pwconf_challenge, pwconf_response, pwconf_verify
-from util import to_hex, wrap_print
+from pwconf import GenVerifier, GenVerifierMaterial, encode_registration, pwconf_challenge, pwconf_respond, pwconf_verify
+from util import EncodePublicContext, to_hex, wrap_print
 
 
-def cpaceoquakeplus_init(params: CPaceOQUAKEPlusParameters, PRS: bytes, salt: bytes, SID: Optional[bytes], U: Optional[bytes], S: Optional[bytes]) -> Tuple[Any, bytes]:
-    verifier, kem_seed = GenVerifierMaterial(params.pwconf_params, PRS, salt)
-    ctx1, msg1 = cpaceoquake_init(params.cpaceoquake_params, verifier, SID, U, S)
-
-    return (verifier, ctx1, kem_seed), msg1
-
-
-def cpaceoquakeplus_respond(params: CPaceOQUAKEPlusParameters, verifier: bytes, msg: bytes, SID: Optional[bytes], U: Optional[bytes], S: Optional[bytes], seed: bytes) -> Tuple[Any, bytes]:
-    return cpaceoquake_respond(params.cpaceoquake_params, verifier, msg, SID, U, S, seed)
+def cpaceoquakeplus_init(params, PRS: bytes, salt: bytes, U: bytes, S: bytes, public_context: bytes, secret_context: bytes, rng) -> Tuple[Any, bytes]:
+    (v, seed) = GenVerifierMaterial(params.pwconf_params, PRS, salt, U, S)
+    ctx, msg = cpaceoquake_init(params.cpaceoquake_params, v, public_context, secret_context, rng)
+    return (ctx, v, seed, public_context, secret_context), msg
 
 
-def cpaceoquakeplus_initiator_respond(params: CPaceOQUAKEPlusParameters, context: Any, msg: bytes, SID: Optional[bytes], U: Optional[bytes], S: Optional[bytes], seed: bytes) -> Tuple[Any, bytes]:
-    verifier, ctx1, kem_seed = context
-    SK, msg3 = cpaceoquake_initiator_finish(params.cpaceoquake_params, verifier, ctx1, msg, SID, U, S, seed)
-
-    return (SK, kem_seed), msg3
+def cpaceoquakeplus_respond(params, v: bytes, public_context: bytes, secret_context: bytes, init_msg: bytes, rng) -> Tuple[Any, bytes]:
+    ctx, msg = cpaceoquake_respond(params.cpaceoquake_params, v, public_context, secret_context, init_msg, rng)
+    return ctx, msg
 
 
-def cpaceoquakeplus_challenge(params: CPaceOQUAKEPlusParameters, context: Any, msg: bytes, salt: bytes, pk: bytes, SID: Optional[bytes], U: Optional[bytes], S: Optional[bytes], seed: bytes) -> Tuple[Any, bytes]:
-    SK = cpaceoquake_responder_finish(params.cpaceoquake_params, context, msg)
-    return pwconf_challenge(params.pwconf_params, SK, salt, pk, SID, U, S, seed)
+def cpaceoquakeplus_initiator_continue(params, state: Any, msg2: bytes, rng) -> Tuple[Any, bytes]:
+    (ctx, v, seed, public_context, secret_context) = state
+    SK, msg, th = cpaceoquake_initiator_finish(params.cpaceoquake_params, v, public_context, secret_context, ctx, msg2, rng)
+    return (SK, th, seed), msg
 
 
-def cpaceoquakeplus_response(params: CPaceOQUAKEPlusParameters, context: Any, msg: bytes, SID: Optional[bytes], U: Optional[bytes], S: Optional[bytes], seed: bytes) -> Tuple[bytes, bytes]:
-    SK, kem_seed = context
-
-    return pwconf_response(params.pwconf_params, SK, kem_seed, msg, SID, U, S, seed)
-
-
-def cpaceoquakeplus_verify(context: Any, msg: bytes) -> bytes:
-    return pwconf_verify(context, msg)
+def cpaceoquakeplus_responder_continue(params, state: Any, msg3: bytes, pk: bytes, kem_blind: bytes, rng) -> Tuple[Any, bytes]:
+    SK, th = cpaceoquake_responder_finish(params.cpaceoquake_params, state, msg3, rng)
+    return pwconf_challenge(params.pwconf_params, SK, th, pk, kem_blind, rng)
 
 
-def run_CPaceOQUAKEPlus(rng: UnsafeDRBG):
+def cpaceoquakeplus_initiator_finish(params, state: Any, msg4: bytes) -> Tuple[bytes, bytes, bytes]:
+    (SK, th, seed) = state
+    return pwconf_respond(params.pwconf_params, SK, th, seed, msg4)
+
+
+def cpaceoquakeplus_responder_finish(state: Any, msg5: bytes) -> Tuple[bytes, bytes]:
+    return pwconf_verify(state, msg5)
+
+
+def run_CPaceOQUAKEPlus(params, rng: UnsafeDRBG):
     print("CPaceOQUAKE+")
     PRS = rng.random_bytes(16)
-    SID = rng.random_bytes(16)
     U = rng.random_bytes(16)
     S = rng.random_bytes(16)
-    server_respond_seed = rng.random_bytes(64)
-    client_respond_seed = rng.random_bytes(32)
-    challenge_seed = rng.random_bytes(64)
-    response_seed = rng.random_bytes(64)
+    public_context = EncodePublicContext(rng.random_bytes(16), U, S)
+    secret_context = rng.random_bytes(16)
 
     # Registration
     salt = rng.random_bytes(32)
-    verifier, pk = GenVerifiers(pwconf_params_default, PRS, salt)
+    v, pk, kem_blind = GenVerifier(params.pwconf_params, PRS, salt, U, S, rng)
+    reg_msg = encode_registration(salt, v, pk, kem_blind, U, S)
 
-    # Query
-    (ctx1, init_msg) = cpaceoquakeplus_init(cpaceoquakeplus_params_default, PRS, salt, SID, U, S)
-    (ctx2, resp_msg) = cpaceoquakeplus_respond(cpaceoquakeplus_params_default, verifier, init_msg, SID, U, S, server_respond_seed)
-    (ctx3, finish_msg) = cpaceoquakeplus_initiator_respond(cpaceoquakeplus_params_default, ctx1, resp_msg, SID, U, S, client_respond_seed)
-    (ctx4, challenge) = cpaceoquakeplus_challenge(cpaceoquakeplus_params_default, ctx2, finish_msg, salt, pk, SID, U, S, challenge_seed)
-    (client_key, response) = cpaceoquakeplus_response(cpaceoquakeplus_params_default, ctx3, challenge, SID, U, S, response_seed)
-    server_key = cpaceoquakeplus_verify(ctx4, response)
-
-    assert client_key == server_key
+    # Online phase
+    client_state, msg1 = cpaceoquakeplus_init(params, PRS, salt, U, S, public_context, secret_context, rng)
+    server_state, msg2 = cpaceoquakeplus_respond(params, v, public_context, secret_context, msg1, rng)
+    client_state, msg3 = cpaceoquakeplus_initiator_continue(params, client_state, msg2, rng)
+    server_state, msg4 = cpaceoquakeplus_responder_continue(params, server_state, msg3, pk, kem_blind, rng)
+    client_key, msg5, client_th = cpaceoquakeplus_initiator_finish(params, client_state, msg4)
+    server_key, server_th = cpaceoquakeplus_responder_finish(server_state, msg5)
+    assert (client_key, client_th) == (server_key, server_th)
 
     wrap_print("PRS:", to_hex(PRS))
-    wrap_print("SID: ", to_hex(SID))
-    wrap_print("U: ", to_hex(U))
-    wrap_print("S: ", to_hex(S))
-    wrap_print("salt: ", to_hex(salt))
-    wrap_print("server_respond_seed: ", to_hex(server_respond_seed))
-    wrap_print("client_respond_seed: ", to_hex(client_respond_seed))
-    wrap_print("challenge_seed: ", to_hex(challenge_seed))
-    wrap_print("response_seed: ", to_hex(response_seed))
-
-    wrap_print("init_msg: ", to_hex(init_msg))
-    wrap_print("resp_msg: ", to_hex(resp_msg))
-    wrap_print("finish_msg: ", to_hex(finish_msg))
-    wrap_print("challenge: ", to_hex(challenge))
-    wrap_print("response: ", to_hex(response))
-    wrap_print("key: ", to_hex(server_key))
+    wrap_print("U:", to_hex(U))
+    wrap_print("S:", to_hex(S))
+    wrap_print("public_context:", to_hex(public_context))
+    wrap_print("secret_context:", to_hex(secret_context))
+    wrap_print("reg_msg:", to_hex(reg_msg))
+    wrap_print("msg1:", to_hex(msg1))
+    wrap_print("msg2:", to_hex(msg2))
+    wrap_print("msg3:", to_hex(msg3))
+    wrap_print("msg4:", to_hex(msg4))
+    wrap_print("msg5:", to_hex(msg5))
+    wrap_print("key:", to_hex(server_key))
+    wrap_print("th:", to_hex(server_th))
     print()
 
 
 if __name__ == "__main__":
+    from params import cpaceoquakeplus_params_default as params
+
     rng = UnsafeDRBG()
-    run_CPaceOQUAKEPlus(rng)
+    run_CPaceOQUAKEPlus(params, rng)
+
+    salt = rng.random_bytes(32)
+    v, pk, kem_blind = GenVerifier(params.pwconf_params, b"password", salt, b"U", b"S", rng)
+
+    # A client with the wrong password fails password confirmation.
+    client_state, msg1 = cpaceoquakeplus_init(params, b"other password", salt, b"U", b"S", b"", b"", rng)
+    server_state, msg2 = cpaceoquakeplus_respond(params, v, b"", b"", msg1, rng)
+    client_state, msg3 = cpaceoquakeplus_initiator_continue(params, client_state, msg2, rng)
+    server_state, msg4 = cpaceoquakeplus_responder_continue(params, server_state, msg3, pk, kem_blind, rng)
+    try:
+        cpaceoquakeplus_initiator_finish(params, client_state, msg4)
+        assert False
+    except AuthenticationError:
+        pass
+
+    # The server rejects an incorrect confirmation value.
+    client_state, msg1 = cpaceoquakeplus_init(params, b"password", salt, b"U", b"S", b"", b"", rng)
+    server_state, msg2 = cpaceoquakeplus_respond(params, v, b"", b"", msg1, rng)
+    client_state, msg3 = cpaceoquakeplus_initiator_continue(params, client_state, msg2, rng)
+    server_state, msg4 = cpaceoquakeplus_responder_continue(params, server_state, msg3, pk, kem_blind, rng)
+    _, msg5, _ = cpaceoquakeplus_initiator_finish(params, client_state, msg4)
+    try:
+        cpaceoquakeplus_responder_finish(server_state, bytes(len(msg5)))
+        assert False
+    except AuthenticationError:
+        pass

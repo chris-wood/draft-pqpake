@@ -3,7 +3,6 @@ import hmac
 import hashlib
 import math
 import functools
-from random import randbytes
 from typing import Tuple
 from util import lv_encode
 from xwing import GenerateKeyPairDerand, EncapsulateDerand, Decapsulate
@@ -11,39 +10,26 @@ import mlkem
 
 
 class KEM(ABC):
+    """KEM with key derivation from a seed, used for password confirmation."""
 
-    def __init__(self, name):
+    def __init__(self, name, Nseed, Nct, Npk):
         self.name = name
-
-    def KeyGen(self) -> Tuple[bytes, bytes]:
-        return self.DeriveKeyPair(randbytes(64))
+        self.Nseed = Nseed
+        self.Nct = Nct
+        self.Npk = Npk
 
     @abstractmethod
     def DeriveKeyPair(self, seed: bytes) -> Tuple[bytes, bytes]:
+        """Returns (sk, pk)."""
         pass
 
     @abstractmethod
-    def Encaps(self, pk: bytes, seed: bytes) -> Tuple[bytes, bytes]:
+    def Encaps(self, pk: bytes, rng) -> Tuple[bytes, bytes]:
+        """Returns (k, ct)."""
         pass
 
     @abstractmethod
-    def Decaps(self, sk: bytes, ct: bytes) -> bytes:
-        pass
-
-    @property
-    def PK_LEN(self) -> int:
-        return self._pk_len()
-    
-    @property
-    def C_LEN(self) -> int:
-        return self._c_len()
-
-    @abstractmethod
-    def _pk_len(self) -> int:
-        pass
-
-    @abstractmethod
-    def _c_len(self) -> int:
+    def Decaps(self, ct: bytes, sk: bytes) -> bytes:
         pass
 
 
@@ -79,62 +65,48 @@ class BUASKEM(ABC):
 
 class MLKEM(KEM):
 
-    @abstractmethod
-    def params(self):
-        pass
+    def __init__(self, name, params):
+        super().__init__(name, 64, 32 * (params.du * params.k + params.dv), 384 * params.k + 32)
+        self.params = params
+
+    def DeriveKeyPair(self, seed):
+        # KeyGen_internal(seed[0:32], seed[32:64])
+        (ek, dk) = mlkem.KeyGen(seed, self.params)
+        return dk, ek
+
+    def Encaps(self, pk, rng):
+        (ct, k) = mlkem.Enc(pk, rng.random_bytes(32, "kem_encaps_m"), self.params)
+        return k, ct
+
+    def Decaps(self, ct, sk):
+        return mlkem.Dec(sk, ct, self.params)
 
 
 class MLKEM768(MLKEM):
 
     def __init__(self):
-        super().__init__("ML-KEM768")
+        super().__init__("ML-KEM-768", mlkem.params768)
 
-    def DeriveKeyPair(self, seed):
-        return mlkem.KeyGen(seed, mlkem.params768)
-    
-    def Encaps(self, pk, seed):
-        return mlkem.Enc(pk, seed, mlkem.params768)
-    
-    def Decaps(self, sk, ct):
-        return mlkem.Dec(sk, ct, mlkem.params768)
-    
-    def _pk_len(self):
-        return 1184
-    
-    def _c_len(self):
-        return 1088
-    
-    def params(self):
-        return mlkem.params768
-    
+
+class MLKEM1024(MLKEM):
+
+    def __init__(self):
+        super().__init__("ML-KEM-1024", mlkem.params1024)
+
 
 class XWingKEM(KEM):
 
     def __init__(self):
-        KEM.__init__(self, "X-Wing")
+        super().__init__("X-Wing", 32, 1120, 1216)
 
     def DeriveKeyPair(self, seed):
-        sk, pk = GenerateKeyPairDerand(seed)
-        return pk, sk
+        return GenerateKeyPairDerand(seed)
 
-    def Encaps(self, pk, seed):
-        ss, ct = EncapsulateDerand(pk, seed)
-        return ct, ss
+    def Encaps(self, pk, rng):
+        return EncapsulateDerand(pk, rng.random_bytes(64, "kem_encaps_eseed"))
 
-    def Decaps(self, sk, ct):
+    def Decaps(self, ct, sk):
         return Decapsulate(ct, sk)
-    
-    def _pk_len(self) -> int:
-        return 1216
-
-    def _c_len(self) -> int:
-        return 1120
-
-    # def serialize_public_key(self, pk):
-    #     return pk
-
-    # def deserialize_public_key(self, enc):
-    #     return enc
 
 
 class KDF(ABC):
@@ -183,6 +155,11 @@ def TH(KDF: KDF, DST: bytes, label: bytes, *fields: bytes) -> bytes:
     return KDF.Extract(DST + b"TH-" + label, b"".join(lv_encode(f) for f in fields))
 
 
+class AuthenticationError(Exception):
+    """Password confirmation failed at the client or server."""
+    pass
+
+
 class CPaceError(Exception):
     """An invalid value, such as a point that yields the group identity, was encountered in CPace."""
     pass
@@ -216,17 +193,18 @@ class KSF(ABC):
         self.name = name
 
     @abstractmethod
-    def Stretch(self, PRS: bytes, salt: bytes, length: int) -> bytes:
+    def Stretch(self, msg: bytes, salt: bytes, length: int) -> bytes:
         pass
 
 
-class SHA256KeyStretchingFunction(KSF):
+class Scrypt(KSF):
 
-    def __init__(self):
-        self.name = "identity"
+    def __init__(self, N, r, p):
+        super().__init__("scrypt")
+        self.N = N
+        self.r = r
+        self.p = p
 
-    def Stretch(self, PRS: bytes, salt: bytes, length: int) -> bytes:
-        h = hashlib.shake_128()
-        h.update(PRS)
-        h.update(salt)
-        return h.digest(length)
+    def Stretch(self, msg: bytes, salt: bytes, length: int) -> bytes:
+        return hashlib.scrypt(msg, salt=salt, n=self.N, r=self.r, p=self.p,
+                              maxmem=2 * 128 * self.r * self.N * self.p, dklen=length)
