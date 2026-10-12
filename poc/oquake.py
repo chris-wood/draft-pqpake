@@ -34,13 +34,13 @@ def oquake_init(params, PRS: bytes, public_context: bytes, secret_context: bytes
 
     r = rng.random_bytes(params.Nr, "oquake_r")
 
-    # T = XOR(ut, H(public_context, effective_PRS, rho, r))
-    prk_T_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) + rho + r)
+    # T = XOR(ut, H(effective_PRS, rho, r))
+    prk_T_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + rho + r)
     T_pad = params.KDF.Expand(prk_T_pad, params.DST + b"T_pad", params.BUA_sKEM.Nt)
     T = xor(ut, T_pad)
 
-    # s = XOR(r, H(public_context, effective_PRS, rho, T))
-    prk_s_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) + rho + T)
+    # s = XOR(r, H(effective_PRS, rho, T))
+    prk_s_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + rho + T)
     s_pad = params.KDF.Expand(prk_s_pad, params.DST + b"s_pad", params.Nr)
     s = xor(r, s_pad)
 
@@ -54,19 +54,19 @@ def oquake_respond(params, PRS: bytes, public_context: bytes, secret_context: by
 
     effective_PRS = derive_effective_PRS(params, PRS, public_context, secret_context)
 
-    prk_s_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) + rho + T)
+    prk_s_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + rho + T)
     s_pad = params.KDF.Expand(prk_s_pad, params.DST + b"s_pad", params.Nr)
     r = xor(s, s_pad)
 
-    prk_T_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) + rho + r)
+    prk_T_pad = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + rho + r)
     T_pad = params.KDF.Expand(prk_T_pad, params.DST + b"T_pad", params.BUA_sKEM.Nt)
     ut = xor(T, T_pad)
 
     pk = params.BUA_sKEM.Combine(ut, rho)
     (k, ct) = params.BUA_sKEM.Encaps(pk, rng)
 
-    prk_sk = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) +
-                                s + T + pk + ct + k)
+    prk_sk = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" +
+                                s + T + rho + pk + ct + k)
     h = params.KDF.Expand(prk_sk, params.DST + b"confirm", params.Nkc)
     key = params.KDF.Expand(prk_sk, params.DST + b"key", params.Nkey)
 
@@ -91,8 +91,8 @@ def oquake_finish(params, state: Any, resp_msg: bytes, rng) -> Tuple[bytes, byte
     trace("oquake_k", k)
     trace("oquake_th", th)
 
-    prk_sk = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" + lv_encode(public_context) +
-                                s + T + pk + ct + k)
+    prk_sk = params.KDF.Extract(effective_PRS, params.DST + b"OQUAKE" +
+                                s + T + rho + pk + ct + k)
     h_expected = params.KDF.Expand(prk_sk, params.DST + b"confirm", params.Nkc)
     if h != h_expected:
         return rng.random_bytes(params.Nkey, "random_key"), th
