@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                               Apple, Inc.
 Intended status: Informational                                S. Jarecki
-Expires: 11 April 2027                  University of California, Irvine
+Expires: 15 April 2027                  University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                          8 October 2026
+                                                         12 October 2026
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 April 2027.
+   This Internet-Draft will expire on 15 April 2027.
 
 Copyright Notice
 
@@ -2671,9 +2671,9 @@ Appendix A.  Deriving parameters
    We measure an attacker's resources by its running time t, which
    models the number of operations it can perform, including queries to
    random oracles and engaging in protocol sessions.  A protocol has
-   security level λ if, for every t, every attacker running in time at
-   most t has an advantage of at most t/2^λ (in distinguishing the
-   protocol from a simulation around the ideal functionality).  Note
+   security level λ if, for every t ≤ 2^λ, every attacker running in
+   time at most t has an advantage of at most t/2^λ (in distinguishing
+   the protocol from a simulation around the ideal functionality).  Note
    that, for PAKEs, an attacker can always perform one online password
    guess per session, which does not count against λ. We target a
    security level λ = 128 against both classical and quantum attackers.
@@ -2725,7 +2725,8 @@ A.1.  Conventions
    In the subsections below, q_ses denotes the number of sessions and
    q_X the number of queries to random oracle X.  The sum of all these
    q_* values is at most t.  A term meets the target if it is at most
-   t/2^128 for every t up to 2^128.  Note that we ignore small constant
+   t/2^128 for every t up to 2^128.  In particular, a term t^k / 2^n
+   meets the target if n >= 128 * k.  Note that we ignore small constant
    factors.
 
 A.2.  Parameters for OQUAKE
@@ -2794,10 +2795,10 @@ A.2.  Parameters for OQUAKE
       when one of the attacker's hash outputs matches one of the roughly
       t^2 hash values it obtained earlier, which happens with
       probability approximately t^3 / 2^(8 * Nr), where s has Nr bytes.
-      We treat this as a search for a target value, which a quantum
-      attacker succeeds in with probability approximately t^4 / 2^(8 *
-      Nr).  To achieve a security level of 128 against quantum
-      attackers, we need Nr >= 64.
+      We treat this as a search for one of these roughly t^2 target
+      values, which a quantum attacker succeeds in with probability
+      approximately t^4 / 2^(8 * Nr).  To achieve a security level of
+      128 against quantum attackers, we need Nr >= 64.
 
    *  Tag h: collisions between tags occur with probability t^2 / 2^(8 *
       Nkc), which requires Nkc >= 32 for a security level of 128.  There
@@ -2816,7 +2817,7 @@ A.3.  Parameters for OQUAKE+
    In addition to the terms of the symmetric PAKE (Appendix A.2),
    Theorem 3 of [VJWYMS25] bounds the PAKE-to-aPAKE transformation with
    the following terms.  Here q_pb denotes the number of KSF
-   evaluations.
+   evaluations.  Together, these terms require Nv >= 32 and Nkc >= 32.
 
    *  KEM security: the IND-CCA advantage of the KEM has a factor q_ses,
       which counts positions for a challenge instance, so we tighten
@@ -2828,6 +2829,11 @@ A.3.  Parameters for OQUAKE+
 
    *  Verifier collisions: q_pb^2 / 2^(8 * Nv + 1) requires Nv >= 32.
       Collision finding does not get a quantum speed-up.
+
+   *  Confirmation value collisions: collisions between confirmation
+      values occur with probability t^2 / 2^(8 * Nkc), which requires
+      Nkc >= 32.  Theorem 3 of [VJWYMS25] does not have this term, but
+      we include it as for the tag h in OQUAKE.
 
    *  Guessing: guessing v or a confirmation value contributes q_ses /
       2^(8 * Nv - 2) and q_ses / 2^(8 * Nkc - 2), which require Nv >= 16
