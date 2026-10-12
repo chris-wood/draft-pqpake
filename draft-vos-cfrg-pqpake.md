@@ -532,7 +532,7 @@ def TH(label, f_1, ..., f_n):
 
 OQUAKE is a post-quantum symmetric PAKE built on a BUA-sKEM and KDF, using 2
 rounds of a Feistel network to password-encrypt the BUA-sKEM public key. The
-OQUAKE protocol is based on the "NoIC" protocol analyzed in {{ABJ25}}. If the
+OQUAKE protocol is based on the Tempo protocol analyzed in {{TEMPO}}. If the
 BUA-sKEM provides security against quantum-enabled attacks, then so does OQUAKE.
 OQUAKE implements the common interface described in {{overview}}: it consists of two
 messages sent between initiator and responder, produced by
@@ -561,9 +561,9 @@ If no client and server identifiers are provided:
 These requirements originate from the security proof for OQUAKE. If these requirements are not met, the proof
 does not apply, but this does not mean that the protocol becomes vulnerable.
 
-The specification follows the design as presented in {{VJWYMS25}}, with the splittable KEM technique described
-in {{TEMPO}}, which prevents timing attacks caused by rejection sampling in ML-KEM. See {{timing-and-tempo}}
-for more information on the timing attack and this fix.
+The specification follows the design as presented in {{VJWYMS25}}, adjusted to use the Tempo protocol {{TEMPO}}
+and a splittable KEM rather than the NoIC protocol {{ABJ25}}. This prevents timing attacks caused by rejection
+sampling in ML-KEM. See {{timing-and-tempo}} for more information on the timing attack and this fix.
 
 The byte-level encoding of the OQUAKE protocol messages is specified in {{encodings}}.
 
@@ -761,7 +761,7 @@ See the diagram below.
                     +---------+
                       |      |
                       |      |
-  client_key <--------+      +------> server_key
+  client_key, th <----+      +----> server_key, th
 ~~~
 
 We note that this document only specifies the composition above with CPace and OQUAKE.
@@ -809,7 +809,7 @@ CPaceOQUAKE.InitiatorFinish(               |
              |     CPaceOQUAKE.ResponderFinish(ctx,msg3)
              |                             |
         -----------------------------------------
-     output client_key              output server_key
+     output client_key, th          output server_key, th
 ~~~
 
 ## Client Initiation
@@ -980,7 +980,7 @@ Password confirmation relies on SK for confidentiality, so it cannot be used as 
     seed ---->+---->| confirmation |<-----+<---- pk
               |     +--------------+      |
                        |        |
-  client_key <---------+        +-------> server_key
+  client_key, th <-----+        +----> server_key, th
 ~~~
 
 ### Offline Registration
@@ -1142,7 +1142,7 @@ Input:
 
 Output:
 - client_key, a byte string of Nkey bytes
-- response, a protocol message for the client to send to the server
+- server_confirm, a protocol message for the client to send to the server, a byte string of Nkc bytes
 - th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
@@ -1233,7 +1233,7 @@ client_key, msg3, th =                         |
             |    server_key, th = OQUAKE+.Verify(ctx,msg3)
             |                                  |
           ----------------------------------------
-      output client_key                 output server_key
+      output client_key, th             output server_key, th
 ~~~
 
 OQUAKE+ is parameterized by a BUA-sKEM, KEM, KDF, and KSF; see {{config-oquakeplus}} for the RECOMMENDED configuration.
@@ -1401,7 +1401,7 @@ ctx, msg1 = CPaceOQUAKE+.Init(                 |
             |  server_key, th = CPaceOQUAKE+.ResponderFinish(ctx,msg5)
             |                                  |
           ----------------------------------------
-      output client_key                 output server_key
+      output client_key, th             output server_key, th
 ~~~
 
 The protocol has six functions. Init, InitiatorContinue, and InitiatorFinish are
