@@ -690,13 +690,13 @@ def Init(PRS, public_context, secret_context):
 
   r = random(Nr)
 
-  // T = XOR(ut, H(public_context, effective_PRS, ⍴, r))
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || r)
+  // T = XOR(ut, H(effective_PRS, ⍴, r))
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   T = XOR(ut, T_pad)
 
-  // s = XOR(r, H(public_context, effective_PRS, ⍴, T))
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || T)
+  // s = XOR(r, H(effective_PRS, ⍴, T))
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", Nr)
   s = XOR(r, s_pad)
 
@@ -737,19 +737,19 @@ def Respond(PRS, public_context, secret_context, init_msg):
                          lv_encode(public_context) || lv_encode(secret_context))
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || T)
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", Nr)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || r)
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   ut = XOR(T, T_pad)
 
   pk = BUA-sKEM.Combine(ut, ⍴)
   (k, ct) = BUA-sKEM.Encaps(pk)
 
-  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) ||
-                       s || T || pk || ct || k)
+  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" ||
+                       s || T || ⍴ || pk || ct || k)
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
   key = KDF.Expand(prk_sk, DST || "key", Nkey)
 
@@ -801,8 +801,8 @@ def Finish(state, resp_msg):
   catch DecapsError:
     return random(Nkey), th
 
-  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) ||
-                       s || T || pk || ct || k)
+  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" ||
+                       s || T || ⍴ || pk || ct || k)
   h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
   if h != h_expected:
     return random(Nkey), th
