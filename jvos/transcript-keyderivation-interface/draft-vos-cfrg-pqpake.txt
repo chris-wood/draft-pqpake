@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                               Apple, Inc.
 Intended status: Informational                                S. Jarecki
-Expires: 12 April 2027                  University of California, Irvine
+Expires: 15 April 2027                  University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                          9 October 2026
+                                                         12 October 2026
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 April 2027.
+   This Internet-Draft will expire on 15 April 2027.
 
 Copyright Notice
 
@@ -618,8 +618,8 @@ def Encaps(upk):
 
    OQUAKE is a post-quantum symmetric PAKE built on a BUA-sKEM and KDF,
    using 2 rounds of a Feistel network to password-encrypt the BUA-sKEM
-   public key.  The OQUAKE protocol is based on the "NoIC" protocol
-   analyzed in [ABJ25].  If the BUA-sKEM provides security against
+   public key.  The OQUAKE protocol is based on the Tempo protocol
+   analyzed in [TEMPO].  If the BUA-sKEM provides security against
    quantum-enabled attacks, then so does OQUAKE.  OQUAKE implements the
    common interface described in Section 5: it consists of two messages
    sent between initiator and responder, produced by the functions Init,
@@ -657,10 +657,11 @@ def Encaps(upk):
    these requirements are not met, the proof does not apply, but this
    does not mean that the protocol becomes vulnerable.
 
-   The specification follows the design as presented in [VJWYMS25], with
-   the splittable KEM technique described in [TEMPO], which prevents
-   timing attacks caused by rejection sampling in ML-KEM.  See
-   Section 11.5 for more information on the timing attack and this fix.
+   The specification follows the design as presented in [VJWYMS25],
+   adjusted to use the Tempo protocol [TEMPO] and a splittable KEM
+   rather than the NoIC protocol [ABJ25].  This prevents timing attacks
+   caused by rejection sampling in ML-KEM.  See Section 11.5 for more
+   information on the timing attack and this fix.
 
    The byte-level encoding of the OQUAKE protocol messages is specified
    in Appendix C.
@@ -868,7 +869,7 @@ def Finish(state, resp_msg):
                        +---------+
                          |      |
                          |      |
-     client_key <--------+      +------> server_key
+     client_key, th <----+      +----> server_key, th
 
    We note that this document only specifies the composition above with
    CPace and OQUAKE.  It is not necessarily true that one can securely
@@ -924,7 +925,7 @@ def Finish(state, resp_msg):
                 |     CPaceOQUAKE.ResponderFinish(ctx,msg3)
                 |                             |
            -----------------------------------------
-        output client_key              output server_key
+        output client_key, th          output server_key, th
 
 7.1.  Client Initiation
 
@@ -1095,7 +1096,7 @@ def InitiatorFinish(PRS, public_context, secret_context, state, resp_msg):
        seed ---->+---->| confirmation |<-----+<---- pk
                  |     +--------------+      |
                           |        |
-     client_key <---------+        +-------> server_key
+     client_key, th <-----+        +----> server_key, th
 
 8.1.1.  Offline Registration
 
@@ -1271,7 +1272,7 @@ Input:
 
 Output:
 - client_key, a byte string of Nkey bytes
-- response, a protocol message for the client to send to the server
+- server_confirm, a protocol message for the client to send to the server, a byte string of Nkc bytes
 - th, transcript hash, a byte string of KDF.Nx bytes
 
 Exceptions:
@@ -1361,7 +1362,7 @@ def Verify(state, server_confirm_target):
                |    server_key, th = OQUAKE+.Verify(ctx,msg3)
                |                                  |
              ----------------------------------------
-         output client_key                 output server_key
+         output client_key, th             output server_key, th
 
    OQUAKE+ is parameterized by a BUA-sKEM, KEM, KDF, and KSF; see
    Section 9.3 for the RECOMMENDED configuration.  The byte-level
@@ -1527,7 +1528,7 @@ def Verify(state, response):
               |  server_key, th = CPaceOQUAKE+.ResponderFinish(ctx,msg5)
               |                                  |
             ----------------------------------------
-        output client_key                 output server_key
+        output client_key, th             output server_key, th
 
    The protocol has six functions.  Init, InitiatorContinue, and
    InitiatorFinish are intended to be called by the client, and Respond,
