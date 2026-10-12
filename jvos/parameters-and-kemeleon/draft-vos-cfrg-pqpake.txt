@@ -743,13 +743,13 @@ def Init(PRS, public_context, secret_context):
 
   r = random(Nr)
 
-  // T = XOR(ut, H(public_context, effective_PRS, ⍴, r))
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || r)
+  // T = XOR(ut, H(effective_PRS, ⍴, r))
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   T = XOR(ut, T_pad)
 
-  // s = XOR(r, H(public_context, effective_PRS, ⍴, T))
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || T)
+  // s = XOR(r, H(effective_PRS, ⍴, T))
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", Nr)
   s = XOR(r, s_pad)
 
@@ -789,19 +789,19 @@ def Respond(PRS, public_context, secret_context, init_msg):
                          lv_encode(public_context) || lv_encode(secret_context))
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || T)
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", Nr)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) || ⍴ || r)
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   ut = XOR(T, T_pad)
 
   pk = BUA-sKEM.Combine(ut, ⍴)
   (k, ct) = BUA-sKEM.Encaps(pk)
 
-  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) ||
-                       s || T || pk || ct || k)
+  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" ||
+                       s || T || ⍴ || pk || ct || k)
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
   key = KDF.Expand(prk_sk, DST || "key", Nkey)
 
@@ -827,40 +827,40 @@ def Respond(PRS, public_context, secret_context, init_msg):
 
    Its implementation is as follows.
 
-OQUAKE.Finish
+   OQUAKE.Finish
 
-Input:
-- state, opaque state for the initiator to store
-- resp_msg, the responder's protocol message
+   Input:
+   - state, opaque state for the initiator to store
+   - resp_msg, the responder's protocol message
 
-Output:
-- key, output shared secret, a byte string of Nkey bytes
-- th, transcript hash, a byte string of KDF.Nx bytes
+   Output:
+   - key, output shared secret, a byte string of Nkey bytes
+   - th, transcript hash, a byte string of KDF.Nx bytes
 
-Parameters:
-- BUA-sKEM, a BUA-sKEM instance
-- KDF, a KDF instance
-- DST, domain separation tag, a byte string
+   Parameters:
+   - BUA-sKEM, a BUA-sKEM instance
+   - KDF, a KDF instance
+   - DST, domain separation tag, a byte string
 
-def Finish(state, resp_msg):
-  (effective_PRS, sk, pk, ⍴, s, T, public_context) = state
-  (ct, h) = resp_msg
+   def Finish(state, resp_msg):
+     (effective_PRS, sk, pk, ⍴, s, T, public_context) = state
+     (ct, h) = resp_msg
 
-  th = TH("OQUAKE", public_context, s, T, ⍴, ct, h)
+     th = TH("OQUAKE", public_context, s, T, ⍴, ct, h)
 
-  try:
-    k = BUA-sKEM.Decaps(ct, sk)
-  catch DecapsError:
-    return random(Nkey), th
+     try:
+       k = BUA-sKEM.Decaps(ct, sk)
+     catch DecapsError:
+       return random(Nkey), th
 
-  prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" || lv_encode(public_context) ||
-                       s || T || pk || ct || k)
-  h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
-  if h != h_expected:
-    return random(Nkey), th
+     prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" ||
+                          s || T || ⍴ || pk || ct || k)
+     h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
+     if h != h_expected:
+       return random(Nkey), th
 
-  key = KDF.Expand(prk_sk, DST || "key", Nkey)
-  return key, th
+     key = KDF.Expand(prk_sk, DST || "key", Nkey)
+     return key, th
 
 7.  Hybrid PAKE: CPaceOQUAKE
 
