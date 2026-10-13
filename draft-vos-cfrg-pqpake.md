@@ -118,6 +118,22 @@ informative:
         name: Steve Myers
       -
         name: Yannick Sierra
+  BJ26:
+    title: "Natural Barriers to Quantum Extraction: On the Post-Quantum (In)security of (O)EKE and Masny-Rindal OT"
+    target: https://eprint.iacr.org/2026/2280
+    author:
+      -
+        name: James Bartusek
+      -
+        name: Jake Januzelli
+  ES21:
+    title: "The 'quantum annoying' property of password-authenticated key exchange protocols"
+    target: https://eprint.iacr.org/2021/696
+    author:
+      -
+        name: Edward Eaton
+      -
+        name: Douglas Stebila
   GRSV25:
     title: "Hybrid Obfuscated Key Exchange and KEMs"
     target: https://eprint.iacr.org/2025/408
@@ -622,6 +638,7 @@ OQUAKE is a post-quantum symmetric PAKE built on a BUA-sKEM and KDF, using 2
 rounds of a Feistel network to password-encrypt the BUA-sKEM public key. The
 OQUAKE protocol is based on the Tempo protocol analyzed in {{TEMPO}}. If the
 BUA-sKEM provides security against quantum-enabled attacks, then so does OQUAKE.
+{{quantum-attackers}} discusses to what extent this has been proven.
 OQUAKE implements the common interface described in {{overview}}: it consists of two
 messages sent between initiator and responder, produced by
 the functions Init, Respond, and Finish, described below. Both parties take as input a password-related
@@ -1444,7 +1461,7 @@ def Verify(state, response):
 ## CPaceOQUAKE+ Protocol {#CPaceOQUAKEplus}
 
 CPaceOQUAKE+ is the hybrid aPAKE obtained by applying the transformation of {{apake-transform}} to CPaceOQUAKE ({{CPaceOQUAKE}}).
-It is a five-message aPAKE that provides security against both classical and quantum-capable attackers.
+It is a five-message aPAKE designed to provide security against both classical and quantum-capable attackers ({{quantum-attackers}}).
 The first three messages are entirely CPaceOQUAKE, while the last two messages are the password confirmation protocol.
 To ensure hybrid post-quantum security, the KEM used during password confirmation must be a hybrid KEM.
 
@@ -1941,6 +1958,14 @@ is comparatively new and has not yet received significant peer review
 design has been independently analyzed by at least three different groups,
 improving overall confidence in the design.
 
+## Security Against Quantum Attackers {#quantum-attackers}
+
+The security proofs of the protocols in this document are in the universal composability (UC) framework under the classical random oracle model.
+{{BJ26}} shows that OQUAKE-style protocols do not realize the standard UC PAKE functionality against attackers with quantum access to the random oracle, because a simulator cannot extract the password.
+Note that this does not lead to an attack that recovers passwords or keys, and {{BJ26}} does prove stand-alone game-based security in the quantum random oracle model for a closely related protocol.
+CPace is only quantum-annoying {{ES21}}: a quantum attacker must solve a discrete logarithm per password guess.
+The security of CPaceOQUAKE and CPaceOQUAKE+ against quantum attackers therefore relies on that of OQUAKE.
+
 ## Retroactive Password and Session Key Recovery {#retroactive-recovery}
 
 A PAKE is unconditionally password hiding if its protocol messages remain statistically
@@ -2185,7 +2210,7 @@ For the parameter selection in this specification, we make some additional assum
 
 Note that the resulting security levels are therefore estimates rather than proven bounds.
 
-It is currently hard to obtain concrete protocol security estimates against quantum attackers, so we choose to be conservative: we use the Q0 quantum core-SVP metric {{AS22}} to estimate the cost 2^b of the best known quantum attack on ML-KEM. For classical attackers, we use the classical equivalent, which is C0 core-SVP {{Ogilvie26}} {{CMST25}}; see {{ADPS16}} for the core-SVP methodology. Given that the security proofs are in the classical random oracle model, we use a heuristic to estimate security against quantum attackers: we consider a quadratic speed-up {{Grover96}} for random oracle terms in which the attacker must find a value matching a target, but we do not consider a speed-up related to collision finding since quantum collision search is not known to be cheaper than classical collision search once the cost of quantum random access memory is taken into account {{Bernstein09}}.
+It is currently hard to obtain concrete protocol security estimates against quantum attackers, so we choose to be conservative: we use the Q0 quantum core-SVP metric {{AS22}} to estimate the cost 2^b of the best known quantum attack on ML-KEM. For classical attackers, we use the classical equivalent, which is C0 core-SVP {{Ogilvie26}} {{CMST25}}; see {{ADPS16}} for the core-SVP methodology. Given that the security proofs are in the classical random oracle model, and that their UC security does not carry over to quantum attackers {{BJ26}}, we use a heuristic to estimate security against quantum attackers: we consider a quadratic speed-up {{Grover96}} for random oracle terms in which the attacker must find a value matching a target, but we do not consider a speed-up related to collision finding since quantum collision search is not known to be cheaper than classical collision search once the cost of quantum random access memory is taken into account {{Bernstein09}}.
 
 ## Conventions {#params-conventions}
 
