@@ -165,6 +165,18 @@ Table of Contents
      C.6.  Registration Message Encoding
    Appendix D.  Transport Mappings
      D.1.  Message Sizes
+   Appendix E.  Test Vectors
+     E.1.  ML-BUA-sKEM
+       E.1.1.  ML-BUA-sKEM-768
+       E.1.2.  ML-BUA-sKEM-1024
+     E.2.  OQUAKE
+     E.3.  OQUAKE+
+     E.4.  CPaceOQUAKE
+     E.5.  CPaceOQUAKE+
+       E.5.1.  Successful Run
+       E.5.2.  Incorrect server_confirm
+       E.5.3.  Wrong Password
+       E.5.4.  Neutral Element
    Authors' Addresses
 
 1.  Introduction
@@ -486,9 +498,11 @@ def KeyGen():
    With Kemeleon.t = 132, Kemeleon encodes each polynomial of an ML-KEM
    encapsulation key in 391 bytes instead of 384, so the uniform public
    keys produced by ML-BUA-sKEM are longer than those produced by ML-
-   KEM.  The final 32 bytes of the public key still represent the part
-   that does not depend on the secret key.  For this reason, N⍴ = 32 and
-   Nt = ML-BUA-sKEM.Npk - 32.
+   KEM.  ML-BUA-sKEM encodes each integer output by Kemeleon's
+   VectorEncode as a little-endian byte string of 391 bytes, and
+   Kemeleon.DecodeEk decodes it in the same way.  The final 32 bytes of
+   the public key still represent the part that does not depend on the
+   secret key.  For this reason, N⍴ = 32 and Nt = ML-BUA-sKEM.Npk - 32.
 
    For ML-BUA-sKEM, the split operation is defined as follows.
 
@@ -1110,20 +1124,22 @@ def InitiatorFinish(PRS, public_context, secret_context, state, resp_msg):
    variant of the `augmented PAKE' constructions presented in [LLH24]
    and in [Gu24].
 
-   The verifier consists of two parts that are derived by computing a
-   key stretching function on the client's password.  The first Nv bytes
-   of the KSF output are denoted v, which makes up the first part of the
-   verifier.  The remaining KEM.Nseed bytes, which we call the seed, are
-   used to derive a KEM key pair, of which the public key is the second
-   part of the verifier.  This KEM does not have to be a BUA-sKEM.
+   The verifier consists of three parts, derived from the output of a
+   key stretching function on the client's password and a random secret.
+   The first Nv bytes of the KSF output are denoted v, which makes up
+   the first part of the verifier.  The remaining KEM.Nseed bytes, which
+   we call the seed, are combined with kem_blind, a secret random
+   blinding value, to derive a KEM key pair.  The public key of this key
+   pair and kem_blind are the second and third parts of the verifier.
+   This KEM does not have to be a BUA-sKEM.
 
    In each session, the client and server first run the symmetric PAKE
    with v instead of the PRS, yielding session key SK and transcript
-   hash th.  The server then uses SK, th, and the KEM public key pk to
-   challenge the client to prove knowledge of the seed (Section 8.1.2).
-   Password confirmation relies on SK for confidentiality, so it cannot
-   be used as a standalone protocol and SHOULD NOT be used outside of
-   this transformation.
+   hash th.  The server then uses SK, th, the KEM public key pk, and
+   kem_blind to challenge the client to prove knowledge of the seed
+   (Section 8.1.2).  Password confirmation relies on SK for
+   confidentiality, so it cannot be used as a standalone protocol and
+   SHOULD NOT be used outside of this transformation.
 
                Client                      Server
                  |                           |
@@ -1136,7 +1152,7 @@ def InitiatorFinish(PRS, public_context, secret_context, state, resp_msg):
                  |            |              |
                  |     +--------------+      |
                  |     |   Password   |      |
-       seed ---->+---->| confirmation |<-----+<---- pk
+       seed ---->+---->| confirmation |<-----+<---- pk, kem_blind
                  |     +--------------+      |
                           |        |
      client_key, th <-----+        +----> server_key, th
@@ -1181,28 +1197,55 @@ def GenVerifierMaterial(PRS, salt, U, S):
   seed = material[Nv:Nv + KEM.Nseed]
   return v, seed
 
-   To derive the verifier (v, pk), we use the following function:
+   The KEM key pair is derived from the seed and kem_blind as follows:
 
-   GenVerifier
+DeriveKEMSeed
 
-   Input:
-   - PRS, password-related string, a byte string
-   - salt, client-specific salt, a byte string
-   - U and S, client and server identifiers
+Input:
+- seed, a KEM key derivation seed, a byte string of KEM.Nseed bytes
+- kem_blind, a secret blinding value of 32 bytes
 
-   Output:
-   - v, the first part of the verifier, a byte string of Nv bytes
-   - pk, the second part of the verifier, a KEM public key
+Output:
+- kem_seed, the seed for KEM.DeriveKeyPair, a byte string of KEM.Nseed bytes
 
-   Parameters:
-   - KEM, a KEM instance
+Parameters:
+- KEM, a KEM instance
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
-   def GenVerifier(PRS, salt, U, S):
-     v, seed = GenVerifierMaterial(PRS, salt, U, S)
-     (sk, pk) = KEM.DeriveKeyPair(seed)
-     return v, pk
+def DeriveKEMSeed(seed, kem_blind):
+  prk = KDF.Extract(seed, DST || "KEMSeed" || kem_blind)
+  return KDF.Expand(prk, DST || "kem_seed", KEM.Nseed)
 
-   The server MUST store pk; it MUST NOT store seed.
+   To derive the verifier (v, pk, kem_blind), we use the following
+   function:
+
+GenVerifier
+
+Input:
+- PRS, password-related string, a byte string
+- salt, client-specific salt, a byte string
+- U and S, client and server identifiers
+
+Output:
+- v, the first part of the verifier, a byte string of Nv bytes
+- pk, the second part of the verifier, a KEM public key
+- kem_blind, the third part of the verifier, a secret blinding value of 32 bytes
+
+Parameters:
+- KEM, a KEM instance
+
+def GenVerifier(PRS, salt, U, S):
+  v, seed = GenVerifierMaterial(PRS, salt, U, S)
+  kem_blind = random(32)
+  (sk, pk) = KEM.DeriveKeyPair(DeriveKEMSeed(seed, kem_blind))
+  return v, pk, kem_blind
+
+   The server MUST store pk and kem_blind; it MUST NOT store seed.  A
+   fresh kem_blind MUST be generated for each registration.  The server
+   sends kem_blind to the client only in encrypted form during password
+   confirmation (Section 8.1.2), so the client does not need to store
+   it.
 
    Because the KSF is deliberately expensive, a client MAY compute (v,
    seed) once and store it in place of PRS, and use the stored values
@@ -1213,9 +1256,9 @@ def GenVerifierMaterial(PRS, salt, U, S):
 8.1.1.2.  Client Registration
 
    The registration phase consists of one message sent from the client
-   to the server.  This message contains the verifier (v, pk) and a
-   32-byte salt.  The server stores this information corresponding to
-   the client for future use in the verification flow.  This phase
+   to the server.  This message contains the verifier (v, pk, kem_blind)
+   and a 32-byte salt.  The server stores this information corresponding
+   to the client for future use in the verification flow.  This phase
    requires a secure channel from client to server in order to transfer
    the verifier.  The salt can be sent in plain text.  In some cases,
    there may not be a secure channel, but the server may already know
@@ -1236,12 +1279,12 @@ def GenVerifierMaterial(PRS, salt, U, S):
 
    Client: PRS, salt, U, S              Server: N/A
           ---------------------------------------
-    (v, pk) = GenVerifier(PRS, salt, U, S)
+    (v, pk, kem_blind) = GenVerifier(PRS, salt, U, S)
                |                           |
-               |    salt, v, pk, U, S      |
+               | salt,v,pk,kem_blind,U,S   |
                |-------------------------->|
                |                           |
-               |                Store (salt, v, pk, U, S)
+               |                Store (salt, v, pk, kem_blind, U, S)
                |                           |
           ---------------------------------------
 
@@ -1250,15 +1293,19 @@ def GenVerifierMaterial(PRS, salt, U, S):
    Password confirmation is a challenge-response exchange after the
    symmetric PAKE finishes.  Both parties input the key SK and the
    transcript hash th output by the symmetric PAKE.  The server must
-   also input the client's registered public key pk, while the client
-   inputs the corresponding seed.  The server creates a challenge in the
-   form of a KEM ciphertext encapsulated for that pk, and encrypted with
-   SK.  The client decrypts the ciphertext using SK and proves that it
-   can decapsulate it.  It does so by deriving the KEM's secret
-   decapsulation key from the seed.  The challenge also contains
-   client_confirm, which depends on SK and on the encapsulated key.  It
-   lets the client check that the server knows both, which requires the
-   full verifier (v, pk) or the password.
+   also input the client's registered public key pk and kem_blind, while
+   the client inputs the corresponding seed.  The server creates a
+   challenge in the form of a KEM ciphertext encapsulated for that pk,
+   which it encrypts together with kem_blind using SK.  The client
+   decrypts both using SK and proves that it can decapsulate the
+   ciphertext.  It does so by deriving the KEM's secret decapsulation
+   key from the seed and kem_blind.  Since kem_blind reaches the client
+   in encrypted form, the time the client takes to derive the KEM key
+   pair does not help an attacker that does not know the verifier to
+   perform offline password guessing (Section 11.6).  The challenge also
+   contains client_confirm, which depends on SK and on the encapsulated
+   key.  It lets the client check that the server knows both, which
+   requires the full verifier (v, pk, kem_blind) or the password.
 
    The state returned by Challenge holds the server's candidate session
    key.  This key MUST NOT be released to the calling application, used
@@ -1267,43 +1314,44 @@ def GenVerifierMaterial(PRS, salt, U, S):
    state opaque so that server_key is reachable only as the return value
    of Verify.
 
-   PC.Challenge
+PC.Challenge
 
-   Input:
-   - SK, the key output by the symmetric PAKE, a byte string
-   - th, the transcript hash output by the symmetric PAKE, a byte string
-   - pk, part of the client's registered verifier, a KEM public key
+Input:
+- SK, the key output by the symmetric PAKE, a byte string
+- th, the transcript hash output by the symmetric PAKE, a byte string
+- pk, part of the client's registered verifier, a KEM public key
+- kem_blind, part of the client's registered verifier, a byte string of 32 bytes
 
-   Output:
-   - state, opaque state for the server to store
-   - challenge, a protocol message for the server to send to the client
+Output:
+- state, opaque state for the server to store
+- challenge, a protocol message for the server to send to the client
 
-   Parameters:
-   - KEM, a KEM instance
-   - KDF, a KDF instance
-   - DST, domain separation tag, a byte string
+Parameters:
+- KEM, a KEM instance
+- KDF, a KDF instance
+- DST, domain separation tag, a byte string
 
-   def Challenge(SK, th, pk):
-     (k, c) = KEM.Encaps(pk)
-     r = KDF.Expand(SK, DST || "OTP", Nct)
-     enc_c = XOR(c, r)
+def Challenge(SK, th, pk, kem_blind):
+  (k, c) = KEM.Encaps(pk)
+  r = KDF.Expand(SK, DST || "OTP", Nct + 32)
+  enc_c = XOR(c || kem_blind, r)
 
-     prk_pc = KDF.Extract(SK, DST || "PC" || th || enc_c || k)
-     client_confirm = KDF.Expand(prk_pc, DST || "client_confirm", Nkc)
-     server_confirm = KDF.Expand(prk_pc, DST || "server_confirm", Nkc)
-     server_key = KDF.Expand(prk_pc, DST || "key", Nkey)
+  prk_pc = KDF.Extract(SK, DST || "PC" || th || enc_c || k)
+  client_confirm = KDF.Expand(prk_pc, DST || "client_confirm", Nkc)
+  server_confirm = KDF.Expand(prk_pc, DST || "server_confirm", Nkc)
+  server_key = KDF.Expand(prk_pc, DST || "key", Nkey)
 
-     th_out = TH("PC", th, enc_c, client_confirm, server_confirm)
-     challenge = (enc_c, client_confirm)
+  th_out = TH("PC", th, enc_c, client_confirm, server_confirm)
+  challenge = (enc_c, client_confirm)
 
-     return State(server_confirm, server_key, th_out), challenge
+  return State(server_confirm, server_key, th_out), challenge
 
-   The client decrypts the KEM ciphertext using SK, re-derives the KEM
-   key pair from the seed, and decapsulates the ciphertext to derive the
-   password confirmation values and its session key.  It aborts if the
-   server-provided confirmation value does not match its own.
-   Otherwise, it returns its session key, its own confirmation value,
-   and the transcript hash.
+   The client decrypts the KEM ciphertext and kem_blind using SK, re-
+   derives the KEM key pair from the seed and kem_blind, and
+   decapsulates the ciphertext to derive the password confirmation
+   values and its session key.  It aborts if the server-provided
+   confirmation value does not match its own.  Otherwise, it returns its
+   session key, its own confirmation value, and the transcript hash.
 
 PC.Respond
 
@@ -1329,10 +1377,12 @@ Parameters:
 def Respond(SK, th, seed, challenge):
   (enc_c, client_confirm_target) = challenge
 
-  r = KDF.Expand(SK, DST || "OTP", Nct)
-  c = XOR(enc_c, r)
+  r = KDF.Expand(SK, DST || "OTP", Nct + 32)
+  c_and_blind = XOR(enc_c, r)
+  c = c_and_blind[0:Nct]
+  kem_blind = c_and_blind[Nct:Nct + 32]
 
-  (sk, pk) = KEM.DeriveKeyPair(seed)
+  (sk, pk) = KEM.DeriveKeyPair(DeriveKEMSeed(seed, kem_blind))
 
   try:
     k = KEM.Decaps(c, sk)
@@ -1383,7 +1433,8 @@ def Verify(state, server_confirm_target):
 
    A high level overview of OQUAKE+ is below.
 
-   Client: PRS,salt,U,S,pub_ctx,sec_ctx   Server: v,pk,pub_ctx,sec_ctx
+   Client: PRS,salt,U,S,pub_ctx,sec_ctx   Server: v,pk,kem_blind,
+                                                  pub_ctx,sec_ctx
              ----------------------------------------
    ctx, msg1 = OQUAKE+.Init(                      |
      PRS,salt,U,S,pub_ctx,sec_ctx)                |
@@ -1391,7 +1442,7 @@ def Verify(state, server_confirm_target):
                |--------------------------------->|
                |                                  |
                |                 ctx, msg2 = OQUAKE+.Respond(
-               |                   v,pub_ctx,sec_ctx,msg1,pk)
+               |                   v,pub_ctx,sec_ctx,msg1,pk,kem_blind)
                |                                  |
                |               msg2               |
                |<---------------------------------|
@@ -1451,6 +1502,7 @@ Input:
 - secret_context, optional secret context, a byte string
 - init_msg, the initiator's protocol message
 - pk, part of the client's registered verifier, a KEM public key
+- kem_blind, part of the client's registered verifier, a byte string of 32 bytes
 
 Output:
 - state, opaque state for the server to store values to complete the protocol
@@ -1460,9 +1512,9 @@ Parameters:
 - OQUAKE, parameterized instance of OQUAKE
 - PC, password confirmation ({{pwconf}})
 
-def Respond(v, public_context, secret_context, init_msg, pk):
+def Respond(v, public_context, secret_context, init_msg, pk, kem_blind):
   oquake_resp, SK, th = OQUAKE.Respond(v, public_context, secret_context, init_msg)
-  state, challenge = PC.Challenge(SK, th, pk)
+  state, challenge = PC.Challenge(SK, th, pk, kem_blind)
   resp_msg = (oquake_resp, challenge)
   return state, resp_msg
 
@@ -1540,7 +1592,8 @@ def Verify(state, response):
    A complete protocol flow is shown below.  The client needs the salt
    before the protocol starts; see Section 8.1.1.1.
 
-  Client: PRS,salt,U,S,pub_ctx,sec_ctx   Server: v,pk,pub_ctx,sec_ctx
+  Client: PRS,salt,U,S,pub_ctx,sec_ctx   Server: v,pk,kem_blind,
+                                                 pub_ctx,sec_ctx
             ----------------------------------------
   ctx, msg1 = CPaceOQUAKE+.Init(                 |
     PRS,salt,U,S,pub_ctx,sec_ctx)                |
@@ -1559,7 +1612,7 @@ def Verify(state, response):
               |--------------------------------->|
               |                                  |
               |       ctx, msg4 = CPaceOQUAKE+.ResponderContinue(
-              |         ctx,msg3,pk)
+              |         ctx,msg3,pk,kem_blind)
               |                                  |
               |               msg4               |
               |<---------------------------------|
@@ -1663,24 +1716,25 @@ def InitiatorContinue(state, msg2):
    described in Section 8.1.2.  The server_key held in the returned
    state MUST NOT be used before ResponderFinish succeeds.
 
-   CPaceOQUAKE+.ResponderContinue
+CPaceOQUAKE+.ResponderContinue
 
-   Input:
-   - state, the state generated by CPaceOQUAKE+.Respond
-   - msg3, the message received from the client
-   - pk, part of the client's registered verifier, a KEM public key
+Input:
+- state, the state generated by CPaceOQUAKE+.Respond
+- msg3, the message received from the client
+- pk, part of the client's registered verifier, a KEM public key
+- kem_blind, part of the client's registered verifier, a byte string of 32 bytes
 
-   Output:
-   - state, opaque state for the responder to store
-   - msg, a protocol message for the responder to send to the initiator
+Output:
+- state, opaque state for the responder to store
+- msg, a protocol message for the responder to send to the initiator
 
-   Parameters:
-   - CPaceOQUAKE, parameterized instance of CPaceOQUAKE
-   - PC, password confirmation ({{pwconf}})
+Parameters:
+- CPaceOQUAKE, parameterized instance of CPaceOQUAKE
+- PC, password confirmation ({{pwconf}})
 
-   def ResponderContinue(state, msg3, pk):
-     SK, th = CPaceOQUAKE.ResponderFinish(state, msg3)
-     return PC.Challenge(SK, th, pk)
+def ResponderContinue(state, msg3, pk, kem_blind):
+  SK, th = CPaceOQUAKE.ResponderFinish(state, msg3)
+  return PC.Challenge(SK, th, pk, kem_blind)
 
 8.3.5.  Client Finish
 
@@ -1744,16 +1798,17 @@ def ResponderFinish(state, msg5):
    belong to the PAKE-to-aPAKE transformation (Section 8.1).
 
    This section gives RECOMMENDED configurations for each of the four
-   protocols specified in this document, in order of preference.  The
-   preferred configuration of each protocol uses ML-KEM-1024 in OQUAKE,
-   which provides a larger security margin (Appendix A.2).  Where CPace
-   is used, it uses X25519, CPace's primary recommended suite, and
-   CPaceOQUAKE+ uses X-Wing as the password confirmation KEM.  The
-   configurations with ML-KEM-768 can be considered when the bandwidth
-   cost would otherwise be too high.  Each configuration has an
-   identifier containing the protocol name, CPace group (if any), BUA-
-   sKEM, and password confirmation KEM (if any), each in lowercase and
-   without punctuation.
+   protocols specified in this document, in order of preference.
+   Appendix E contains test vectors for the first configuration of each
+   protocol.  The preferred configuration of each protocol uses ML-
+   KEM-1024 in OQUAKE, which provides a larger security margin
+   (Appendix A.2).  Where CPace is used, it uses X25519, CPace's primary
+   recommended suite, and CPaceOQUAKE+ uses X-Wing as the password
+   confirmation KEM.  The configurations with ML-KEM-768 can be
+   considered when the bandwidth cost would otherwise be too high.  Each
+   configuration has an identifier containing the protocol name, CPace
+   group (if any), BUA-sKEM, and password confirmation KEM (if any),
+   each in lowercase and without punctuation.
 
    The configurations are nested in the same way as the protocols
    themselves.  Each names only the components the protocol uses, and a
@@ -1764,10 +1819,11 @@ def ResponderFinish(state, msg5):
 
    The parameters in Section 9.1 are common to all configurations.
 
-   When one protocol builds on another, the DST of the outermost
-   configuration applies throughout, including within the inner
-   protocols.  The DST values below are therefore alternatives, not
-   values to be combined: an implementation of CPaceOQUAKE+ uses the
+   Each DST below is a randomly generated 32-byte string, given in
+   hexadecimal.  When one protocol builds on another, the DST of the
+   outermost configuration applies throughout, including within the
+   inner protocols.  The DST values below are therefore alternatives,
+   not values to be combined: an implementation of CPaceOQUAKE+ uses the
    CPaceOQUAKE+ DST for CPace, OQUAKE, and password confirmation alike.
 
 9.1.  Common Parameters
@@ -1801,8 +1857,7 @@ def ResponderFinish(state, msg5):
    *  KDF: HKDF-SHA-256
 
    *  DST:
-      "601ed384c5775ddd3021f51a4660fff24bf4eaa7845a958b2cade75289d184cd"
-      (a randomly generated 32-byte string)
+      601ed384c5775ddd3021f51a4660fff24bf4eaa7845a958b2cade75289d184cd
 
 9.2.2.  OQUAKE with ML-KEM-768
 
@@ -1816,8 +1871,7 @@ def ResponderFinish(state, msg5):
    *  KDF: HKDF-SHA-256
 
    *  DST:
-      "ca45261d9fe329b856389ebbf7f37ffa76c0034d8fc356454e1291d7d23e2045"
-      (a randomly generated 32-byte string)
+      ca45261d9fe329b856389ebbf7f37ffa76c0034d8fc356454e1291d7d23e2045
 
 9.3.  OQUAKE+
 
@@ -1847,8 +1901,7 @@ def ResponderFinish(state, msg5):
    *  PC-KSF: scrypt(N = 32768, r = 8, p = 1)
 
    *  DST:
-      "284e89132c00ba4f49e66d0af9e63c4c8efa701ce4b66bb6fcf1ce9cc5c35be1"
-      (a randomly generated 32-byte string)
+      284e89132c00ba4f49e66d0af9e63c4c8efa701ce4b66bb6fcf1ce9cc5c35be1
 
 9.3.2.  OQUAKE+ with ML-KEM-768
 
@@ -1869,8 +1922,7 @@ def ResponderFinish(state, msg5):
    *  PC-KSF: scrypt(N = 32768, r = 8, p = 1) [SCRYPT]
 
    *  DST:
-      "2a1a96e307871d45a9739c7193eeb04d6f52d17c67a52f762e5aae17df1ee5e6"
-      (a randomly generated 32-byte string)
+      2a1a96e307871d45a9739c7193eeb04d6f52d17c67a52f762e5aae17df1ee5e6
 
 9.4.  CPaceOQUAKE
 
@@ -1897,8 +1949,7 @@ def ResponderFinish(state, msg5):
    *  PAKE-KDF: HKDF-SHA-256
 
    *  DST:
-      "443e3089985f0f8dddfb20cc5e8618f447bdcfe6dd39abb23911cd784c075120"
-      (a randomly generated 32-byte string)
+      443e3089985f0f8dddfb20cc5e8618f447bdcfe6dd39abb23911cd784c075120
 
 9.4.2.  CPaceOQUAKE with X25519 and ML-KEM-768
 
@@ -1917,8 +1968,7 @@ def ResponderFinish(state, msg5):
    *  PAKE-KDF: HKDF-SHA-256
 
    *  DST:
-      "c2ef9d7f73324735ec5614f331fa49c86c05be3430996c46816fca59d778380b"
-      (a randomly generated 32-byte string)
+      c2ef9d7f73324735ec5614f331fa49c86c05be3430996c46816fca59d778380b
 
 9.4.3.  CPaceOQUAKE with P-384 and ML-KEM-1024
 
@@ -1938,15 +1988,13 @@ def ResponderFinish(state, msg5):
    *  PAKE-KDF: HKDF-SHA-256
 
    *  DST:
-      "1c8604e01071bc2bee8e4132399ded88a9f83c23ed8ab7130d2d2e0b597c0fb5"
-      (a randomly generated 32-byte string)
+      1c8604e01071bc2bee8e4132399ded88a9f83c23ed8ab7130d2d2e0b597c0fb5
 
 9.5.  CPaceOQUAKE+
 
    CPaceOQUAKE+ (Section 8.3) applies the PAKE-to-aPAKE transformation
    to CPaceOQUAKE.  Since it targets hybrid security, its password
-   confirmation KEM is a hybrid KEM.  The test vectors in this document
-   correspond to the first configuration.
+   confirmation KEM is a hybrid KEM.
 
 9.5.1.  CPaceOQUAKE+ with X25519, ML-KEM-1024, and X-Wing
 
@@ -1954,7 +2002,7 @@ def ResponderFinish(state, msg5):
    (Appendix A.2) and CPace's primary recommended suite.  This
    corresponds to the cpaceoquake-x25519-mlbuaskem1024 configuration.
    Note that it requires both ML-KEM-1024 and ML-KEM-768.  The latter is
-   used by X-Wing uses.
+   used by X-Wing.
 
    *  Identifier: cpaceoquakeplus-x25519-mlbuaskem1024-xwing
 
@@ -1973,8 +2021,7 @@ def ResponderFinish(state, msg5):
    *  PC-KSF: scrypt(N = 32768, r = 8, p = 1)
 
    *  DST:
-      "7de162c387ba1bad9c790e7e56bd245d6753d045185cbc3972eba34ddac1a9db"
-      (a randomly generated 32-byte string)
+      7de162c387ba1bad9c790e7e56bd245d6753d045185cbc3972eba34ddac1a9db
 
 9.5.2.  CPaceOQUAKE+ with P-384, ML-KEM-1024, and MLKEM1024-P384
 
@@ -2002,8 +2049,7 @@ def ResponderFinish(state, msg5):
    *  PC-KSF: scrypt(N = 32768, r = 8, p = 1)
 
    *  DST:
-      "d8fcdaf8c2c8c429a2ff93ff658d07050017487dc367d11cabb54f2a7dd2b5fd"
-      (a randomly generated 32-byte string)
+      d8fcdaf8c2c8c429a2ff93ff658d07050017487dc367d11cabb54f2a7dd2b5fd
 
 9.5.3.  CPaceOQUAKE+ with X25519, ML-KEM-768, and X-Wing
 
@@ -2028,8 +2074,7 @@ def ResponderFinish(state, msg5):
    *  PC-KSF: scrypt(N = 32768, r = 8, p = 1)
 
    *  DST:
-      "07d746a69c979f51e46d0051f0878a05ac5ec457d93c72ec6b814f528aae46f2"
-      (a randomly generated 32-byte string)
+      07d746a69c979f51e46d0051f0878a05ac5ec457d93c72ec6b814f528aae46f2
 
 9.6.  Defining New Configurations
 
@@ -2088,8 +2133,7 @@ def ResponderFinish(state, msg5):
    *  PC-KSF: scrypt(N = 32768, r = 8, p = 1)
 
    *  DST:
-      "38a518ec4b20d388f06504e78d6307b000f11e82fa3e5ff575b526129cf70953"
-      (a randomly generated 32-byte string)
+      38a518ec4b20d388f06504e78d6307b000f11e82fa3e5ff575b526129cf70953
 
 10.  Implementation Considerations
 
@@ -2119,6 +2163,12 @@ def ResponderFinish(state, msg5):
    rejection: decapsulating a ciphertext of the correct length does not
    fail, but yields an unrelated key.  A DecapsError therefore only
    results from malformed input.
+
+   Similarly, ML-BUA-sKEM.Encaps does not fail, because
+   Kemeleon.DecodeEk outputs a valid ML-KEM encapsulation key for every
+   input of Npk bytes.  In password confirmation, KEM.Encaps fails only
+   if the registered public key pk is not a valid public key, which the
+   server can check when it stores the verifier.
 
    Beyond these explicit errors, CPaceOQUAKE+ implementations can
    produce implicit errors.  For example, if protocol messages sent
@@ -2349,18 +2399,18 @@ def ResponderFinish(state, msg5):
 
 11.5.  Verifier Compromise
 
-   An attacker that obtains a client's verifier (v, pk) can perform an
-   offline password guessing attack against it, and it can impersonate
-   the server to that client.  This is inherent to augmented PAKEs.
-   Such an attacker, however, cannot impersonate the client without
-   first recovering the password, which requires the seed (or a
-   decapsulation key for this pk).  An attacker that knows v but not pk
-   can complete the symmetric PAKE, but it cannot pass password
-   confirmation for a client that it tries to impersonate: computing
-   client_confirm requires the key encapsulated to pk, and computing
-   server_confirm requires the seed.  Since an attacker that knows v can
-   send the client ciphertexts of its choice, the KEM must be IND-CCA
-   secure (Section 4.1).
+   An attacker that obtains a client's verifier (v, pk, kem_blind) can
+   perform an offline password guessing attack against it, and it can
+   impersonate the server to that client.  This is inherent to augmented
+   PAKEs.  Such an attacker, however, cannot impersonate the client
+   without first recovering the password, which requires the seed (or a
+   decapsulation key for this pk).  An attacker that knows v but not
+   both pk and kem_blind can complete the symmetric PAKE, but it cannot
+   pass password confirmation in either role: computing client_confirm
+   requires encapsulating to the key pair that the client derives, which
+   requires pk and kem_blind, and computing server_confirm requires the
+   seed.  Since an attacker that knows v can send the client ciphertexts
+   of its choice, the KEM must be IND-CCA secure (Section 4.1).
 
 11.6.  Timing Attacks and Tempo
 
@@ -2380,6 +2430,23 @@ def ResponderFinish(state, msg5):
 
    The Tempo fix addresses this issue by ensuring that input to
    SampleNTT is not secret-dependent.
+
+   The PAKE-to-aPAKE transformation (Section 8.1) faces a similar issue.
+   The client derives its KEM key pair from a seed that is derived from
+   the password, and for the ML-KEM-based KEMs in this document, both
+   key derivation and decapsulation expand a matrix derived from that
+   seed using variable-time rejection sampling.  If the seed depended
+   only on public information and the password, then an attacker that
+   measures this time could perform an offline password guessing attack.
+   The PAKE-to-aPAKE transformation therefore derives the key pair from
+   the seed and kem_blind, a secret random part of the verifier that the
+   server sends to the client.  To ensure that the attacker does not
+   observe kem_blind, it is encrypted with a key derived from the
+   symmetric PAKE's session key (Section 8.1.2).  An attacker that does
+   not hold the verifier does not know kem_blind and cannot relate the
+   timing to a password guess.  Note that an attacker that knows v can
+   make the client use a kem_blind of its choice, but such an attacker
+   can already perform an offline password guessing attack against v.
 
 11.7.  Related Work
 
@@ -2450,16 +2517,15 @@ def ResponderFinish(state, msg5):
 
    Despite being new, the core sequential-composition design in this
    document has already been independently analyzed by at least three
-   different groups, as described in Section 11.1.  This document's
-   source also carries concrete test vectors for each protocol it
-   specifies, to support independent implementation and verification;
-   these are currently commented out pending regeneration against the
-   current specification.  The remaining gaps identified above, most
-   notably the unpublished bare-PAKE proof extension and the open
-   question of identity requirements, are well-scoped and do not call
-   the core design into question; they are the kind of item best
-   resolved through the scrutiny that CFRG engagement itself provides,
-   rather than a prerequisite to starting that engagement.
+   different groups, as described in Section 11.1.  This document also
+   includes test vectors for each protocol it specifies, generated by a
+   reference implementation, to support independent implementation and
+   verification.  The remaining gaps identified above, most notably the
+   unpublished bare-PAKE proof extension and the open question of
+   identity requirements, are well-scoped and do not call the core
+   design into question; they are the kind of item best resolved through
+   the scrutiny that CFRG engagement itself provides, rather than a
+   prerequisite to starting that engagement.
 
 13.  IANA Considerations
 
@@ -2828,9 +2894,16 @@ A.3.  Parameters for OQUAKE+
       2^(8 * Nv - 2) and q_ses / 2^(8 * Nkc - 2), which require Nv >= 16
       and Nkc >= 16 to achieve a security level of 128.
 
+   *  Secret kem_blind: an attacker that does not hold the verifier
+      would have to guess kem_blind to relate the timing of the client's
+      key derivation to a password guess (Section 11.6).  This is a
+      search for a target value, so a 32-byte kem_blind achieves a
+      security level of 128 against all attackers.
+
    [[EDITOR'S NOTE: The proof of this bound needs to be updated for the
    password confirmation in this document, which derives client_confirm
-   from the encapsulated key.]]
+   from the encapsulated key, and derives the KEM key pair from the seed
+   and kem_blind.]]
 
 A.4.  Parameters for CPace
 
@@ -3055,9 +3128,9 @@ C.1.  Public Context Encoding
 
    def EncodePublicContext(sid, U, S):
      public_context =
-       bytes_to_int(len(sid), 4) || sid ||
-       bytes_to_int(len(U), 4) || U ||
-       bytes_to_int(len(S), 4) || S
+       int_to_bytes(len(sid), 4) || sid ||
+       int_to_bytes(len(U), 4) || U ||
+       int_to_bytes(len(S), 4) || S
      return public_context
 
    Applications MAY include additional public information by prepending
@@ -3094,10 +3167,11 @@ C.3.  OQUAKE+ Message Encoding
 
    challenge = enc_c || client_confirm
 
-   where enc_c has Nct bytes (the KEM ciphertext length) and
-   client_confirm has Nkc bytes.  On receipt, enc_c = challenge[0 : Nct]
-   and client_confirm = challenge[Nct :].  The password confirmation
-   response is the server_confirm value, a byte string of Nkc bytes.
+   where enc_c has Nct + 32 bytes (the KEM ciphertext length plus the
+   length of kem_blind) and client_confirm has Nkc bytes.  On receipt,
+   enc_c = challenge[0 : Nct + 32] and client_confirm = challenge[Nct +
+   32 :].  The password confirmation response is the server_confirm
+   value, a byte string of Nkc bytes.
 
    The OQUAKE+ responder message (oquake_resp, challenge), produced by
    OQUAKE+.Respond and consumed by OQUAKE+.Finish (Section 8.2), is
@@ -3149,14 +3223,17 @@ C.5.  CPaceOQUAKE+ Message Encoding
 C.6.  Registration Message Encoding
 
    The registration message described in Section 8.1, carrying the
-   client's salt, verifier (v, pk), and identifiers, is encoded as:
+   client's salt, verifier (v, pk, kem_blind), and identifiers, is
+   encoded as:
 
-   reg_msg = salt || v || pk || lv_encode(U) || lv_encode(S)
+  reg_msg = salt || v || pk || kem_blind || lv_encode(U) || lv_encode(S)
 
-   where salt has 32 bytes, v has Nv bytes, and pk has KEM.Npk bytes.
-   On receipt, the fields are recovered as salt = reg_msg[0 : 32], v =
-   reg_msg[32 : 32 + Nv], pk = reg_msg[32 + Nv : 32 + Nv + KEM.Npk], and
-   the identifiers by successive lv_decode calls over the remainder.
+   where salt has 32 bytes, v has Nv bytes, pk has KEM.Npk bytes, and
+   kem_blind has 32 bytes.  On receipt, the fields are recovered as salt
+   = reg_msg[0 : 32], v = reg_msg[32 : 32 + Nv], pk = reg_msg[32 + Nv :
+   32 + Nv + KEM.Npk], kem_blind = reg_msg[32 + Nv + KEM.Npk : 64 + Nv +
+   KEM.Npk], and the identifiers by successive lv_decode calls over the
+   remainder.
 
 Appendix D.  Transport Mappings
 
@@ -3233,7 +3310,7 @@ D.1.  Message Sizes
     +---------+----------------+--------------+-------------+---------+
     | msg3    | ct, h          | 1600         | 1600        | 1120    |
     +---------+----------------+--------------+-------------+---------+
-    | msg4    | enc_c,         | 1152         | 1697        | 1152    |
+    | msg4    | enc_c,         | 1184         | 1729        | 1184    |
     |         | client_confirm |              |             |         |
     +---------+----------------+--------------+-------------+---------+
     | msg5    | server_confirm | 32           | 32          | 32      |
@@ -3242,6 +3319,1653 @@ D.1.  Message Sizes
                                   Table 3
 
    In each configuration, the largest message is msg2.
+
+Appendix E.  Test Vectors
+
+   This section contains test vectors for ML-BUA-sKEM and for the first
+   configuration of each protocol in Section 9.  Each test vector lists
+   the inputs, the randomness that each step consumes, intermediate
+   values, the protocol messages, and the outputs.  Byte strings are
+   encoded in hexadecimal.  The randomness used to generate these test
+   vectors corresponds to the following labels:
+
+   *  keygen_seed: the concatenation of the seeds d and z of ML-
+      KEM.KeyGen in BUA-sKEM.KeyGen
+
+   *  kemeleon_m: the value m in Kemeleon.EncodeEk, added for each
+      polynomial of the encapsulation key in BUA-sKEM.KeyGen (in
+      decimal)
+
+   *  encaps_m: the randomness m of ML-KEM.Encaps in BUA-sKEM.Encaps
+
+   *  oquake_r: the value r sampled in OQUAKE.Init
+
+   *  random_key: the key returned by OQUAKE.Finish when key
+      confirmation fails
+
+   *  cpace_ya and cpace_yb: the scalars sampled in CPace.Init and
+      CPace.Respond, respectively
+
+   *  kem_blind: the value sampled in GenVerifier
+
+   *  kem_encaps_m and kem_encaps_eseed: the randomness of KEM.Encaps in
+      PC.Challenge; m for ML-KEM and eseed for X-Wing
+
+   The intermediate values are listed by the following labels:
+
+   *  v, seed, and pk: the values in GenVerifierMaterial and GenVerifier
+
+   *  cpace_ISK and cpace_th: the shared secret and transcript hash
+      output by CPace
+
+   *  oquake_upk: the BUA-sKEM public key generated in OQUAKE.Init
+
+   *  oquake_k: the BUA-sKEM shared secret in OQUAKE
+
+   *  oquake_key and oquake_th: the key and transcript hash output by
+      OQUAKE
+
+   *  cpaceoquake_key: the key output by CPaceOQUAKE, i.e., SK in
+      CPaceOQUAKE+
+
+   *  pc_k: the KEM shared secret in password confirmation
+
+E.1.  ML-BUA-sKEM
+
+   These test vectors list the randomness of ML-BUA-sKEM.KeyGen and ML-
+   BUA-sKEM.Encaps, the public key upk output by KeyGen, and the
+   ciphertext ct and shared secret k output by Encaps.
+
+E.1.1.  ML-BUA-sKEM-768
+
+   # Randomness
+   keygen_seed:
+   f9977a57ce9d3a29bc4ea75165418069778d67ea4252d769c01e1c0432ae6afd
+   299bb671bad040d6566e536acf8281ff95ef912e9b529db896643341e7bb93e7
+   kemeleon_m:
+   1461349808863529180497329162631953944652
+   2018767594911507041497478964992230269995
+   1226531303044047062411806492047201745356
+   encaps_m:
+   5fb068064a06da2a3b5a4e036099aa2ab1ecae6abc50930fc7ba75db68a9820b
+
+   # Outputs
+   upk:
+   5ea2b05e499be19c3d1d4ea212d6dc5f15c159d1f1720d95a24246ea11321a43
+   e256356866135571e3822845780deb365b659c7e5c59c18ddfbb2fe158628a0d
+   c8d439b9807e0e6e107c40ad9c968e275893b575d858eb1f0e249b5d09737afb
+   b46091ad6724e4d70835cd9e4d353f7218b38a066f6127d1ac31a8a1ffef4492
+   3cdc2bb555f146fdf1625b4bdd9b0c5b24f9a79281410eb8323359dc6b946929
+   54076f09e0d41c27299f260cf7d6ddde492b8d805fea1af559b75f3c64e99bcf
+   0ad94e105d4d979d62d1693ba7e4ca97386f343e7e027aed3c0d55a113abadb2
+   318d6b799ef831a38f6cd0d471416b1a5f9b55f155167135ef405d83e7e32318
+   1691917c120c7fc5a1a866e127638945e9b3486815ad4d4d22cb21b0d1d3f60e
+   187d9679fa0b2b789fb8848b8aad7b9cf8e7c12c8f5003f76f89c264bfe5a354
+   6835b253a107c9173ce9e7ebed3ea87df8e6cfaed8c2b70e28252e00df81d0e5
+   3a0a031a2a3d33d91bf104538dfa2a5f054f4dc4dda9c5bb9cc9612dff300297
+   373753211f142e7afa3ac3e05691dc6a3995ede3a05341dcace4552649f8241e
+   63476f2596b2269d05391f9b87ee570ca06d2313d55427d85d11f8c497a420a5
+   41871e8d8d0e2916685aba450b5aa1225ffd508e54f3560e655b12f5e64fb0d9
+   4584dd8cb9bcdc33f5677f43ed9bbde13f250871937e1e6a8590ea9a1e1f536d
+   8213d86a3657a0d5e6b5780eb701df3e87144a0d87382870ceaf99389a4e9e18
+   298dc0520f250386bdf0d0396db940e645d9c7ce7d94be959784b980dbd2527a
+   2217e5f0c349b912cafe337399d34138cc6439a6736d3d5d075ccbc829d6e25e
+   943c189aaf6b91d685ae05b6039fecf993a77d5e5743bede6794f84deb2d8d87
+   d14c6beb42d74fb624fed04bcde41569ff23135e5ee3325382c86f7c5b8a6a91
+   8e0e305857774eb42a1faec8cab100a94763b5def8ead665d3e7135bc5cfee16
+   c2c9f6c6660ac4fda4630fd721e98b6f5407ac259b5fe45407a6aee6a0c18d72
+   ede973a687d48c08fcd1cb8aff1a24c650c732e131420e0d3543f969cbefed1b
+   2587380788daccbeed106da3a73f17bf3088dc861e036d4960be8184cf0708ae
+   c8373b5a1009c004c32bfe08e512adc7c4492dde0fc8e994e77af5e5be55d1ed
+   eb53cddaf2f9ff245799e5d2d7b14b96d3cebf1bb225ce91457bdde306c3e79c
+   1244fcd32f2768286b637d4f1982f1b4a86c89ee5d62f2c17f975ccb41b7884a
+   480e2d9aa4cf4b77339cb27b462dffbf52d3df2ce4c3418e5c1e4e81fc27259a
+   c8357ea759a0fc68e56cce4fc65908c16a8167d9d106c482d2b5639868683ff7
+   01a747579073019a0d5c937c9cca8106269d80c5a30c8922c7c9886f2e2c80eb
+   a18e4058d8ff742d10ab0d53ed21266f97745471862e31b27db7d5db9ed29873
+   c02d339dbe78f63d701cb7a38397caac4fe0ce2e689bc078fa192b5b23e32cc1
+   76d15aaa5f959962aeb5685b4876a289ff463afa3e3e9465f3fedd523e1442c5
+   6add9726161f105950a920a5e80a34e09cd535489b8649b082e506742e03a8c0
+   b73267582eea0d494c1c9cbe0642ba4c4a261deb9cea364d34ff36fba237d851
+   d22d06b3c472aca762c40ce90565270e254ca6ac263bf3456fd6b89bce3efd22
+   843489d17fe143a29991b44e8a063f113cbafb2390
+   ct:
+   d1f96e79a1b6983bd760bf78b4958aa983c90a877dd372c0dd1366551f78fd3a
+   cb68ef70ae4216f49f28891a3b263b69a09d456281fdffbac4c9be1d4c76b0d2
+   ec5205f7759d8aae742a7a792d36ed6982505f9638232281e5ab0ea42687845d
+   61ae3873e10082bf97df94be61c09f512e86859e9dcd258de4b3fe95e4e9820b
+   cf101ba3925a6b430c5c88d0fe241366b12dc7fda1fb00b341969a2f8e693aab
+   b4ecea095b984458f57a5a32d85170e45fd5196a7f4af2e2844a1ddd359d2447
+   6a827b4d12e7e2a3b9888b5f88cbfe1d27c6d86d9bc3c65e3803873d94bdea06
+   0939f16a27ed97cc6558b4a1814f6bedac02cc8a5e5755888eb7f69ec9d2a56e
+   6d127369622c932ea574c963bef774851d8a2b0af8640bbc74b6d8835b4e0422
+   5de0e62afa8ca16ec8b858f4fc0b3b334231a198717465cdf7da9dc528e93338
+   da32bac41eef8cf3d873271a30cdd0ab48d1d4109c919cce44035e134d6fb994
+   589d89bf26b6c7c38c044a0579eef66c29c302ef40da1b060aeb698c996f8f7b
+   ffa57354d729782ee0546704fedb2eced5306bdead7f3d6b7fa496fb48d459e0
+   d4045eb0290ca91019c79a97d65688670110cbb6dbd8591d1683eb9cde945df2
+   c28fcda156597edc588e105bed0c335f341abed66bee11654b16f6cdb8a96040
+   c89fcb5e971c2d14123216955517b1938e7e5c79bc2c170f6fc77fcc1876abfc
+   c9f94423c25f9efc282138d768ca02f91d77f4c462b486a6f361ea5d43ac2f52
+   e3f77158a7191e8c748847c2fb95f582faa25d9a53de6fde098004c2b73cec00
+   50cea309e2dc3840fd939ac6dace1d0833424e323c9b9fc9de11ab6c1a1893fc
+   1a981765cd4454e16f5a6332badae48d046566a05812e0cea67c1fd7b8fdeacc
+   0c025135a8359021d5aa3fba42c1c81f23a8924782e3b14284e90d88ae00ab34
+   7d8ce704b71a17ada69df20807ab9cfa506fb54c86ccb9ed496af3b10b7ffcfc
+   9ad32c46cb2c1ced35d11d881aa333d062aa4f613e6dec44d9d4d3c001970364
+   08456ae8b26bb3a597d39f32de6b390ce890285592062e62976bb592d28e65c8
+   a012981cdccf551d8601cfae926b5b375bf63ff432bf23e774543a077f4467f7
+   196c9c719d1ae4332cb8f64fda530aa0009d6c57de10318ffc07750d1795976a
+   dd29356619057d46da54c110937a3ba5353979383181eec5284c978abfae0bb7
+   5eeb5891795572ca835347746a5bcbe69f6a2ee26cefc1102d226e2365805e4b
+   bb6279cf4f45464ef5a0b55476097ffa8b0612e2fcc19a6f44493eabb53d44d6
+   8ad8dc1cb079f897881d56daeea6f65073a0bbd4cbb3564f01eec42351db73fb
+   85863d30b879c95ef23a0b90e61f4fa8147e2bd136a34ade6451e531ab34f814
+   b722940683bc72c32f0ca1455c2d1eaaa943e1b7ba8b1145a1c75501bf6f66a1
+   8d6b34977f158fec674e61f32eddd1a5c981a290630a815b2f9dd4052dbc1096
+   d647afca8159a45dff2ae6454ccc81810a8fac10c39b48197cf3c2610e08ea8a
+   k: 1aca95f4d35ccfa5df88ad047ce1aa654c524bd55d8fa2e7c1a041157b810883
+
+E.1.2.  ML-BUA-sKEM-1024
+
+   # Randomness
+   keygen_seed:
+   d7f4ac5351358f8c0cce054f550ef887d14453ee67eae9cfc848465f85beef78
+   186334d3185d6e77ef37897203ea589f8d9bff4b2ebca57d10e02d271536e7d6
+   kemeleon_m:
+   5272279800210349582568710348767618125641
+   6888731916715852000259939628383230864647
+   673819760188224090248748910699537810002
+   1137590557977869620235949346486406000588
+   encaps_m:
+   1096e1f2ecb7b3a6c15102c58ed7154e0ebbc876050cd2ebe20195260294bf9e
+
+   # Outputs
+   upk:
+   cae21f6d19d97c5a36e7477de94182eea3b4d3965d1c0a4d14ca0f7b9e580ef2
+   1dcc6c562fd7c1734541da98844370433608f441cd98169b94f19bef4baa59c0
+   4683d69286803ab36acc942b18e166b07a976e77538d8152098dbd4c3bb3e23a
+   c588dd86db5e2a556195de37931de368197493a86dddd9814bd52faa15f36279
+   b2964bc4a7fef51ebf73050c59cb67019af5bc7bc3c173ac04df1732fe7fde21
+   ab36208979b9cb03ae21b63dfb4b61a30468755b56fd039e5e6d2c965cbcc2d5
+   13268952fd2f85455c006b0fe468922414fc7cf0f0c66e768b8858eb84158e98
+   3a76011c79cb1d525b9ed23e7aca7d860acfd19c4bef1c3b38d9f6eb5c00817a
+   08d841e0a5c5bb2366ffd04fa668ab9c8bf691135a357826fba77bcce5019a46
+   a8d1ae37290485a3e8c0eb99f150f4d1973a6ffa4a265f5244451fb435b86e2a
+   29d235246f188508c56b72e95168e8eda1aa2ae1b35460f9505f5cadb57a9144
+   25425bc4286b3d716d81a62547a53615221ae0a3ee33287650ad41d47c487210
+   46ef068b393ea63007d699f9bb29e3d023d0529723fd91ab643435a46ad78e14
+   dbd15804ca3700556af69dde1e60070444f8f9b452d5610edcaec6dfc24f028a
+   2f0b690a4621199ff596a23bd11306a11254cb081e436762e7ec4d59a4a48168
+   1e189d73648b7b07c29f998e2168051b07a7ce353a1754aba177a98d02fac682
+   3313a090f7dade3f7f013d121b730d44abe40ddab2180050bd9fdaf9c3c41e43
+   b8be8d210ce468db164417d8a0c6fc07d104fe3b4ab5cdf18a4a02bf9a07c2a6
+   2841c855ea816367c8af37d1d11bba67e9759cf75ea253b13499a21961d7fa8b
+   5ee7c6abfa5b4ef7d2b746364516781bf198094113fce3514274688e3fa173d6
+   e2fb4f0489fff6c6e4c98f5e1d8cb19cb38606b562afb577ed399c9536012729
+   735df516dda55899b3a3decfff923e61281c3deec765fb69040fa0de9c2fe889
+   4f119f0cd7c8ef0e186464d1b6187cd215234ed8583d6f0eec70d9cc0ac7780d
+   d47ae1b78e098a4877a943ed6b8247b9f3345f5252f54dabb5976bde8bcbcf3b
+   035ae0a700fdee77f674ec5736d909ba0f9c0dffe8a0e8ad0badf78d6e6eb50e
+   17232574651c0beb040dc9ae82a6cd53dc7c14295e331d37615204702f2dd95c
+   b5b107804130dbc78494ef2d651d61bad8ef969ff0adb9b39d84acb92a2db8c2
+   ceeb9d50da688f23dc45452b6753ae8211c3456ab06432ba6006961587f36b86
+   92162f251757cd19c3740adfbd4eddffa142cbbfc1ff7f576946d36232483147
+   a18a3c90b388c80e58c6d104d4e1460e473577b004ff8ecc4b6596f73cd6faae
+   c1e4b91e7413fca0adefabc1b609fe5b4feb4c5e14991c17efd25d49050d7f84
+   00928e4dc68edecafbdd87d1775eb3a4caa9c9f705c97d3ca1ae44290f0af452
+   d41945c1598b424f7cf2472fd4691cfed2bb98e93f79ecf1d137c3471507106d
+   aac8fd5c146b060c61b4f6b4c36805acc52c418d39e089623a5117f299e96996
+   ede6544cfe86639db789df3ab97e650ca5b05c51577e5ef2a2a62fcee4025aeb
+   769cd2ac10d142712c8a1fb45e3a9368a3d5c73b44023bd42b12902882aee2d1
+   16f7855db92307aa3efa4f44294642b56f381f3f153b54ec82de3958a599cad6
+   02661b8343a9efce1aa9d6791d62fa9669a432ddc6fe68cef8b56f714d27a4c6
+   0ff1b1d0f0046b3126fbf0af817309c48a742657027fb906d8387df8f63dce31
+   a183ba99eace38a6c4f37142ca01741fa9b3cd7e60f96a6b0f4fa03eba3d363b
+   ad40ac65c1556065b84ff0d914fea57d662f50ce25d03b50d823e0bf71917246
+   476efd5f297cc30b1d88c3cb2718cb6ff44e9f4699bd8833746f18fe3850692e
+   44fe72ec3e285990103ceea47bad5cf28e599b8cbc27e507fa1bd4982e4471af
+   87ba8b35303ef93c89dd863bea0f7de0c0e90f4213dd976b9aba2ea87c661fec
+   e8a64ed90467af059dcb764f9399d6ff9dd12dac8ec610e54fa7ed5b2698f87a
+   e5f92cc942f94996ad79507d2f285b316ad8341b9a0368181bbf557575cd7027
+   02c2b78a33cc0c79db1fba5a125ca184f077049c2a6097ed036dab52bc38e093
+   8b709f7daeb8cf12086e0ebd83a947bfc5d93ffa3433852b7e37359977f9d2ef
+   8d1bebdbd53509017014324331261a000c41c2cda42efc20a5b6de233321fe3b
+   7387382735d72b4ec97d82be7c75e47693a6bd70100d46a27905f5ca
+   ct:
+   819efcb3353ec75340eda839c1a68de5c864e0a80e4d4af2804d71b17a1ead1c
+   2474e50db454a6a0ebc78d032f6aabea9a2a526ecf958ce60bdcab213d366d40
+   da7eff13d1bb4d0450f9d8bd82f4867bbfe92282d9590ef843501ec9a17aff62
+   28f40840a8624e265840b7c781367c92c2dfcf92250f92b31e2564d7bdf27e1c
+   0efa9e90bf32e2dcbcef49d9be6c1f9990c28ae52da774b1017967ba1a05d49b
+   5e1c3f44112aed1c201e1f1a0e816d012b33c565ce0a04e404470700b177b31b
+   9a68d71ee7ab44aaea3415de868bd920a61aaba5971bd5f694de29ec091dbc88
+   ecfa57567fa14a345ee51a129ea514bc02084b73ba15b72cc551830de9751ada
+   19ca43a4917af914f64c57da4e2d7e3e9673fe96cba95d31573c0b473ac594e9
+   0b5cb5143db77c9f5254416f7e19d33e95aaa0963ac81e8ff4df4ffc012da01a
+   5a34fff5168d70acb3035943302e111452827163099fb5035ba45b34a68cc6ad
+   9dd090f81735ab5b24ee97cad3e045285206c89af324b721861ed766661fc877
+   4ff1a172e22816d32a846c0c536dd510167e27b5d177c823b0e3106d5b8582ec
+   3315771b6a9aeb98cd1765392c852a4afc0ad2f4e208107f0ccc295e57d925fe
+   a8e32ccbcc725256c9fb18d1e68e7a201f381574f775c62f2939c75c2694ac92
+   8c8439721adcf61dc0a683701413cde6688cd29420c7091f811dd78e65a81574
+   062a4a457f2c9c776e90554bbe8f8821e073694e05d4434e5c8b1324416444e2
+   97cd69107a9997618b6f36de20b72e2cd9a3d5eaa59a248146090e20c6539492
+   9fd1d8e5ea2e91a012047634ff9b12bc9cdaed3b39d7e94f870d72b8a199e741
+   bb802aa344d78bba9b02302af9e03fe50be7aefb9f59838219e6ad1d7fbd447f
+   a49600692f31d511aef4a101c09169be1fe3cfdb213018d30c1464003d64e199
+   1597189df180acd74ff3736508ec140e02044a420a66c08609990055d73650c6
+   f04f2e5b905bea78aeeef9025bae0254c098efb2bf64eb7e09b902194f3cc93e
+   3c57248db9a94426ece459ca2f2af4ca0cdbe1a0826d8475b2663fd141fabb1e
+   0141954c22741777f4ccae054d156b77503b5adc1ddf063d04f2f981680f2335
+   ba4bb722804207f83ff4f21cdf4deebf13987d2bf7b804f6035f014ef4af01c6
+   bd7aafaeca90a1912b0a92af1bcf6486ebe6ea938e11f92ff18d684c1754c725
+   8e1909e3485ae8c32716cb799e513599471a7019daa1d6b781d550322ececc1f
+   ffff6c0e7a33c5ebea94eba2d6bb91f62dbb42c31fcdcb92bc61c1f4547ac8ae
+   c4f133388b93b704204433c78d63d792be769dc3fe403476ff8c68e28f201556
+   a7bed9fe6f0333f175220180a38ee05b0f603f91e0100d62aa4113588a9c112b
+   576b7a691ae17e2252c9cfb1f490ed929edcbaf96d6ddf7d0422b9affad18142
+   38d26a408fb6005953f194279962f093fe95d684dabd7f191c174a22dd7d9abf
+   3d114f40e1582bef441c90931e753a8d09c59e4c34eef6e83f6a3daa2580a269
+   9c5f2a1f50ba29a185a1939bf0b14c8f167cb51e75159b95ac6ad5f0c3783bc5
+   55938d712fcb914773b7781cf5fc0d7963dc77ee192174afb094a6d3532d8174
+   e7e7f6bc91dd82597294cc2c6bb32f9555b8dff68b9aff2a301c979a1b4e6242
+   519de6f85a9a765b75e6f5f3df7d064c10d1c5181db2641bf077fc96521fcc06
+   ba912a019580b0d17ae507c945f881362b59414ec0a12236144f4cceb27be1ea
+   dac2db2388962ca918f5dc50161b13c65cc81bb3c664a885725b35fcac1067b6
+   e5a28a6308951a4d9a50ee917427e5fa36a466fa3021b8ec2fafaed585bcd749
+   5d71ae09bbce4d8fa3a933556b955d6659649132da1e6ffba22d78aeabe19c9a
+   e8b6984d493e90a1c4528b9e6818ae00d038749f15038eb886dcbbe6b1636aff
+   bf05b5f59a4caecdc10ae1edc7421440860141278f09583c78ac22970f907cc6
+   90706568f2ba14ba821c541f5360c4eba8e81ded38cd91c28e96147d9c972f58
+   bec2e8f5b57fa0707ffa6ecfeeb3017706421f5d106ca0694ec8971ccdaa2886
+   f7398d0182e9193aab8d47b6d63ba4a17baaca549a3668d7a15e46c32a84837d
+   67dc68d76ce1b22a02474aea87591fae1be1e6c916d9a203eccdbfbf91e3ac08
+   bcd51666cd6e7b7261f730001e550cbc829cd3451d6787247a4cb61304bbabe4
+   k: c5af2f291a310a44fc1d3de6e031a4ac00cab841c01a678bffac70682ff40d01
+
+E.2.  OQUAKE
+
+   This test vector uses the configuration oquake-mlbuaskem1024.
+
+   # Inputs
+   PRS: 70617373776f7264
+   sid: 491ebc580e99bdb207149851a41ade6e
+   U: 636c69656e74
+   S: 736572766572
+   public_context:
+   00000010491ebc580e99bdb207149851a41ade6e00000006636c69656e740000
+   0006736572766572
+   secret_context:
+
+   # Randomness
+   keygen_seed:
+   1b72ffacae1cea34e0b1b39c5ba3a48e510e96ae870d2852c48923451364b514
+   d09ef8c406ab29630af1cfae37d33f930309f92795f2b81d523067b309023664
+   kemeleon_m:
+   8058404972743800913033774606104527928166
+   1110385295860749891559900999499439305027
+   1286656160270843980114744582003922295292
+   7874892916391994581161732664824306710224
+   oquake_r:
+   24076dc36a2800779ad25b37b3160f036c85b2e78b174203c4dc1ec592eb982f
+   6390f50f537e8f220a25bbd5cdd320e5b295c8e46fa92b1f86ba33f2ac1af3d3
+   encaps_m:
+   0063df53afc95a34dc243ef15048268578ca06f51990c1491bcae15140bc7a02
+
+   # Intermediate values
+   oquake_upk:
+   34ece1cf57caef55ba643c0a4e40365a3adc959e47842fa88fa4d6ab942bbc3a
+   88021a018ecbbde7b5ca69f2d44ec47396533a3a1b7b63e274dbe93c9abc4bf1
+   620725fa80e59f7219444d4aeb92569fa4db33b45a826d66e1aafafbd229aaef
+   6fac9f788526b1f6d77b2e10c0051420b10c84bfd77106ea0cd840df71be55f8
+   cc04554184b6927a132fd265fc5d9051977605fc58ec9d21f5e3b91e754238aa
+   7fd3b5bcc0345490afc2359ff2de990d9b715094fbb24ffcae3263ee733c2761
+   b9ce102549c0b391592a65f009cb0eb17e759d2f47e201ccb1f0b99d5069a7fb
+   36089ed65ddfeade22170bac366ce1f22de68a108a2db8de687b1706bdc0ba0e
+   c4e056d26087ceb3709aa88b6525d7a511d4274f4c7887ac284473e57fd37c72
+   abb3f842399cd56161ce44df5c7293440c67b04bccff31c313e127ff00be9dcf
+   9d1cedb0f8aea637b845f84f7765578e1d91638ae5d86a7938427e636ca96d9b
+   a58c0db87b95a92b0a61a4f2bbe3f228991b5db2ad4d5d3daa35ebc68c8a0ac2
+   c33cf9760718fe9eced2ba4eb004f10f74cbba943d26305be2ed318372e234ce
+   860e34d8c6550ae589a60eb78071ce47ff216c334a1b1eea864f8d2aae67b250
+   c48d01db6bafbfd7f5a4cacd94b664854001cfc3f282151f91db1f01da138780
+   02801fe09d1430cdbfc900e172d64f1bf148e4d7da6144c0cde8bc6b51b86799
+   d66b521ae9679b52b90dd9b20ab4a51e94ceb0f7bf1991ed79e2d08af43511e6
+   9855004300417df552dcec2de073421e687c03933c71a7af879d30c0400765a8
+   53390ce00d24e254d3d8ba510dea27ea08c2122a278483b7225a1f133a46d12b
+   d6728c80fcede6f7f8c9c50f6a960482a238b7012384c70cd02d23882b01c09d
+   a227a95c93f9d1081d9f36f717398ee1cae06462987ecdeeb4fcca4b6c958014
+   74a2fac97bbd5d8271f6ae6ef24919b99995644741331591cf1153f80216ccfa
+   e5c438b017dca9304cf49b04df1d29c2f472a36e631cb9d5835a71025b901a77
+   bf2c170b0bfa34bc955483c4eee2cd40c405f4c69c3597fafa9cd02e3337f3c9
+   0a751c662c8ceb5188df501c03230d95a34829bd1464505739aab764b55808f0
+   817448ec51926f57e37c8138e73d3db692625fcac61018609c92d0750c56167c
+   21b1c836ba83dd9caa3bfbd8b38f98ff27624b3b67eabd108f13063f71e01cbe
+   fc458eefb35a0877e0f875b9ac30c80bc0343b432a7f663cbdb0296248db75a5
+   e9f923f3a1d9c1b424b24fa0dfd780ecb016f1ab48872e8d5222db5fcdc9a7bb
+   6f2ac3f61ca5e588baeb1b3ef79dfa852c0b7b7756c03b49db669fe1c99f9618
+   de886531edded0742712fc89f551d9b741b8d35ca43d4cccc65db272585b0b16
+   c4222ea78b36105077915cff03ce9e278fee68c8f4f4e9224927ec1f33e432d8
+   59111641e3cf59e0332a790a3c84550771e04a7ff9d5a13e9b0bc342d2ebd190
+   784310b6fb353de171c81f0e68021a12878f268c538e25a692ecea0e617cd422
+   5d50e1366f4cb47efaacc7d1afa657f80f137bd19462ca93cc801a7d0ae5ea63
+   be844b62dc61dc939f62c49504f7f25ad3ab6928f2b4da5cb95dc8d08ea6356f
+   c8ecf53c4bcd2e58bbb1c8f86770efd0a057fb91283b7b14c8dbea5c7ec0c4b4
+   26e8c5b6c3502e6d4e2e2ab9bea94783288ad25e322b5af150fda00b6a308413
+   6991d6c690dadcc1ce9c2ee7d6b9e31095cee01fba21041b9bd1ef86ac20c39c
+   ea4f90a8b269d1b21a0658ab85f4edcb47a4bf354319f29272cc889a0811ac3a
+   b15271686d2a1d288a4063841af2ac935c1918562f8bad5bc1f75fe8d8cd4ec2
+   b7f2470b2c549a757e445afe604efed28b2f2ad332c1615f2cc048ad51156a3e
+   35e41c3d605f2e19a943460688eb4e5e6ecefb35f92986b9ae9879b97a08e55d
+   2f2cda86e05049d761911c059dbd3ce8b6e7bc7a4a6f6d248e0ae3502523da5d
+   0d1e151d2e2100e81cd4a49221c4092bbcfc34c29418cff9abd00a6ebda65fbd
+   1829fefd38313351165ae3f095cbce540d60828e2e510a7f0360704eb9c88f1a
+   4ee584dcddb573e838828eff5af6d5157866a0c48a1c9d6199ff9335ed7781fd
+   96150edfb6486d795cdc0c37593bb4cc8c93405b14bf04230c04cd42d6ffa572
+   189bb63caff9c690ba0b1cba9ad1de44db23b5677856f88adfb44ef8bead62eb
+   56f6506016c1165047d72bf64cf87486a91ae7fdc98ada12d1c5263d
+   oquake_k:
+   a2f6f231f2a39385f8bc7fcebd1325a9d8bc74304ba408515277464e3aba8b9e
+
+   # Messages
+   init_msg:
+   a971e3b8ddae1eb0c39e1592e7747db6159326a3e46f7f273b648d942b213512
+   2216108337baef6930aad9367e026dfd4b8a3273e93437509b0f3711ad7ed967
+   5d92f5557be07de8c94509d9c79d7dd06afc5cc3f350682f39d1a1e7903eb05d
+   d0377bfd1e902b96ef13cbecb739b4675722f7151cd2b69a5a89d28c838fb32d
+   2b1804618d3f55cdb9672bf0df0f6089bf45af435445b23e1d8db21ad4b8d418
+   f26a4d8c47dd8fc4945406e376c49ed9c750b87c33a73ea49b5b31e8f188eb26
+   c2d6fc31811b09cd54edad76a5814bddad76e9d996aacb566385a5ccb8fc31f3
+   d565e3e1e0596fc5431aab51dd0f1e49ad591516ae6ffeb94bb46b54afbd4054
+   aa05a8547fb37f0eb5a6c8f3908bcd969452a6bb983eca735e379011340894a1
+   f68f0cac6f583da900eb7d1e749e437b60c1833d9ef622830a8e1f56dc457f13
+   d10363a4b4c161d5a6663323b29d0e7163c1c128a7b0f44ce04777a1e7efc7f1
+   24dadf874af3b5865442b90065cfd088b2f1a241e64607428e67e49b03558fdb
+   fcee50f8bd211c52c42b85cf4f2a1d7dafaea0866a081dc663b54605b7b2404b
+   e6651bc7e60ccbe8adbe051d24836b3537336dac7dee53c19c68de94eedc4b8b
+   b04cab36586d5fd49425a2b44bb561eb6a434dcb2c2918dea36d636648147443
+   4a9db335c9dcb71770787fe61b7df544805bf0fa04c1f7ef7dc00f9c6e882ec2
+   d7bc8fd9dcab4eef2cfe808aee26c1e40e9983d48e96e3768d984ed0b115b380
+   fc27ed87d2018ad76d380e722f16198bed836bbbd5b8e37f461bd2bc7002d917
+   dfcd54796c1091583cfd52fb278ec19832f83e69da6dab4aa0f832289e8878c0
+   1f8bea10eb4034252e9561509ca6753c0391c0141e10aff295423f1821ec8945
+   9ae66932512ec2ca62b529ae6c1ce6407c58fc4442ceb3c9daf5d4c7196d98ba
+   7bb837b7a100b56b744f6580095779dc52b603a72663f305dc44d9c0d804ed93
+   c6b4c6e956c710511efadd15d3cacc711070dbc7bc5cb37e27491adc414919fa
+   1fd6815044047b81d0b8666e0d8ab5a881c93df94e01c720cb5f9c5417557c85
+   d060b01823d0e0700d052f60577bf6c4049fa9d4bf174e39d53e03e2f01b3688
+   f9c64efd15ef342dcb540144768c3bf1d84738f85c300ff71751d4c3e67eebfa
+   ad6b791cd761c9773140f92072c7d616333224f362705ca5df3358de52b73e29
+   23d9eb0ec3aea2931714af5d2c2e983e109071db76650ae57c7c54fdc135948b
+   64ab4fe452d39c0c209e2779935a4fbe03a6606698f5ffe43f5f4587745641d7
+   b69ff19c471b47c8498eff06e4cba827041627febf6b334f51ca601dbbcf73e1
+   e4454f597c22e594179864bf27812635785c1976a87263a8085302e56cf23e4c
+   f8039d9a268dbf1da2bb0ad83639abe11611ebf780d52090501bc83d8265bc1b
+   01d09c9519b5e1595bdd737000993c2d80889bcdf48e8db4346d2b9c9066e35a
+   f961a2d0187628d2d7a91742ab2a7ffdee103a05a7cbb4f56e1c9f6e1fa5ca85
+   6c83990eb7b7c292e7c451e7a51af020698be2df207a043afc42988179ad854e
+   49276fa08185ad819a66c25ce09fdee26ce122a256807757bfcfc65781323e7d
+   e90870ae6b1494f6490464173aadc5a2ea8faa0a28c5a6d51e40d2a9933137eb
+   976f93960836007c8411f7236f574d1124eb7bd0d1ef33067755d75f0c9e4580
+   0985d7e323cc8c6b6b71ce08f4331a9503f89e736a04f2ef32a1d8e3d99be689
+   f0c0541bac974a6e9819df648c9aa5ed5a7ebc9aa193eb8fddaab2717132cff4
+   f1ada463e1e81db11a0ffea7699b28205ef196e38b31a5aa4e893077beb553e2
+   dc421a9430f96d210eb44e3bf2fc984b3a03f9956d69e3eec12e570786f7d70b
+   36660c973c0cd5a65572caac1d7c94a2f2ca412b7fa6a2f9f87aaea9f419ca43
+   f417ba062c30cd460a1e648573ad0ca6c9a2b395af968ec4da45ae34543828d1
+   d383c67b62c4a762e2cc0ea204406267a94e56f7f24bb54b0db08c89c8adc0c7
+   69e21e17a04b43db7ec883ce5a8655c5925104c59de1e5e20e44606c616415d9
+   b951be1572c976257cdb68396391c9649179c0ea54c11b30f52d53dee165f67a
+   ea5b2edbcb623c6a5788b80734edb996b751ccea98440c523834fedfce7cf444
+   6164441d6c9d9b35ee162dc5140728b62c02d750e96f9e6be87f10d42ccdc7f6
+   6419642fc2c0418c5724a8a2d713f07aec9f410d6e15f745f0859af4d727b4ef
+   b9a41ce07392c30e104e6f4e80ab24f5fac60aa8bbef8b6c2fbffa8fbead62eb
+   56f6506016c1165047d72bf64cf87486a91ae7fdc98ada12d1c5263d
+   resp_msg:
+   77c08f8ef0ea2bd0c3b866e6c9b127f51925a6fcde0140c84629c1f96380bdd9
+   9b6997e7d47bd7ea89298afacd312f7595339ce97a58cd47e43e4eb3829c38fd
+   5237b90702eb73c1ea0c51bf4a0060c3babbd81137d7a6811ffc88fe099207da
+   30a5897e49e15a9d4cb9451b9cc0c913d20e7106f71f49228d1d4b941fa494a2
+   192289d2cbb94fc6fbc278673f4e708ccf09bbc78da86dc8a49c9a828e27fb07
+   adb8e2c8812de907ec1095d28bbbe15d1c3feb1e7bb1da32b3faae50fc51c4f1
+   2776c59a16ca1f0535a1cdfa6996570db3a71ed48adcbeac42911ea08b2bc451
+   249774b2d8d270c8f13068e9819a5ff98fccc141f38810a6de6e128a3247d15f
+   75b3ae607c7294f26d64856b992a72169d43fbf9d9d93bc8ddb6b6e9f831bfac
+   8e92d050f4a24010ab1aaadc449fd975d2aeeb676ed85673635efab52720fa3a
+   729b55e927492a99d4fd5ce6721b24e37dc1988f4e9f82cbaa42e2f98b6c82b5
+   d9bf4fdb4b40a020c4c0c6b4a85ab18224b048e81b3f112fb4da572629fdcc82
+   2ea0ad046da192f44dfbd1021933375394181107907c08290b91d6fcca18ea9c
+   062792424c7c4ab5a8b45820e1323fffb40fec446fb8d222f0ddf25333f64c41
+   21397c4d85cdc843ac7a22b0ac23a544159da2c2c88ac229e757b7b65571b774
+   e252679c15751828f19583497a17930abc6312789e82ac2012c703747361f08c
+   fa015ad38da073fe8a63f55b235e24e055c135fa2da1162d0ae5e3f8992fbf01
+   155eab0a6832f1645b21534cfd6e81036c2ca630a480b7f7c90828f9e77fd498
+   db298fcc8ebd7957eb2342a94e1df20febcce0196ec25eaa019a7bbec1f2e7f9
+   986ac29af67d4395493d5a391986a22f1d46220db0fe2ef3aa8979ec32b61b8e
+   116913d34375655421942f0917acb0012db682cee6f3a4cb91f88e813fa826ef
+   d28d484c0ff125b30da4fb5adcaa551d2f6099e31336c9bfa30d19d2c3c7dc2e
+   5a32246bf4de969cb5062152b98b2d6e04828cd7ac65bd51dda05886e73a3adf
+   ab5c08295fca1713c102ed56b6a8aa82fadc2d7736667226d9e4829813530ab4
+   c39b3e0570d9f45781fe6bf10850bf4a8977fa2f71b6a73454575458a5942a1f
+   afaf4b3b1de64bab31cf3876b3151fe92a5e8684f28bd5da5414cb46eb491429
+   f553bd690402ef42f5cf6539b5151f8d421ef754e1f0b672f4cb5dd1918a86d9
+   3a08a608c27cd48ab7a82fa69de7bd6a2848549a6fe9f6eff3a0ed62f3a6b95d
+   aa6c9f1767aa8ecfd0d705d38cdb334f6ac1eebcf4c6a478743b074ebd2c5191
+   3f5176c14483e42803ca1dc55717f46175bb6fdcd85f41190030f44d87d4ff8b
+   5f3e937778edeee57a0a73e4aabbe1989c764a9dad570ab7db52606be0e94625
+   0f667070d849791c233f0c96761fcb3919fc435501785a4934702a8343986766
+   e738adfbe3a30c835088b75c59b552f0a3e7962403fc15fe9cb5558d28e44106
+   164469f6592b0db856e0d4113e7e1a4f9d8c0cc069d99355dd898cc005121001
+   965dfc1ac7738d43a157054ae8ea11d16f1c7781e8f06eb560ca2a5feeca7650
+   3799d2754dd9478d9edbff29fd6260ad08028d47cbdd698f40eb58b6f9d3287c
+   f30b67d1a0c800bf33e6a7fc1589984a3db079b35f6d881e69bc8acd8da8e644
+   2703361848fa924d352d13d96c1a41208be407ac485e76c870a8921c912afe33
+   2b090ad1a6f1696ffb24fc9646fd5f45a5c6a61fc73a5ca94abca6089ba35f82
+   f0ebabb98f0c6900d89a11157829346ecd3fe92ae94b93eeaac97337c9822c1c
+   d175b16109c48f86ba3f6dc20cb5662e54a7400ca8371fb0611bf725b1c48718
+   cffe36d65773e19e15c6c2ff995c6b92fcce8cb69eb408add7ad57581f2f437d
+   7f2c14a0a8b482c4cd6457ca5e2c5375a431bf90e1497e457270b10fcd30d20d
+   e2c967b9bf92d2e372645c207ca0af2efc804ed5ff7bb20ae909bd2ccdf8736d
+   d7925e5aa370c6730760575ff915e4b856d59cad406e8ae076f2f280a2ce5329
+   84c0e7c1aefad6247f32bd985723eaecf2168c54208b976311b028344e8cec83
+   2da29cd92e5d77ba0a9c856b4e70bb85e8cb56da18c707fc2a2e96db75acc9f5
+   a59c08110b277e114446a53d28a3484ef6359e38fbebb12ceaf0f354c6ba7822
+   a596651f86ab55a1f2acdeda8ee46f9e2734a80c2633b88a72cf89355afa3f35
+   f9e12992bf21c94a0152076288dc78a74f1c5c8401319399daa078d7df1132c8
+
+   # Outputs
+   key: 5dd4c8b1a0d75e7e1630909c3631a42581da38eef299a91f882a3daff51eda6f
+   th: 3561ba81783f339f83a687d470dcbc7cdd6912d13c463b349a6617b98a282add
+
+E.3.  OQUAKE+
+
+   This test vector uses the configuration oquakeplus-
+   mlbuaskem1024-mlkem1024.  The message reg_msg is the registration
+   message (Appendix C.6).
+
+   # Inputs
+   PRS: 70617373776f7264
+   salt:
+   e795a40feaffe55c21b8406d81a58c6b93abc1c748e0f1d00288279ddfaf3e05
+   U: 636c69656e74
+   S: 736572766572
+   sid: 58ab9b8b68c5235ef34d55ed9360bef5
+   public_context:
+   0000001058ab9b8b68c5235ef34d55ed9360bef500000006636c69656e740000
+   0006736572766572
+   secret_context:
+
+   # Randomness
+   kem_blind:
+   8b48a9bdea8c06e6ec7a3a1a556c0986261c17c5b504593119fc572a395589b3
+   keygen_seed:
+   8f303d58861d5681fe2c425cee78427c20256c2d237598c0ceb138e69a8d0bb0
+   82672481ca851c51a1d0ab120cf41a7b2124c535f7da8b56060945ca628b760a
+   kemeleon_m:
+   3894838351867222182646994939770830104979
+   3434737787003320894514588210210527540422
+   3892794890143457944485005844715318524131
+   6849880024357140307951614887883724123854
+   oquake_r:
+   31e2e12b0d7d5899ae40424344eecd2e2f529081cd94745063102d8a475558bb
+   c10c478aa35240e82bbde6bd7091219e77967f1935d17f3799059fde95497617
+   encaps_m:
+   acdbaedc185b33aacb977863068a0cd004ed6b01c3ff85be5ae2ebeaf8869972
+   kem_encaps_m:
+   7ce9143437820b9bafd22810916aaac611a04c9e99886fccc07392bbae6cd15c
+
+   # Intermediate values
+   v: 34f9688e2af8846d2a5cf8bf6817339e18216363ad9db156e537d72428d2777e
+   seed:
+   e672f5bf8747b29e9d7cb029ef5d89014c75f2b38f94d628e1bcbc2eb608c4ef
+   e8619363763e488ed159ce6f9ec27566be8d4b6ce6e58b0c4452145c3859533f
+   pk:
+   45ba13c0869261c1b1b4b252d2e81f612aca9469840f25cad12140346748796a
+   1757a37118a733b2b57e1d304eaa104cce1c63a98286787519cc97628348219e
+   a86fd2ca6d8cd9145dab0e16ec98a815743f0b7a0193a9325244a70659fef525
+   10931bccc01b73a68938559431bb55b6ba752cc5a002f880d065420697c83f37
+   2c83d4299626478d115c92f3397dc647d4e505e4f03a7a77439e9790ddca638d
+   4cc18c5a22157020894a733db9c9616aaf1ff767c0e228b201578a9593c60803
+   759c23fcfa6844c133fbf58f97c9ce42f7935144beebc453888c7e63874e729a
+   ac84b76211908b91c28eac646a9ee028643027a8012c9cc38b573376f26616dc
+   e45698d758c778a0e605a5db1b90c778b630a7c1805a2b47b4873c132ad00169
+   21b0c569d99745e0b704a072699159df267d06c2b754910750a42a77ea2e1c0c
+   836ac595f67100030b2f292950ebe924b3a0818e11b9a2353150b0a1b634c0b2
+   5422f2d8845ca724aee63638c56e3e82a2faf017fa49a461622f3d6a0b7f6a08
+   66e3637df4791a5807a0f6bfbdb28610d7ce40b3c3ae561eddb07f1318b7d0b2
+   ae368206ae424750107461e65944276284b494af30700e55bc520331e73583e5
+   230c765c741557b51ab3bb351752743567584948b149abc3712cf1329759807d
+   56f72b9fb2bb45933e5586497681bdb5cc05fb9392c706be1a021ef7422f4097
+   83de577bc1c666eb02c7ea409daca10fd606795dac9cd685132d4354b85cae2c
+   9a9341aa950a5369cab41ef82715703640bbb19329814eb14a647d918b228a4b
+   3e42222009135a38228f97adf440c978b4143bc8cc95386914371c5797ad53a0
+   66ab2581cfb539f712af87a055d4630c644cac5e769aad17af409741d73c7d50
+   a39cd602309bd66a7d58ce639239ad84366cc77d8819a154fa6d92e4c2d771af
+   3d233aad457bd559b7d430b74eaa794e432dd2d217e131cdd598c1c416c82840
+   8261629093685a35abb08935bec9242788a9caaf4b5b9b47910c9c067377563f
+   a7b7fd60a1115b45cf98aa6f38c732f281f727740f172e14800d4ed4a706b40a
+   484988c3c231870b1e81ecbb33e0adb3846393712547c178930981c4a4840cbc
+   3baa12aad6ec0f3b4a2610738aba98a643b815774cb40e489dc711618c0560d7
+   728a33f31e052c7b9db45f57d0899456201bd43092c21310397bfae9bedab26b
+   88320952cc5a8a3591af4a735d715ff0d284adf06d46140fb621bfb95449d492
+   1e1ae60ee9e198e0fcbaa2698010db7bbb9c8d039cac4eb307b92b57e93055d0
+   d1c72a08b7aa48984870afe7aaabdf1a879ab59519a03bfa19238acb7fadf920
+   2c53ba79dcb1e5950f938b42d7084c1139be8cd9b72004a82b290e4eb84cfd29
+   0e1e2c78c4d01af88c3855861b16d9714417a6af7a19fa0680700341ea26a134
+   72484b0595bbf7ab43a3ae0d2cc7e39c4a9341b119aa33e5db36767a2a7462bd
+   ebf32be7c47791e9743b22ccd10c7b09e679ad559a87c2ada4ac46bddc222ad4
+   cf0c326e5d255693f39f4f334a6767301b70793958210f3117ed559eab23780e
+   db18069736b316adfebc6ee636ad6d43554ea078a0156ed5ca8cc0dc7cc2c7ca
+   ea880e9f4460a663710e74cc07ea39ff48b5343bb9fb27cc23ca5573832ba981
+   59e9971c485a38fb44ccd4c03a4d5892073a62e1f0320c904583533e28d37618
+   bb327ffc54e0742485aab6820511e9162b9de394214747f6a60cbfe8683c6929
+   c0f9ca6eb91da63b6878f5703bc22ab79a2b80b90ad1478809d55156c685cf44
+   109c1402737482c1faa394bc9d99b7ad711b9e6ae7022140284083cef0a511d4
+   2a912132541f95cf814a652978bf49c868bbc34b61539965b4bfae717f90798b
+   21f09f8318292b66841e7a70d485bad5140c39014ab626ce8a1570a7d4442028
+   00c1f5254cd1222bc70944bc7a2f37abc50cc9e0994d0f3b8a0a08a091c72e36
+   c092641ac9019136d3cca554687a89e45de7e70bf5305f3be13933018bbd919d
+   2ed84a6bc508b1e384602228048ba57f515ff25201d5b284519613764b0e1a93
+   ce00501ee1740e1b2617c521658d9a2dae604797f04afe97570e3b6222355654
+   7576932048fe6a4e3d09cc6358c6e51b6d7e7a839ceb59aec51e4c8578dae34f
+   7d7b46e96133ca1b8bdcaf8b8e205c5ccd6f75af99e66e833f6a1cb5895a88de
+   oquake_upk:
+   042df9b07f7bef5ee81622432f6bea45aaebf970008f2b2cde8b8796df263c24
+   f147563e775bf54cce74a09469e8222dd2577cc2d4edee61d365c50d28885261
+   284315b7c18f186083c12733ac761d029f7f960830a68cfc783636887b68e667
+   258b531f60687ccc1479d803e8457618452abe244e6194ff0e8180e0eb4c95c0
+   eb0d49b63724008951e71aba571cffadb6becbf117ae33ffb67a2d1f02dd13f6
+   371d292d59fff6b6f8e03f3ffc73c17381ab2c6bb4f667c5c034b11496122144
+   6fbf07f709f62ecdadcd3ade8edc198882253a2eb635459218b9a1fa8181528a
+   771e8caf01b0558af7262680267795df4231fbd109fd4da61cc59fa3a6ff2d9b
+   142a33962364857c4df7b7935ba3af89c73db6cba60e09511caf798526f3b8cd
+   e877cf386342c27728c8b4ae6909c9c59ab90787988bff9a916b671ed828a982
+   52e2fd65b667723bc6c1f9dcbdafdbecc33c570aaed93f389d8278da8671b6dc
+   602dbb8bb3c080a399e394318e219da91e297d4ddcf65bd57a3022f1cefe02d4
+   d7ad35e46acf7a4a9879a980d3c90c79456e4df867537b3a411ac86ecd89ea1f
+   82158e472376676385da59bc509bcbc930649220cb2b70f6ba8e264bb9d7f579
+   7f2004911f50a4b672b6a9df3b2992f4d94704ef3a3a1d37ea563187b595f43c
+   865e9ef642e1e8590bb1db29a4f1186a83b954da3e3d23612482b457ce49c5ce
+   9cb72f56cf24d4514ed62b0492772e786971f14b19b992da58f3a2e2c71a5322
+   ff90d7697cb77cec8d724fe4e5d91f98e345415aadbc77298b82b5762d4f6a57
+   2e07e5fdd591599b032d393d38972d28d053014969701c4c6d46ddecdf22dc3d
+   4d671cb4de64c758b2b2c2779fab3233757a39958e2f05c3b396d233775f072e
+   21415500c1d2942b790db3aef4fcd812532aa20af9994b6d410524d25455a395
+   338bd0942e35c0cb738536e9707c6973fe4d7cefb476acf86bc438dfaca886dc
+   7a02fe3cdbb1f06887182057641f5dfb371be5a6bed79196c518cea612f4a78f
+   88426341ec348dedb3e9474efacf4b20ea3712c3d43e29ee520ea3e0b5ebeeb4
+   5317b8ea7081e105035ed2734d6ca481729384553ce57e3f688b9b51f7620747
+   c203654e41b71bb418ff44d950000ba76c95de2e63b217930cba9dda037ea2b4
+   4302d2eaee877229217da6c401c8a75fd6379e4f9ddfe4a5560223be096145ac
+   3d62152a7c360b3d2ca39d7bb1382941cf3be1db4906a8993a9804713c0b926c
+   c80c35d362a545620174be6a8351e0e716e34dcb3e206b1016a4c839e0578342
+   199351b2386e7a33f9152cf48d4b2095446e65043fa47081a80ecc25c97baaa1
+   da92c05c3314ccca79155068618abe26a90939cc451527c78c51b614d52192e1
+   6e295388a74e1489a2a42f1eedc634d87931457142f3207cc9571b21b78c21fd
+   4a194f4a6d6b9ffa1f65c8b1b6b736f45c7feb719ec3e1fdf3caac271fb15955
+   64704d3daa25334adfb423b3a3ca8d1b33bd6e2f37345116215828f5d66354d9
+   a57f37d167abc538d562647508a859650e0af800130628a255bc0b5fe71e98ad
+   5220e2dbfcbb4ed033e9ca4ca982b6ad3040539c90785d12770d3a95375ab377
+   ca17303d5066cbcbe4e35e7de70b8241c72decbe7a516bb6b61f898cc8d1abf3
+   865b3a6da0289abe602c2d46ecbaff984621c7b64c153e211ff9c34d6499d2af
+   17b874fe103e7da295032284755d20dcd254c57d10222a59babc93198b3d4d40
+   6fd62736589dd5e4c81fe077613e50e09fb13678ad477b70117ab77fd3b5583b
+   ad4e709310b386bacd17d3adc792624ed0fe1f3656704428668603c2345db400
+   e27b522fa2139515cfece05c9d5495b720eb8be3739b2c9e371c6f4b9dfa892a
+   513cc71813050c665ed392311470e08429cd85591a47678f073171bad5ce18b7
+   74fc6de388adf668045a6a5c017f9fca4ccd096fc7e0d96ae88ef7f94adfa752
+   91c3e26901316c74138c7aeeccf150ffc59037caea70d4067e684e5d870cc495
+   d2e88e4288d0614d3db73a03f881d3e95922ef33e9b872f494484d35105e1480
+   7b3af63d302bbb213b48501560aa3079b9a9737381ce3745537a7697dc6a2184
+   c9ba104fa665ccae6fc281c3825f3a39c4b95edf8cba1edab4af4ffb459b8821
+   2cf79cc03c611e191df9b87368734d0a1087d2ae5cde63b168bafcd7aef63e8b
+   44728db6e2a56eb66ccc93e855ddc975dff89613db6df8ae89fbc26c
+   oquake_k:
+   5fed48cf64ca626f7fd0924b1114b7f688fc713843e0de5d93707eb5fe4e946b
+   oquake_key:
+   4f3921415c3969527a7b0fbf83c6efbba1bb95f3dae3c3fa0731611b7bd1b662
+   oquake_th:
+   917ff7bd48083b1909f3a5544e31d65e486390a640f2e0e0df4153a133563291
+   pc_k:
+   8d8e3be25ac114ca6d25bcd063de31be569e0d1b581152eee49000aa639a48ac
+
+   # Messages
+   reg_msg:
+   e795a40feaffe55c21b8406d81a58c6b93abc1c748e0f1d00288279ddfaf3e05
+   34f9688e2af8846d2a5cf8bf6817339e18216363ad9db156e537d72428d2777e
+   45ba13c0869261c1b1b4b252d2e81f612aca9469840f25cad12140346748796a
+   1757a37118a733b2b57e1d304eaa104cce1c63a98286787519cc97628348219e
+   a86fd2ca6d8cd9145dab0e16ec98a815743f0b7a0193a9325244a70659fef525
+   10931bccc01b73a68938559431bb55b6ba752cc5a002f880d065420697c83f37
+   2c83d4299626478d115c92f3397dc647d4e505e4f03a7a77439e9790ddca638d
+   4cc18c5a22157020894a733db9c9616aaf1ff767c0e228b201578a9593c60803
+   759c23fcfa6844c133fbf58f97c9ce42f7935144beebc453888c7e63874e729a
+   ac84b76211908b91c28eac646a9ee028643027a8012c9cc38b573376f26616dc
+   e45698d758c778a0e605a5db1b90c778b630a7c1805a2b47b4873c132ad00169
+   21b0c569d99745e0b704a072699159df267d06c2b754910750a42a77ea2e1c0c
+   836ac595f67100030b2f292950ebe924b3a0818e11b9a2353150b0a1b634c0b2
+   5422f2d8845ca724aee63638c56e3e82a2faf017fa49a461622f3d6a0b7f6a08
+   66e3637df4791a5807a0f6bfbdb28610d7ce40b3c3ae561eddb07f1318b7d0b2
+   ae368206ae424750107461e65944276284b494af30700e55bc520331e73583e5
+   230c765c741557b51ab3bb351752743567584948b149abc3712cf1329759807d
+   56f72b9fb2bb45933e5586497681bdb5cc05fb9392c706be1a021ef7422f4097
+   83de577bc1c666eb02c7ea409daca10fd606795dac9cd685132d4354b85cae2c
+   9a9341aa950a5369cab41ef82715703640bbb19329814eb14a647d918b228a4b
+   3e42222009135a38228f97adf440c978b4143bc8cc95386914371c5797ad53a0
+   66ab2581cfb539f712af87a055d4630c644cac5e769aad17af409741d73c7d50
+   a39cd602309bd66a7d58ce639239ad84366cc77d8819a154fa6d92e4c2d771af
+   3d233aad457bd559b7d430b74eaa794e432dd2d217e131cdd598c1c416c82840
+   8261629093685a35abb08935bec9242788a9caaf4b5b9b47910c9c067377563f
+   a7b7fd60a1115b45cf98aa6f38c732f281f727740f172e14800d4ed4a706b40a
+   484988c3c231870b1e81ecbb33e0adb3846393712547c178930981c4a4840cbc
+   3baa12aad6ec0f3b4a2610738aba98a643b815774cb40e489dc711618c0560d7
+   728a33f31e052c7b9db45f57d0899456201bd43092c21310397bfae9bedab26b
+   88320952cc5a8a3591af4a735d715ff0d284adf06d46140fb621bfb95449d492
+   1e1ae60ee9e198e0fcbaa2698010db7bbb9c8d039cac4eb307b92b57e93055d0
+   d1c72a08b7aa48984870afe7aaabdf1a879ab59519a03bfa19238acb7fadf920
+   2c53ba79dcb1e5950f938b42d7084c1139be8cd9b72004a82b290e4eb84cfd29
+   0e1e2c78c4d01af88c3855861b16d9714417a6af7a19fa0680700341ea26a134
+   72484b0595bbf7ab43a3ae0d2cc7e39c4a9341b119aa33e5db36767a2a7462bd
+   ebf32be7c47791e9743b22ccd10c7b09e679ad559a87c2ada4ac46bddc222ad4
+   cf0c326e5d255693f39f4f334a6767301b70793958210f3117ed559eab23780e
+   db18069736b316adfebc6ee636ad6d43554ea078a0156ed5ca8cc0dc7cc2c7ca
+   ea880e9f4460a663710e74cc07ea39ff48b5343bb9fb27cc23ca5573832ba981
+   59e9971c485a38fb44ccd4c03a4d5892073a62e1f0320c904583533e28d37618
+   bb327ffc54e0742485aab6820511e9162b9de394214747f6a60cbfe8683c6929
+   c0f9ca6eb91da63b6878f5703bc22ab79a2b80b90ad1478809d55156c685cf44
+   109c1402737482c1faa394bc9d99b7ad711b9e6ae7022140284083cef0a511d4
+   2a912132541f95cf814a652978bf49c868bbc34b61539965b4bfae717f90798b
+   21f09f8318292b66841e7a70d485bad5140c39014ab626ce8a1570a7d4442028
+   00c1f5254cd1222bc70944bc7a2f37abc50cc9e0994d0f3b8a0a08a091c72e36
+   c092641ac9019136d3cca554687a89e45de7e70bf5305f3be13933018bbd919d
+   2ed84a6bc508b1e384602228048ba57f515ff25201d5b284519613764b0e1a93
+   ce00501ee1740e1b2617c521658d9a2dae604797f04afe97570e3b6222355654
+   7576932048fe6a4e3d09cc6358c6e51b6d7e7a839ceb59aec51e4c8578dae34f
+   7d7b46e96133ca1b8bdcaf8b8e205c5ccd6f75af99e66e833f6a1cb5895a88de
+   8b48a9bdea8c06e6ec7a3a1a556c0986261c17c5b504593119fc572a395589b3
+   0006636c69656e740006736572766572
+   msg1:
+   6c3606a8141ed76fe371280ec20035dd2248ff4db35c9750e68a8560fb623edf
+   b88079e379ea6fe65ca07a374b2b658c70e00c63730042391b36a1b375213a08
+   a0e29b203bb309b63706eccd6e7489b7f8120c2b2e0d319c9077369c7716d5be
+   6192f90483dc91f4725aedcf64e8e24e372777d4f9829d8ee5bac6a95c45d156
+   7c1838d398edfcbf979a2123c3dc1712f240c6bf75e649dcb7577992e7559a18
+   6713a24ea00091e2e5c784113f76a68a25f27c2c8330c9bb8cbb69ac7a7be87b
+   f528d5b0760f16fd439285cff2029a4f7a6cba635e7a594b462e657d26847fb6
+   95f5159e247fcddca5d2a3fc71afd10ee8191f1f21f08c19539365ce5c4b6342
+   e385ac1db6cc8f180ec0b84a48ebc6ed0d0036a049180c6ed4899caf454f05ee
+   6d5ad5ed5b2f8c0486841ed426bba7449893aaabcc926dc8590dad1304a970ec
+   5ff5ace31ff043d774c5539984dfbe3a15c89655937ad5aadcd68e6f3960f856
+   6b14737557f00e1568a645162d4999fec658cff9029ffc3e8950d3200456db56
+   7528cad92e05a473e451c6080942ecd458900c780c44bc170c00d1efaf536d83
+   4e417efd19fdcd2ab4d0842b29a94040b16d309eb96922fdfff8db911133189f
+   1db3d43478a37c7c25881611e23d3d76803f4c00a20340d25dbd63209b72f24b
+   b16e0ed207916fa1e13138935f0b6e13e551c91fd740a78d230289b48aa3714d
+   c76eb9705d01d9ad9f543642723e5509fde1e2b692eee2c56bcdcc81fe89938a
+   75b6c6d67cbf384b13a56e334e2c90517ddc29918578bc0ea57ee5e50b8f7efe
+   d609f85dca77aa5282d7d5a15e737f52a519387010c5cf72919be008717aab04
+   41cbbb67d8de372f232ad5207716de911547a4ab2670931f58c7e06dcb7e718d
+   597826babca2aa52c6b261718b59bdd0920a2b96f902eeb668b4b053c1a78cfd
+   2453a8d3822f319e0d84d34970501a18157b437d263966be85a9b57c2b050ef2
+   71281ca4cb0d1d3ae02be94c71d148b87c88f8045af42e3c287e21c0a9c9cde4
+   024d454a9ccd364fa8e262d8fb651eeb88cbb2e652ba720f9f057b9f1920b48d
+   0d3f81b06e7cd0ad7a4a07bf2de092500fd613ebacdb9ca254fe4dd073c1d9bb
+   7d64d61f6d867f08ab7d3927ec1aeee7ba72a422a07f38784ee045b3421371e9
+   b261148af413f3abde153abbdc5eab01c73d2526426b8aadde683d8fbac5973f
+   168c114b11adaf6f84e1ad5834777c21d1528ffcf377c66f2501bfb5f23d558e
+   0072bc5a89c733de7b6a4e3d609f0a1751da586685c634752f708f23a6e1142a
+   bf7b36c4a6dfdc77a6f4066781aee977c791a98b066a0a3e08d84c6183e674eb
+   68cfcbf11c7804e8317a500ce3fba676254fcad4141fecfa5f7ab53765d90ba2
+   1a65f796b0811c02f5aec42d158abd4936e590a421aa9c90a14711906caa416d
+   04d79d47733b6cab82a56d013fb4154bb8df615b9898e7cd231221d8de812f24
+   f7e7d2a3867cb87f35c51f1587f408276f082665b01daeae72eb37e72d048035
+   491922309cda84884f77ff294f7df89be2af326844aad79efc98384274f6b00a
+   e0f9c5e5c11b7b6ad00bf7327814671d6eee990b03bd970cf2a7977d95922b40
+   35a1ae8016a50d48202188bce7333fa2c5b1d9e591c91864e6db28e2263d6cc6
+   8f9d3c16735ea1228e3d67d9380bcd3c7e914fb156c809dfce2bb3376e12a046
+   fc2f0766db08c560cb8fd65406202ffea2e138d6d52b8b40a42497f38265148a
+   b3b9b977c4b24c6cb52724a2e31e1df052c945724117d02acbcd61b7f4181659
+   09b5c1f6d7dcfa2c9e69eba54b04b6a8b6750ddfd4e657351dace716c09371dc
+   659b2f188ff91c07ec6d73c6f0b3ec4c83ad94cdef736811d069fa611068c72e
+   7f909c4094bfe16e2d960e2a1f9ea31b886501f17c7203b955df6c8406fdc718
+   ae2515691d1dfac384f09514185fbc473ae4601cc638f92b55b2c2dce258e1b3
+   99a58b7382fdd4891e98bd62fe2aa34fa2e65cae070554a1708373f621b13588
+   495c03a3ae0ae54eba53d864595740b6ac3b770e131ca5d1c57f9c96de489514
+   0e431ae462d56262123826b3e16243f9f8962270d89081ba774bc3b4e847e747
+   fe09969b737b81a98ba70658e83b271caa31304600fa27ec2fc6e66416206862
+   512c9769acb57008ad3ea0a12d679790a08f9804ca21ba17cd19f003b7971cae
+   d336ef7ea05a8a0de8955f2e152b2aa17a1c186f8ae6a3719ad9bf606313943a
+   7a3cbe84337cf5208fda181a17cda57d4c876ec96dfafa31fd3df9f0aef63e8b
+   44728db6e2a56eb66ccc93e855ddc975dff89613db6df8ae89fbc26c
+   msg2:
+   2d937fbc9dd34d3e9a091e081388efe341606e3c7a2f756c7f472d3b8f79d582
+   8bf1580277989291896b38148a608632c4cfff8ce37ebc9f66c0e02dc1e7abcb
+   6266d30d2bd461cb6ce05cad9468fe531d951fd990d68d376399cae74158a3df
+   c8eb84a6f75d7ab0e3ef1b34e9e6fce253adfe6e683fb26ab870e63c542c66d2
+   b85e1f613c660ab013d01f2c7884143a4bb8a04081106de9ed23d187a2195ee5
+   47fb7d67b5db93164d28fb10fbea70eb4c48098c94f772e8a1a71c99cf38bd6f
+   820bee4a69ed06ec983b59f4f81df0f12185b2c7d23707b9cef020e16de382eb
+   a6768d37fea6ba1a052d45239bbe629254ce23ce2e71e9ce75019b3eaf6a94c9
+   0d50669bcd1e0c388b99354a7e117166fbe1eedbbf80212a5ae0e80a32fc3b95
+   9c074521fdc2a4ba130c20fabbf78ca2a719038cf2c00e972a6450e8bdb0578f
+   bea60643cd61e548a6c599938ed1a521aa4259947da434321dc84304e1ab7b08
+   02e4654c70cb12d5f07835415cec2fc2edb985a63be9d9cb0602724c074046b4
+   02be61737dfa5931568ad635e9bf743719d4b57fdfe4206f4dbe573528123273
+   7457697a4d38c28b5032c5eaa9a76f6e1a114f61e4e6e4e6c419a8ab499bdd88
+   91832b401e65180ec17f724fcc7b067432228931a6a1c71bd9ce64ac247036cf
+   b0de8548d60e75e0e5e643b1e0d6b748fcdbe4f4e9d9b552fcd4ff9870010de5
+   b1d482e82bb27e180019bfd18d6d3904fa5b7619bf08a8ed6e9308343e072671
+   e572816c8beb8c446d3bb388a3a8538cfff21123ecd2c195966b71181bf46288
+   fc6a245da553b65a2313565dd754ee5425a63a427fe49d7e4d6c1475ab45f71b
+   46a9e4fbfd8e3fb922c983f8997b7d6b60377789554a5b434e7526791150c09f
+   37ca1f9e09373cc1e196d89c2ec3322f543275aa71fc7656e515cd76b23ca1f4
+   9f18d87b66652e9d064788fb0bcbbcf98ee208e55e628cc03ecd17e95590d637
+   5d639eef9cb74e647edbd6c3a1bd83ad3dd2b17e30972c042d07c74b77fde754
+   ccc580eab95b57a89c7af634d1e3e88b0c182cc621c24acab8c209c86248c0fa
+   6d242fe7d7b42b598e3c678704d7de3a6bfad74d8c955f899c504dbbd1ccf70d
+   82371bfc3a71f16d0c1c41e38924cbadd91a47f9728ba2006029d9ed27db530c
+   4115b1ad68a00a64f2813c03cfaf4f19db9b0777367e23e503abe1e07751ba64
+   5f7f6d8a681b8eae9fd9345163ee8d29fa2199720dbea0a5ce166c6f00218e03
+   6061b21a1b7ec648986e826feb34d03bff12b816be67579c3fc4165f59241396
+   ad4d36db0363ee5f4d37068bec4e0ca655b722c78f2f1d8a025ca98f51dcb137
+   9649c71ea28acff325780828165a33d950f94712fc7c16643574563b3726275a
+   95121df3345006a22c184256cc05a83c3439bd1e88f9d4716b1f918d9e143e99
+   97c8c78991edc524ef27e4bdcff9c79305640b77b113144432b82d28bfda6263
+   12ebdec51b99829e768b1d7d20a1ac14d602ea2789689af5244d6669d4869667
+   b53a2a2ca91be238c9c5f928f21f87d9e866aa3608f1bda4e43c8b700ccfd32b
+   e85d173f37298a77d0100bae97f02a747943e0d423d9ffafdbcb4be265db17b8
+   fb14082ea73885d33ddadad95f4a7c3ba7c2cf96d43579ae9a8a5f85acb1f98f
+   77a782e5c09dae5d3b44e5c263ec3cddfafaea7f14cafe1ee1df3f7f136047c2
+   8f5ff50137fe4cf45e77b82b239a6bd13debf667c8924e59fcd9f287678817cd
+   de15f346f206e43a0414de081cab36427998e3b3cb9313603a73bfe9ef3e4c69
+   2dbbcadb36ae2a962d8b2521561f65582506bd7a26486bff38e1f9249e6a7572
+   6433e1c3f986a2bf4564d9ceaefab96a68454c92c236d74b2cf9f1dda95b99b0
+   0fa04449f15c64708253258f17e6028c5436950f2aa4bbb30ae26d72eb90f18f
+   0ff00e44f4a966f691c2c3ce64527820a727d23bca80f0b5fa4c6e77b5692fb1
+   8f340898b6b324ab854c6388e2abb55461c622c127208c62b75f817a09858bd8
+   275f3fd79df19de69f34b33a35b28f142b2ec4f37aa38c1bd5d42a57dcce76ab
+   8d26fde527263b33edb6326c9f605fc152a493def715aae844db8083cdfb0ef0
+   317d5700a8e9d15338310b5b2ffa4221aa4dc99af8d9e906f16c464132d2213c
+   379e0d36f2b27ddd46795c886fdf9db9c1797639e63ad83857ea69cc6220ddbb
+   ac61f160d02bd2aadd8f37d7d88ebacf5341227b89312e09134808eda9300963
+   946641a2f82c94baaa9e6457d208389827adcbc1cddb938c137343b8251fc7d3
+   73b443340cf7592a8d4dbe5c4b3670c2e1bd298a7fdec5c347dde96bb74552c3
+   848e367216e6e6accc847560f66a0f264e0c383fe2b7685c19adc8391d4f6719
+   b67322009ae43b351c8f6245aa9b94285a70ae005445859a9e871dff52737968
+   730f55b88b94be45e445e24dd8f1857e1e786724ed2823ee0ef8d10654070eac
+   efb08983cb1146e6888364d485c1eb01d3d7752af0da7768591e1f9a0ad9e64e
+   2c544fcd9b1ecf799ae0a760e29f350390b4c09bdabde4b7d03aa594d11486a3
+   cc9e686e37585887032f9d3ae294591e004a580c79df2f46636a8a9d85b989a9
+   0da850f9195693c38ad17015e20b09df5a548cd6609316ad3f366b03a3120820
+   1b9eab8f265d67af2efb4be52064cdbc65e8bccb8022c1d841f319db47fedd2e
+   869661cbea6fd27e2ac541f2f3908cbef431b655c32dc61602f3ddfcd6f49ee3
+   be06a59201d8f83f3db556c20279551fc606f190d603a0f6cb00f6d2759ed567
+   587d12a1cd3a6cfd7cf0c879f2b24d6dc792418c82c044fa94d5866bdd1d7431
+   44fc786902d324bcc6b0bd99b6befa247f7a2c4c5c19e438f6eb458edc75855a
+   ea213756dacab3912ee063ba3ea5bdcbf270c672bd3fe1452fd96aacb8373b77
+   7abd2c976cc911e1bb35007b3f24f6c3d5559974407c26773c0ca1749e1e1bc1
+   fd1836e1e4512c4c65ea7d875f2f6d5c799f60de2256f891604074ca5b1dd8d3
+   89647a7ffcd3c44591779bf08d0735820aaf23be84e626b8c8dc2124141ed1ab
+   4f24afa69cc2bda08c24a8bca4c2421bfe21783972f095cdb994096d68973fbd
+   eb846089cbdd1e4999f1b8bd03ab525e9c9c144444187c9ccf8bb92b2614c4d3
+   a0723ae778dab2e39d562e303eec128a60e9e75c21a0da44b8a376f40c0e1fcb
+   e96fb0a932cab022e009d5a9cb81a4dcc16ca6b076ea20f4cfb5dba4ffa4adcd
+   d543e95adb297d62778dc1d7772b519b3c094f7c5b8035449d49094dec504a9f
+   0fb14f2b60b9cf37274190d597b2e74e4b5186cc92e234dc23195ef1794e7028
+   f3448e535ef82775483a5ba79ab03396236a69a4d044835e9d2cf9712d9fa9a9
+   775496401c0ed3c9b9fbe9d4ffb36d4e11d04b68920b24a392ff4802e8263707
+   ea233519c9cc2f6dbea416a42789ed6ae0adc78f6b9822bc686e585d85e83077
+   9f6b4a8b5a894d7399a945394200204f1fdcfedccf9b44e6134c1b1d4cf5e8b6
+   6f2f879c0b44b2d329bd750330a55477340eedb80f0bfbd560278a843c9500f2
+   c18e0da05f21fae56a877da4e4d1897d788fe208cd4d667f256c8402df307be9
+   b4798985f9354d205eaa86e24b3bc10bffa2b00cd2517ef243b0ed1624c5f4f8
+   10d3eef8bd9592f3d9cc8c66eea05115402dffd1af953273ee20a4fd6190ce2e
+   d5dc23359c78af214dc1b1460790301b7da6c5597eb38e9fab7c13dc14df5f69
+   cb323fab0a9fa8eabb23d0643a7689361d8cfb21559fb465dbc8b37de8c98704
+   b516801fbe20b42025994e0fde354e7c4f6601f083b028a92396303aba1e7de3
+   da92d80a62c896e714fe65115cda4c6a5342f2791c0a90dd96c8d27e6f293d9a
+   2d6d74040db2e5e050d2b1419f37e07d903613197ff5bd75cccb049004daf11d
+   aa0275eae522ba287b17d1b37ac21be27c2347986f320d336b69d6d292e08642
+   3e0825ac612f054e3f39d13edf0559043bfc6449cd5e2ce068381ef7f9a89f2a
+   7e069d80fd58706fea9563e3ae3cf63d6b6ebd6156ee0ac00f3317146159bb7d
+   e454931c241fd8f56ff6130a439d44e6fe6324043c378f6440139032b336615a
+   1295768889763fd51304b2ab6624bc07c34f4b9561f9c8292c38397ad0514c9f
+   96e1938c8d2463be92fccc92258c7f2aaeef2941c7360b171ede3abe7553be56
+   4927e55ec6ea47f8a9186ddcff9f73a1da7f6abfe8e886a1c54b78b6cdc3d393
+   1cc7f707ea76e0d1be1c851d2183d8757fbba005283a367e937a0f85f62c3342
+   433c5372d02325319421930d0ef6f59b55fe57a595c4f7f92d636d9310da3d9a
+   877e05896130b48f0c73e6c1dc1b4812891bc38605dfa8451d11ccfe1ac4e458
+   b4ee2f7414762db9d3ca2752d9cb1f740fe7095ed4cb1c62cb88c7283e66cc85
+   f6b964cf0a735e7cae551c74ea46550517008bd25f56f92fc50161f4e7ac6b77
+   ebac95c47a8f18685cefcd9b740ad22de7769588d3ad3dcd0555d579b47b18a6
+   de7b1a893953198dba23c64288ef794899769d51d9e4174b6ccd72381e24f4a7
+   msg3:
+   c8bbb2ff0bbffb0dc0fc11cca78ec2f53b5523f811bbc6d2eaeaf3be39c9a9af
+
+   # Outputs
+   key: fd317f41aa971761f29df797670baaea6b23b68fea78cd292559f6562917e859
+   th: c6ff82554b8a7917a144e96b951bd248d776bf85d31c0cfcab09c94797c19ccd
+
+E.4.  CPaceOQUAKE
+
+   This test vector uses the configuration cpaceoquake-
+   x25519-mlbuaskem1024.
+
+   # Inputs
+   PRS: 70617373776f7264
+   sid: 5f02c05f74ddc40c6a72580fcca6c10e
+   U: 636c69656e74
+   S: 736572766572
+   public_context:
+   000000105f02c05f74ddc40c6a72580fcca6c10e00000006636c69656e740000
+   0006736572766572
+   secret_context:
+
+   # Randomness
+   cpace_ya:
+   1e2c3bbc8e3792c29232575e35cc4d80393fb8c42bd3987f4cb43c36b21021c0
+   cpace_yb:
+   1babee87af38b812ab8e4dd164b09624e38ee28b250755061e2d9d4d494d43a7
+   keygen_seed:
+   fcc8b186f5cb82e4b9f0c0511c8a24290e61cc62545a95c03f4fc35e6fe0d854
+   9ab6fc07bbea08621a01ed31607ab4be599629a1c9cda259d61a9f45d59480ed
+   kemeleon_m:
+   1359716769713181098622270848581034533426
+   4935050944789845558138946659851859036593
+   6242109080622844525534276880490673162202
+   1642571121857026614820940785026838197231
+   oquake_r:
+   1ce948cc6a8080496154c5e8b803ac91c15350dc1ecab4a878d5ac7a66cae9c3
+   a87efa9136a7667544e49f99faec179236ed2fe33efeffb1a94d8c5ecb96349c
+   encaps_m:
+   035b3b04c060e2a07b8292a59e37a9ed93a696e8f838c15fc6be18bd5975dc80
+
+   # Intermediate values
+   cpace_ISK:
+   76068b5b5bb45cd2ba4ebc558057af5d371c23a59d271de8c4ca8d589f5549e0
+   548e84c13d9c3c9dc7f33707edfcc6dfcba16113298b0282d0c531c800e04814
+   cpace_th:
+   56903ef8c04ffaba94a9f63b0573398ce519289408909da20580c10120dc40a3
+   oquake_upk:
+   cf885fa36d91e94d5e1d6a306f6c1f39b6d0d2487f0b822fd92e291987227d2b
+   5a78e6248a46db410ef7b672da5e0e387a1a9b1022af896ea00d5d6c94df27ad
+   8c0f3b403878dd5d2222ccbadbd19b0d64c8378f9eb43f477d1adbc4e1968f58
+   80bc94f68e40c59dbed70efbb2a344f3bba6ac3780aec51a2ca08b4807d00f70
+   c1859d646286e9f77a50b2c75f3770ae326d5ec2ddaa288e2e4b5f08df586dca
+   0ba9dc15a962da8080269f1f0b17d5a180ac35d4b435e0fabad6e9e4a645ce1b
+   d9ddc293b4fef9a26bcf6f36cab1eae655b1d386ea48d565af6640e0f2139b05
+   a0bf3337e810bea31a4ad6d6b7bf850f30e96c9ae1b35b37d0622f798bb1802e
+   1bb38536afe251605732cf904e3097be1d558a6d2244c5e2825ab2042957c0ca
+   009aa969a5ddfc8ded0f74ad4af6213459af9539e1949c0df065ea0eacc1d866
+   8dee1e30a1c1f4229a42571b8ec509d651db874b5c70a6364378279b68eba156
+   f7b5a47b5a675e3fc1b235e0afa9d5f7cdb0c0b0e7e7fac8404ea7f730189cc3
+   7656c47abbdf2a8b1d94a201b71b00b14dd857eab5fb96cef293f0616c79434b
+   340eabc8798ea4715ac8949b084a92a80f7359b6856cc7ad65530aa704c8fb0a
+   11c4b39c4cbb2ea836ed9c901455f31ec70a50d82832edab24edc786a0174f67
+   65e81d6df81f551aa4354b596ddca31f004519c3619a4d4a35fe19392c630ac9
+   d4f08742dba50a1a34f2b5c14ca83dd7583ea833d13e08dedb152b08779e66b3
+   06d4af29aa94e53853f502689b3f11af13cffc81b976fc69ec79318c0d88f1c1
+   872199dc939392ae5dc59b5c99ab0f77913f2d07c8f02138b7d43613df1fd64d
+   985eba4492fd3f3b7b9e0cc10ff503535b697132b653f2d307292d646dc36a01
+   a61d031e22afa5b30bebc85d84ac0a58542f2f4a114be786ca3b164360f8917c
+   ce744ffbe0674954d3ca2d072a8bd4184f166adbe26047f23105deb6dce27d60
+   96410f21a85979bc0a0787b61f0d994a96e6da150cc70aa4a6eba93965e80ca6
+   a3d3f7149aaf0633c5471817973938f9d81d1286ed9f676b14b4b129e8cb6077
+   544ef1ebbdccc688373ec9169c9ba77aacdead755a49abff27ca0a1565addaed
+   dff92d2ddbb9f2d4aa6a8449cf555898f4384f92f6c2efcde73e517de13204dc
+   751a0201ec261e05ad6e9927fa36fc603e5e5471c241793cd4371d824fe15878
+   e461817b33e983c6b487bde64dc71d3019a778e7fc790b7600e71676644df7c4
+   e98bb031709fec7c91785bfe9f29db6754bdb72a1be2d8309f7e99ef6508d296
+   23a311905e2235ffb77d314af23d409609a71d3ce77476c0c2227bf902bccf00
+   00457b63f2fdab1213b15efe4233400bfaea62548b981a67d64c573a2183ae69
+   96e86061ff268874fb6c6808831b8f2bb3180b4b0e7cce188af3dc60cdfcdece
+   f447eaed7427611e4a9da0914a72687d1fab60d1d293bf114adef559644e7e97
+   b7b2b3ea0ebce1ade41d92644cab600fe2376731f42007bf5f75e3082cc4adfe
+   456a9d0d189d291f205c1379397c30da3e69133a47ee5895cba62c2132f568a1
+   dd8bb4e9185e359346a0a245c1ee89c2b20e2c9d29b5e4d395fe7b21954f4f58
+   9c44ad20ebd512c0f1638770b82372375ecdc1d2c4a6a03aa6953d92f079df34
+   569481dac3c3bf52aa1e934e6ff626c166448fa2adc8a10b8b5919a8627df48e
+   5cd358f4aa05dc30d5494ebfd58fbcd0391f83b9fd0ea592ab35c6c8a88dae25
+   a23be79f86c8a781bf885af5e453acc403fbf77f7320986012528c8712f94550
+   3bbfd0d6c3783c9d7c14d5f1193e1af263d822ba916a1450dd1336ee5fc9e024
+   b2fd11a6e354789f3a8b53f355ae5d3a83fcfa60d30bafd63b027aa2ad09abf8
+   e5002b47d0c66d2b7c293c1ce3a6db7a823f8b99b3b708665d3f7a43de40430a
+   c681b51a3b92e3900478e67c6505dc362d486d434a081ad9b949b8a565590b85
+   10f1ba21e0ed90672ae376eb0e2c61a4e8b74b4d0559bfb0901329862fddd73b
+   8b256a3d98b18b4e1f42f0e7d8a8bd9020ef0702c80a8c0444894ea2ac1ea4da
+   aaae0fdc2b3ba1516327775cdce4027290e8fdf02df77437914d058f182dc1bd
+   9c1cadd31a8f16fff606038a4d22f5841a1e4f58593d7f70203a23f4a678e412
+   240cbdf90d6c73a5eb4cd6f89866df8d08e3cab78fede88803f4ca335479981a
+   4d62af99f552a1098db4f6b8eff774c953bd3f25a736550c6dc2d751
+   oquake_k:
+   53b55996f289077c2f3816e37353ef1fb3a0e145706aa87ef54478c86bd42de9
+   oquake_key:
+   b2fd701473e79dcba51f65f2dc66f24feef1c7dc171afb69038ed569d0e71159
+
+   # Messages
+   msg1:
+   0020bcb5882fe0e6dd63cc591f6395c2bed43267ece198751e3a3cfb57af04f0
+   7137
+   msg2:
+   00208fcefc32c6872b6fdc6294c7f1616d5e79cc06557fb1b7fba54f1a533821
+   187b2654c4038869a1f7082d8dc9e1fbe4649afaa70eb6478cda096bea348ceb
+   7a13300309df2f5a7dc9d6654e5660130076787af0b30ffecaaaf9bedcad93e9
+   8169c8641fd58ae05462b11dd101619a8b04190f6880619f48ed43f594c442db
+   24541caf2013bea023088b6b733dfab26ec00f734025713608e870abcd714863
+   5b4ecb1834c8007a5da43e016a4211079d4cc0aee8778c2f736e7c8555e17155
+   609382218598f27086cba06afc0d421816ee41f47e0ab494d13bd7d506c9d23f
+   d0ead24b1283863bf699a1afd03652156ffdb71f7ca1fa8a67894624d83078ee
+   2d0dd5703d4fffcc5326f5796a25ae7188f92fa11f62316a094aec9986e39a71
+   641a9c40a9feea32dfa0ae2d1dd97a40d9eb86a953e19066778e606a09851d7f
+   207ae24e63a2aa0f079ebf50a2067fd6941e6190b0803ebbfbcf9462d435a2a7
+   9bde8cd1b600cbedbec859d8b298a2f27c00e174be34ce779f2b48a308ba56de
+   f9c7cc036e7421036848686f99878e9e4dcd3828fad4e2ce6ae215babe0564ac
+   73a2d4b083f1ecd7de91c3a4f7f7a80606f97d7a3820b924cb5dcacb2c7d81a0
+   ed614b3fa9d606479d33acf71816c8a433b7c40d7ac3a27edfea430b189808ce
+   d5c6f0dd5a4a295e043faf74e79e660d3ecb239899b1d861ffaf6735ff201881
+   87450dc36a39759ce85753e89712ad1d551079d22c15f15ae91628f4c3f73e69
+   1d14a224a77fd11311beb75747e849beb06ba83ae9c0904f279c183e7e063038
+   51531812a60d9669265c79b58a9ab8b771b49def67750c12408e26ccfc516025
+   f0e147acb53e5c8aa93b0d89786804be136e5fc6d19cf568bda1a98b2504edbe
+   94ee2d5a7345f0fd32ac13461bb853837c954fbbd3e496875afdb3b2bb8bf4c9
+   8caf126a6977a7298fbe8e25093048a64cd7e6e8f3b48ae0eaa8ccc559c97661
+   568906c4531cbeca62dee50b8a91bb1c5b219d8863391730becb93afb66aa74b
+   fa5ec37245ed37e297e560e257c8cc61fd7dc011526805dbe5389e2932d1eccb
+   8be7b7debfb8b50189ace1ac503ed54feef10f2c21944f7c8cce77b039c169ce
+   c864fcd372588f140da6e85631d0f0ccf8adaf10ffd2cb0e16fa6a89cdb1cec6
+   c86bdee27dec6ea148d6324d40942fbaac931d1f1624ba7c8bc50512d1f7516d
+   9e8461953f0bbb30298b59c6696c92fb181ccb70d349b64b6a17eaa5b9ded560
+   b4424c78fb266981127918ef09bfedb660e5baf196ec0d56d7495bfd084dc1b6
+   076b6bc66af7cf0ef848fca6d67dc6ca3a281cce540b985b79dd908ed436347a
+   254e5ed503fb861202a8127559ef14fc4df9c5b6d23131669a9a4e98f75d5499
+   fe07aeb059c2903134b00f68955d761947a2e05071796a269182e29882045324
+   3925bc667c49b0b1f648c889e6266698f4bc4de6206d54e3492ae2c0e80af673
+   a7cea832eacd56c2abb5f6529b0f89e43c00baf0b729998c69f4bc7d18158b8d
+   bb43d34dd376428dcf89a9452c7fe536e55c32cfc55e1faf3fd5ff5530329fa1
+   345126f4c622af2ef18c1f1b441e5751d2e1b0b8a05cdafac3575ed47a4d9297
+   c51086875e5bd52ebd780409a3a6bde77798a1b3781f1291b7920603afad0774
+   0a4330cfcd726907849ead17273e835e9283a98f7cc44fd5dfe92fe09e27f3ed
+   04ee9c1798c31478e40a0ec5c517396e9601a9a6415a1de0d07137f64a01861b
+   512d4666e109c4177f5c89e7575f61e7de5330c46fa2d293bd0d5674eef5d3b4
+   e1de348b3a1c9a3abe095e4acc3cdca762930921bfc770b731217a7e3b3e04b3
+   2aa32b695a3f881ec5dd1d2c6be14601cbdf9374b17c1fb37542db682b2225fd
+   221e5661e32293547be1ef1636fbab39579b7ca01edf06778b1ae93a241f9359
+   cad4aaae37a2e47c525335115b0635947d588bdd3132a0c30e1ac924407f9655
+   eb78e6dd593211b75cfdc917fea1ba0b4e9fe220f3d2f978a888c79dc1e738e1
+   eeb27667e631add9618164b8cd0c55d448649bbe4e1f31fe9435da6f7680e502
+   3e9a3bc6da40bfbbf40a4d15c062e573e6ae1d2db640cba072553fc1c8cc232f
+   817b5b2c10d8e4c60b3c7dedbc4dac8197bd17ceb0d577b94f86b8dd8aa601af
+   4968d7c9efe8b21a4fdae2257044039b3d35e167cf32e2e2865829a931c5820a
+   48c6bc3d92111c46334d1bb321a55a8b36c9e5af54ff5b2711c7cf177fd8914a
+   0f347f63b1545ad5bcedf6731c2afc867799a1115f55ae4572f16f4364a87db7
+   db8b3c7e7d0d10ce5006e2cea294ceac3b962173f982d83cfcbbda795d9d5479
+   981a4d62af99f552a1098db4f6b8eff774c953bd3f25a736550c6dc2d751
+   msg3:
+   c71826db2c8548192e7c22e307d3e1a7e96c11540b0ad7b62d0640d29ef364c3
+   c33988839f1ead3a7819349c2430e264938525679ab72c406fe7ec63dbd2b4a6
+   de022bd4b4ac86988988db7b818281e1029782ca2d920e1767dbcf5b0baffec7
+   88433ae039a3f88d3fb75fd91b01f8c60dd106f634ba322bcb36ee93a1838c1d
+   6b62e44a8218b1b450fe404363352baf2fb860f8e4fc281af6d4e22384351889
+   4a8568b479e19cf8bb59033913148c23819412c14c9e80723e401fa1568e3784
+   6659772ae7a9ad2ba56f4f394781697cdaefb4deb4c1accddf82dc129c1f775b
+   c1c9c612b6c90df6b56e4ae196e9fac85fe03fedf4f70f91dd5a5f87c5f9f520
+   64a5f3d466b8bccae8d5c4eadd0d22b7c754cb380eb0f9cf60da1639b02002f4
+   de98e509ace684166f099a90726c36b3faa1da7cb4c75f263b52c7b84901d563
+   81d0e2bd2d462f54c5c6991fec9455b589afddf76c63edc32a96283d73e3f5db
+   6bb77d39d32240712f0ebf187597cc016500cb2a75b85857875c388f8d427260
+   46ae95c11f357395a1c4b827c7c8c4c00527c70cf03efd9cffed04abf9d927a9
+   7f0ce62ec79172ca8822d64b516023c27d68d2b4255baee2f1fd8d9700058a29
+   01165f3be5c2a9d3b83b0574d1d36d759a3646763fcfb498892fb4bb4eb9531c
+   3ef81fcac84bf75f6237ea7c43566fe87a41a8e3d3cd04ed568a8874a019a88e
+   9a67f6dcf6835b8821a3270e7fd6a0a8631fed10b4d53875f25f1575cd94bc72
+   c9f263396d447fb3300d40c002f1fb83d2c4c7333c138c946096a9b75c72708b
+   69103da86e100e0fc1a833e822c1ac17b82154035b979b5711400ba7704e1e20
+   5fb97c9e2fd7ad25cc22fc733172ea552236a8dabb47e959a7b07d84feae201b
+   a1ee29d11264228b14b91dcaac1e6aec6dcbedf780f933da7047e7dc6034b049
+   9f50509479688d13c45948fc2bd2cb247d1c5cf2db25dfa0d1d3317bbeac0f65
+   b2c3c75ba4e5185e009a18faefb826323c2c9ad23b992b5efa516fbcfe27a562
+   589407e906fd9a444d1cb419d82278585891d4de91e5683b4cc9c760bc7f9785
+   ca96f7caa41ba29e802799fb2d832fe1e74ac78ba9510bb9dab5ea9209aca154
+   1af3eb5ec0b9e242f44db32933651d3514880578ea0ecb912ef802244667c680
+   e837f0925e643bb0f5462eaf3ef8b53969a53eca1dcbdf86b29e9244c4760142
+   5456677e1ef95014f60e0faca77e4985bc3e99f5a47c46f79122b86f3783af4f
+   752ae57b35eec9f73e632696a597bc5ee5f744baea93c3a367aa605738529422
+   8077e99cb5a2a0bad7f39f92d30cd2d651fe49f721763259d17dc9f74d380a5f
+   110f7a084b750d65298cb8dafa17c29351fff578ebdcf214b338d92162d77671
+   99dcd3888a6ea77c0c2bc5d2bfe8616b7dd837793d4da4aa8e61778127892fac
+   d5e32ae62681824eccad633edba1dd45a5c515d03a3dea3f4e0460e2f90e17b3
+   3ddfe21fe104236d0f3ab8ef950e5401bdc8e50c60c23421502263984f07a749
+   07815de6189af2f12dab84ee116ec6eb8239fb700201451230f2263b0a40929e
+   4c8920fd775e5ecba06dcda33a200ccad905ab272f87e3f538bc99cdc9d99df8
+   6299e63532de4df0c10fe1b44902c7a8c3eb9c5a1ceee8a742e9dc6b5659210a
+   d46ecf2ad101d400b42686740e865cc4e184a10104086f6eb41117790d3939aa
+   a208de841f6d0d4c9dd930a839fff51310d221dc693d34c28eb8a749c05464f8
+   dc4ce64fd27dda82501b536e8307578329d29f2a9fffb0ce5c2b5e1795f4be4b
+   1446155c8875015a1c9d0deb681394f2c3e509cf2c998e5e3837f9fdd2432fb9
+   79fdcc6df8716bdff44d2a323f85fccd19215f0d90df0a95c7bf4cbedbbe8af1
+   4eddb80c8337f835b930bc88d66a089b060f9d0db15b018d7d47cf0b9db00472
+   7c52e24cdacdd5ae0363c73911f446fb2abb31e8dd10073af8659cf31d9fad38
+   7fb408c824ee97f5f406346e83a4a04c918569f01685bdfe905ee547f5270a82
+   9d7ad0f76f96c395595daab58973d6c1603ac2dd4b266d10148dee4222a927bd
+   52f9442e4195e388a429f34a776f9097181c7efef4f2085004008e1db25d7c52
+   e0162cd2d49828d8e35e45c27bb6c96ee23babb2e9afa16b3c5eaf00cae39626
+   ca95833e873e08df868ce6ec75da54bc36da54f0d06cddafea1d59e0baa1b380
+   53ecbe15b67f5143ba72d11f9707a116427f95912ee19d408954110fd3eb8e4f
+
+   # Outputs
+   key: da7749513854187ccca337360cc9fe85bac2446fcd4560a186fadb14cdde6679
+   th: d87c1f03732425d5e04b0435a8397f03d894d5f4b4391132982940fab0fb31f9
+
+E.5.  CPaceOQUAKE+
+
+   These test vectors use the configuration cpaceoquakeplus-
+   x25519-mlbuaskem1024-xwing.  The message reg_msg is the registration
+   message (Appendix C.6).
+
+E.5.1.  Successful Run
+
+   # Inputs
+   PRS: 70617373776f7264
+   salt:
+   d06cadf597f5edbe49665a45e5fc64a4edd0548f8f5bf378af6c36716f3ad1b8
+   U: 636c69656e74
+   S: 736572766572
+   sid: 54f8c1bdf63ed6ba5003e76b5cfb83bb
+   public_context:
+   0000001054f8c1bdf63ed6ba5003e76b5cfb83bb00000006636c69656e740000
+   0006736572766572
+   secret_context:
+
+   # Randomness
+   kem_blind:
+   d8f4938d02f56defce1bc453ea277a9dc5721b9ca4824a9f4512e6a95c06497e
+   cpace_ya:
+   c241fe16e46eac30c95023d16c521b4c3ec4c1cc37644158d24774da2c7fbee6
+   cpace_yb:
+   54f1ed086a0e47a516a386063d5b00dc885f54a363d200fa4c476e571d70c3a6
+   keygen_seed:
+   2ed9ebe24644fc70c7ee4e6b433c7ba00598d72aa27dbe9cd3471eae3d386e81
+   ef008112e130e1c20b9eb06d7fcae99806c9e7b043a95a0f1b13ec7e5491b4cb
+   kemeleon_m:
+   1237154876545894753131008903038350498507
+   4441771810281243994208228782343105948742
+   7348407785231099440785815711724642103725
+   3365632252984598452680259611360129490452
+   oquake_r:
+   fadd3ce70d33a645d35b7637f4a85662271b997b37c559e9a6c919a20a7cdf38
+   b0833a3dbd2067f4fef035dda680da2cceaf88be9f754b5b543f6195205a7650
+   encaps_m:
+   9f3cfed05a4e87a6d9c14e3e2d0dcb596ac5211b7cbdd9a61eb9c5a7b56cdfad
+   kem_encaps_eseed:
+   43f54cc465ca9a277cfccb23f83bbcb6b53b9949b442850927728d96bc858a70
+   29d75bae549e77de7fe203fcece7c33aedd465d3c1b7e18a8d12e5a9f8c876b1
+
+   # Intermediate values
+   v: a37ca5142da5199502f083958b11c6a71bd46984c4a827ccc820409b6ecebb03
+   seed:
+   9448e7b1c350695493e7b6089a04e47611016c83f9a9ec8da8dce61af053e033
+   pk:
+   6175860aa56fe9e7c801abb084753c15f521a4f968e1a0998f70634042bc136c
+   cf7f5c2439508fcbf598c9673a17755e9e58a3166b35ffa871542a87fc3c767c
+   c5163f4219b277abea36a0ff6b93ccf9b24078abce462833274f94215d120171
+   71aa72b73a0bada6c2200218a14cad37e15f52180deac826babcbdd2f348c042
+   272bf3b751953bd971b269193b74e501b76a6aa93404df167626932a5dd4c508
+   e8262f5060b632c7f5987204c7cfbe2c03a0c3793681475a9498ff7a1abaea13
+   34ac7587528ec2bc950ac309af4625bce4c9d2897bea76ac5718040de74ff0ab
+   358b4133e2490e708773068615c6b1478f2a028cc914a2d519c2c41dcfb0a3a6
+   95c244eb908f5572165abe6c8801564aca3cd5cb041b05603564f3a7325d337f
+   2cd4962a4b30e1f0021065a88b03cb9676c005364d334a619f54483e3a1a0300
+   cb76f29fab2710dae387defab0be5c7660b68f2029585d3b3165008fe373318c
+   9a4d7d247c6b266f05f173900b4436da4258b160e45bb0f7a5b0970746b6c507
+   f8e6015de765e4e33ef9a091fb9a14163ca81e79b2fd6112381053ed00554884
+   6378e91658e80ba135098a07950e4123dca56754aac30d300a97c5961b373a17
+   3a531dbb127061ccda5a5a1e71286b584c806bcd6283bdfa10c785c705d4b150
+   7d9195d96a078d8905e0e745562130baea55790ac85e0b45e42ab020db720720
+   13a299174dac4ce818524730798615941ebc979d11cdf89131ddf206ee69440a
+   ea653b713326572509ac0ead234d4635120d30bab4a39947c8cd68c9adfc57b5
+   826164d712c3e5627a6d742a59cc11e0697d06070a9b42953a8166a8c04e02f7
+   b4326065675b3af4c1cbc4a9368951246eab6849aa54cfc2c58e20c4eb9225bc
+   5026c0a7b8e88165b8048ebc171567f5b4e5a474be2594149986096c69a71a15
+   2d853f35f80c9d03bb20528796034666127c59765e1dd97e83c287d5d66a2b88
+   7e49d8ce9e8490f57c40d5d3998b467fde8a15b4ccb83c03606c0103cbfbbf11
+   3408848429b6da5a634c3329a09f319763b7e0c70c11a962433124f2b84d6362
+   a04bb1c1ec99d87316ec9ca566c07fad813a63f88539c6a3aaeb95f0489b0a85
+   c59e8c849349640670a4332831e3282e34a21cbafa09c501aadb403eb61690f0
+   67a5fd61251405a7a9fc4b1c8971c1a42d7043af6d607beb3c9d259ca933a518
+   82f68a1d4458d3b70fdca40b0b8a1c29b43878208d22e3658b68cd02454ace24
+   5c1cf130f9a759d4515308dcacd705759a0244ecf5bdc8115a929a408af475ab
+   cbb93ff8668be716300c50e576b6790c179c82262b024c0299bc108b446582be
+   9fd4008ab70dce061f1e399ff2ba36be68551ec16b8b66aad8c1022f26c10e55
+   4f2cc856bc1a8d0b4113b8222e39109127592d2557135208a332e036df6847f4
+   26c8d0bbb147dca84814294903735466be49a8485c634a01ba2c03374218700e
+   76b56f2e692fdcfa3012e19ba40a5d31f64815e49de5a62de4a71dd9a9732c04
+   5517a57b5e6a46022852e2cbc463ac0e71f7b86475b088281b024220ce7273b6
+   1544e2d520630a4b73ac5c08f349c6c34bb4d605dc4198088410080b94e85a22
+   9bbf96b49a72b5f8eb5d313e75acd22faf21f854904dc8e6afeee362878cf8d7
+   0d4474e363d78c3d94c8492641d5edd62e588ab751150ac05845df5a1298e722
+   cpace_ISK:
+   c9f3a5ad895cb596360b5517bf4934b2209ce18aea5542592b922949fabdfe93
+   73e0d408f83f5d3880dc3dfee50cdff74e6c5463c10e7065483c06a1e24ea007
+   cpace_th:
+   e96915b4e2deae693e1d521147a9c8dfa6bdda42b0c3b60af14230887901573a
+   oquake_upk:
+   843be5f1e63ecfec54f6f85baf3224883e6bab7337bea2d2d76fe9147f3bf163
+   63504c641945c9ac419450b2d9ab20826367865d78a19a3fa133cb6e78dd47d4
+   00cd1cd6d70eaf3795a7bb6c1fc4de074d9885bf0130aa6f52f291e9fe3694e0
+   1208d2345bc8e972fd089451ffb87c79de5a7298fffcb7ea6322beaa24c0a2ad
+   03150bf6844bf4f9155469feab75ee24730936e262bb247c4f0942d171dc3878
+   aeede9f91bcb83fff009f815102fd2e534f848f08cdb2137a15bb28591fe5a4b
+   306b00aa76323a271807e1aedc967848ee9220a5c8a13db0fb4155be851b9b67
+   a537cb82296a026a21c96028473d45d94df2c76aee1303dd5c4fcb7c15e91b06
+   7ea27831ab97041ef9f7d0730abb0043a7249dd8d376f6d2e94844e00cb1bf6f
+   76b1d5a399e19e938ddce50701ceda21bd02dba4a07a99ade29aab016421d764
+   8c4d43c4d1893ceed8ffd8cf37130163bea8e138310a3d31d675b9ed6371a489
+   cb84e1e4e3e67da1e22e679d59d8c7ee415432b5c1bcd5f888434cb54f80b297
+   136e0863670227c8b2ee194894bef68b09bdda05e7796f39a922409c971bac68
+   5333d3460b3ce76b776ef6c2b856fd349a3652a2a7fb373a992ae6c82e860b24
+   064a99fec62fd699a2d12bba12192e3a31925e2a7ccc4682e6e0dde7faa8054f
+   3bb38beac2b8553284590ffe3dd9d976262593c05b639c262d6b7765a6df4db5
+   f09e7f36dfa026656ee689ed50414eec0f7009b5e1aca8ba78785d0f1b6ba544
+   72809bdad18d0ce8cd36c753a03b705fb35e3823b195d24c7e8a9e7d2f4dda0f
+   015c64c82f82d4f33abb76a00ebadeb0917543172628b5068dc349f70097f39a
+   6376adfde2204690e2c2052f91aa7590a7bfd9b691653ec0faaf0709ad2ba969
+   4bd7fca05639ac1e69b3f05a3b1fa7c010fbe8de014de6b0f4aa3b9ae014a05f
+   e8720d403f9f732efbb992a4551d2450944b97c5d66ea8e67c3eadee08e6fdc8
+   44ec9e39b634240120e7d9219942fe0a6b2deaed7c9f58ae8e33fb789ec0f44f
+   69542e9f0d87483eee288a7e9f0e1f14533ea36d9dcbfba87b03365b7e66f0b0
+   5f1b6609896bfe4cc8b4d74d0e8c726edf00f64d863b0d9ee442b79e23acb764
+   f0917653938c099e9971a5998d570542af494e0a069a0d8427842187ee2fd6ac
+   ea3ea5e800f0b2d84c26838ed8ffc6173472dffa64e00cfc433ed457a5648027
+   0a86744ca1422f43848f7a403f569cc477ad56cc197f77d64d9fedea56cd4a0d
+   e4b6e8f81093531ccbe8b450840279b2760ce7c53222b0f4181f19840be22541
+   b832e10a98cdb006c2662a7dd4a4d8921b8a9905003784f7c7a6af8a1718fad3
+   5e18f24b86ea4ce86fcfa44ed1041aa0663d656591569304405c42634faedc8e
+   6ba6cb7d908acb00c6f778a06ce116a3df36b67a24591f1bfd8daa8deeb2f3c6
+   a24e2bb7d6de84874e596e8e4f79549f35745e45229b75e2e24524efff6ddcbe
+   6938c7212983adf15a2d704879366d5c21b8dc1f8bdf55a7a3f9b1582c5a7a78
+   269fac21a80f201555027e5783a8c3f30f6d2167772b853147992510a7ea8278
+   920643fa695bb39317849b961d6b92a8eccb679beb765c43a0fba11132be75c4
+   85eeeb6bf513373b62b1db61b9862e0c1d61e1b4e711d304d077c7dbd338c6a4
+   2dc4d8bbebbb4aa3bd97f62f78a9945af67b0339b5a4e1c4c8da06ee497f5909
+   22e7a39c67101090a574ab18a71ede11bba859d8d88970400c28288b0740ccc2
+   bc5e575c01550d293ab9a288d79e920c47df57cd004b4cb08892bf1f8923f3a8
+   88c1338cc48c6e45faeb6d5bb81eaa0bb6ba6f927e5c197afa87cdc76acdb0cc
+   39cc5551ea7871f3e8a82f32c1d19596a25b69d1f2bc30405a59607c8f686690
+   d6dbd4d3242cb618383c6e4272c5659fd429d7e7d898c26c17b3e710679cbb7c
+   e4e540f69c87597f1568645f5feede8cdad96166900e7b9d9a265e9ce1cda420
+   8bcba76bd518b5ec319fd3086ca8a0584fcde82454fd018f3e600989b1840c5f
+   1ab587c702d4512067eb5deafb09844be3b3dd55635e8c5e1830d60295175c76
+   256385abfc87e0e3e1ec0061c3ee56e67c069477901fdd91d6212ad1128a9496
+   3fae7a5ad59949b6318d591afcda45c1acaa93403cdd0e3ab88671ae0fbc1b7a
+   35a827fdd2a0f04f58df165a7790ad64f2b8ba67c03fadfda6a01f6a8dade87c
+   bbfde0f53fc5890bde7106b66921a9e05246758c031ffa57207a5e9d
+   oquake_k:
+   e905f105ba20d20cc9247c691a80d7bea9af2b70ee70eb985c15a4a6da4608ef
+   oquake_key:
+   935eb74b2b93e431e1585936335c99f8377ebc9bae61b1fe4330e0220b949c60
+   oquake_th:
+   385a8e60b1f6efdfe7316767158ac9a892377a7ef3ecd3a9f5b9b182088c40d7
+   cpaceoquake_key:
+   6aabdd9cabc86db4bb916546eefb35a3feb35411ae12c0524ffbae4af5ee1d55
+   pc_k:
+   99a52dac35b2d447e7061e035574aa94725d9e953c448c413d2a4c021ab9c7fc
+
+   # Messages
+   reg_msg:
+   d06cadf597f5edbe49665a45e5fc64a4edd0548f8f5bf378af6c36716f3ad1b8
+   a37ca5142da5199502f083958b11c6a71bd46984c4a827ccc820409b6ecebb03
+   6175860aa56fe9e7c801abb084753c15f521a4f968e1a0998f70634042bc136c
+   cf7f5c2439508fcbf598c9673a17755e9e58a3166b35ffa871542a87fc3c767c
+   c5163f4219b277abea36a0ff6b93ccf9b24078abce462833274f94215d120171
+   71aa72b73a0bada6c2200218a14cad37e15f52180deac826babcbdd2f348c042
+   272bf3b751953bd971b269193b74e501b76a6aa93404df167626932a5dd4c508
+   e8262f5060b632c7f5987204c7cfbe2c03a0c3793681475a9498ff7a1abaea13
+   34ac7587528ec2bc950ac309af4625bce4c9d2897bea76ac5718040de74ff0ab
+   358b4133e2490e708773068615c6b1478f2a028cc914a2d519c2c41dcfb0a3a6
+   95c244eb908f5572165abe6c8801564aca3cd5cb041b05603564f3a7325d337f
+   2cd4962a4b30e1f0021065a88b03cb9676c005364d334a619f54483e3a1a0300
+   cb76f29fab2710dae387defab0be5c7660b68f2029585d3b3165008fe373318c
+   9a4d7d247c6b266f05f173900b4436da4258b160e45bb0f7a5b0970746b6c507
+   f8e6015de765e4e33ef9a091fb9a14163ca81e79b2fd6112381053ed00554884
+   6378e91658e80ba135098a07950e4123dca56754aac30d300a97c5961b373a17
+   3a531dbb127061ccda5a5a1e71286b584c806bcd6283bdfa10c785c705d4b150
+   7d9195d96a078d8905e0e745562130baea55790ac85e0b45e42ab020db720720
+   13a299174dac4ce818524730798615941ebc979d11cdf89131ddf206ee69440a
+   ea653b713326572509ac0ead234d4635120d30bab4a39947c8cd68c9adfc57b5
+   826164d712c3e5627a6d742a59cc11e0697d06070a9b42953a8166a8c04e02f7
+   b4326065675b3af4c1cbc4a9368951246eab6849aa54cfc2c58e20c4eb9225bc
+   5026c0a7b8e88165b8048ebc171567f5b4e5a474be2594149986096c69a71a15
+   2d853f35f80c9d03bb20528796034666127c59765e1dd97e83c287d5d66a2b88
+   7e49d8ce9e8490f57c40d5d3998b467fde8a15b4ccb83c03606c0103cbfbbf11
+   3408848429b6da5a634c3329a09f319763b7e0c70c11a962433124f2b84d6362
+   a04bb1c1ec99d87316ec9ca566c07fad813a63f88539c6a3aaeb95f0489b0a85
+   c59e8c849349640670a4332831e3282e34a21cbafa09c501aadb403eb61690f0
+   67a5fd61251405a7a9fc4b1c8971c1a42d7043af6d607beb3c9d259ca933a518
+   82f68a1d4458d3b70fdca40b0b8a1c29b43878208d22e3658b68cd02454ace24
+   5c1cf130f9a759d4515308dcacd705759a0244ecf5bdc8115a929a408af475ab
+   cbb93ff8668be716300c50e576b6790c179c82262b024c0299bc108b446582be
+   9fd4008ab70dce061f1e399ff2ba36be68551ec16b8b66aad8c1022f26c10e55
+   4f2cc856bc1a8d0b4113b8222e39109127592d2557135208a332e036df6847f4
+   26c8d0bbb147dca84814294903735466be49a8485c634a01ba2c03374218700e
+   76b56f2e692fdcfa3012e19ba40a5d31f64815e49de5a62de4a71dd9a9732c04
+   5517a57b5e6a46022852e2cbc463ac0e71f7b86475b088281b024220ce7273b6
+   1544e2d520630a4b73ac5c08f349c6c34bb4d605dc4198088410080b94e85a22
+   9bbf96b49a72b5f8eb5d313e75acd22faf21f854904dc8e6afeee362878cf8d7
+   0d4474e363d78c3d94c8492641d5edd62e588ab751150ac05845df5a1298e722
+   d8f4938d02f56defce1bc453ea277a9dc5721b9ca4824a9f4512e6a95c06497e
+   0006636c69656e740006736572766572
+   msg1:
+   002063af203866b894ce2043caeac4bf6128a71597d94c4f656b48db5c0e8f51
+   1407
+   msg2:
+   002071a16aad67a24e752504034f68d4f1239cc545f5c45742d3c8f513790ae3
+   0b1ab38d9b41929d7c70acfb15cc6e21bc3beb0084b5adb25b7ec49fafd5294b
+   95d69577608ecb6bed38c2d54c52942e61e6eb9c967cee6a45bf30f71ee2604b
+   6ca8d95abd53ce2e873e5d1b7c609aaf7446f4434657d376d66982e7f812aa9d
+   4c67cb43fd005ad39ec1d93899426ec8c2e6eb44a85e11e4c32fefbde84ae59b
+   3e50944d762bbe1c6e14e2d54c07a2da8679ee30662dd10d3d18aeddd6aef45e
+   6afb15d7b82de62c4be2563acc2e882d66da0e5b26cc81b815b9f1f06b6f60b8
+   2dcf8d3314a825fb0b4e8a1c2774b1b7813e735a9cac525cd5246d5500150ed3
+   b30cd7be7817cbb348147fc050a0bc620f6c0e835b071d0eb9018f97ef4180a5
+   3dadfdc16d3e3ee5acb6b0c436d7dcf3d7185bbe8b67569fd01c8f28b350fdce
+   8b75ea30cb0f8c2bf01e1e6d2a04f562d9b1e5aaa0994c1f2a3cc0414986b7d0
+   85d279753c608fa99d7df9ffcc24ef471972ad81c529cd91f77b7f0e5c9b2b4a
+   fb346a046c936a2cebf320ffe3e4c2ba7e18c6f8256407366ce0a5a9019fc1a2
+   6026b655ce7c196c9cf8b0c9c5e64e60b480f60093608ccd7b6113ec3a07ac93
+   94bee898003e37c365230e3b03547de77cf086c10f8f6548676fcfacfbb677a3
+   5f809537e776109eefefe8ddac49c01335922a167d65d65ca6e9d9b1f5129d40
+   b9d4feb07ae40511ee4f5fa2133d6145855975324f4198c06394d4509fc889a9
+   c88177619b53a409c4a2bb564b9cd367fb862ff1c8e1523fbc72c08d8d244b06
+   a7ec372c7bc4e56b7a01a9313e0fe79042aa834d1702978013d0b48cec59e5b2
+   74d156351c619e58123de58ca78a6058c34f0e66af34e997f7928a5f260c8c18
+   72f40c8a4a59b83ca58a8855b21afe2d515c33678695416ea6f2e4794c9028db
+   0b33d907f327d648ef051b6c82dabe518bd87555555aa12d58de8f1225f6fbb2
+   f09654c9320c4a405cdf1282793f106bc74a2a6edf32790c6d4dc683af2ad7c6
+   e47be019939988c57ebc2d7f806702b2b69791795544fd3f693daf522aaf716f
+   9a3006c12c1e4367404681d95ef5aea86c5fc06094f3bda6a729705e9f847163
+   13e62cd41a05b40b653897959bca881be39b0f74cd1417612bbeb7fe250dd2fe
+   a72e6088bc8dbcef40605193d57362437e1dbc0ce966669b19611cc399c5be3c
+   157c0a524ba75d381ce8140a0c9a1a5b4a41d87c6f9b2d6ac388fac922c1e993
+   22713c1f6d4878e47a7679058b6501d85a5e2bf5f5f6393364c7055752102fb5
+   2ad5f807f2d1b1efe1a02fd28fbe871aadd4816f75f45b5c64d7d8612e6dbbb4
+   3985e1e959c66dfa19933d505f70348ebe12e66ef59c9d16d6ba00e6d272e4c0
+   079f5b2fd32eda93a3224f494e266a433cee4e11d1664e655c5cf39798f1c162
+   2ca3b2050c95b5a4132d13c1f46d11d81bdb6773a8d35d494fa7ee06c9a326ba
+   b45892e1e573767f30cdc07b22aa977f6cd7c9de97a9b6d1b7819bccd35cfd8a
+   1607b64bea31d52b3e4266043110f2cf05a74b775eccbd12e417e2c4566b1cad
+   3360d36d92bbe623cf8810b229115d33e3d2dcd0d3dcd4bf5f5aa43d60f2f9cc
+   14ba26934052ec24385640df486e8daea9600aebccabeac201f2cad21190abeb
+   45dba36b0fe2dc0f6c259faf55c23ae9f090eb09626d492612406898533bad10
+   e0c2593cc58d75b15c9482ec835d85a43015ae959a28b228ea4322f2560b44a6
+   a10a866898fb7ea7b5633680cc6527a5d86f93bdc5eb82893bca93ff6912487f
+   0e6af481c895a80d8e3d1327df15cba0484d3d3da8e7926156c3ef71c3b39c4b
+   edffdf699de6fb25a0ba90fb72b7a75f2f18ba97393c8da9130c023d79d54ca0
+   6d14e0084349bdfc65db6061e385e208b8e2d21f208111ff08d9c5d3b7683c32
+   012c598755afe0b1cdcecf171314523507d68bb194678db108ebc7a5fecc3765
+   86c94d35d3930a87cf718949c3e6f9af94374f3496ecfc603b122ef758e2888d
+   9c03f08e5a4d9350b116c3a699abe2ebc7211d5613af897dfc480c5fcfd81685
+   adb8dc31b7960b3ec4be1559010dfdbb6e1530c72b34b773336adc1f4182e53b
+   3faed8d9b39bc5e4ea14af5c4aa98aa79764372fa95f1e3567a502224a19eda9
+   1fbea42f034a76eee9c89322c0026d201b51cbbc5db39a5e796fdfb13f223dfd
+   b011f9601263070775e4aabeca49aeb0c7c27a29074911170ced2ed3001b9984
+   7bdbde5b32d04f1664fe45e576d19b125911560a94cf10856df0bae4f191c608
+   43dc4efbe2fcb6040caedf1b2f8603feeff1c4a42bd50372092a2db13b428dad
+   e87cbbfde0f53fc5890bde7106b66921a9e05246758c031ffa57207a5e9d
+   msg3:
+   bd32506169b6b0964ce1df726c16ebe95702ced6013e505c90bd7b3f43e0f97b
+   418a68428be2e8b155e27ef58372769d1ba3952e1002f26c3c3e4586b0b0a93f
+   64cc31e08c9ee876fa07bc83fa4250de44331c4c783e56f79be1b2b230f3e654
+   b03d5dffd1df96e8fd5f60108047145271829ece584f4d994da558da5604b542
+   8428c0a5d2b79f1db482d4bedcfa59cc7741bc37a9311b2c31acace17997e015
+   cda10765af0e1eb3f383e09a82fbfb881dbe3acd3951e23163513e056b5f48f0
+   4f5c08036f0360a3f6958640921f1966862e10f0688ccf8472dd4a263cb17f8c
+   c2a1270a4f3496eac0920ee84bf512c9ebcab6c341424a54ab854b7e59d716f7
+   6d5c70c405aa52f35bd58a84a64b5f1d3a7d55c1a0fb0d381e8427ad487cbe4a
+   865a372bade6ea4e30a9c598437b2bc9f4d32816608d66ec34c1f16622c9894b
+   578d3215bedb7880e6884f447be6e1b25934115ce338563bbb62e4f819936b69
+   7e3f0ac6e2108b5b69c9c3c2f241225b195296dcee4f69858f81efd6b6cd4725
+   c96148f0b92bdb7344e2cdbaf4d1bb27478d148fd9313923447c4b9a2406e184
+   ff1c7f13b9082785f0a8a08616d27d0a27d447d8da75470455e3c3f90c16aaea
+   4ac34f66208098d62b115807fa44a268d35d94c89304405022a2d71c92e89522
+   d1f891d44a7593bf4f76fce423124a621c6f48d3334c2906698e665c69f62bd8
+   f629163e0eb094a193d9e814e7f3527d3992a68af72d950b9ec43139291949a0
+   65616cd0e644ba90c951c3dc5ac4bc6d7de508dbdc2ffd1477b669e09a95719d
+   0458b0d2bc973e70e691f5b1f9f3a5ccb4eff84d5e52ff1097d89d555fa3ef34
+   6644056dbfeb20d4b98e614ce8c036eb568cbf2282f02be61a3b7b78b27ec0f8
+   d111ba648ee98618a267ef25a1a108ea3b8ce05cefd6a7d42c1c9666d9379190
+   9be49af043e89753a751238835362729ba445d9fb19518f9d7eae035cfd888b8
+   9cb16c2251c170dd3ccbdbb501cf0335a083a1f620dbbcb662ffb4850ceff5c3
+   ab23cb6b5884f893420f15c4f9859b1703e0ca4cb8d826beeca53d8d71ee05eb
+   fd95fb12bf86af55b1bb3448fe3bc34dcf67ccfbfdf711375c0f3487429a7864
+   ee2594d81453d650024b601d2d2ba6dcaee5f027146cec1a19755200a54d9758
+   fee8417451951e97558f8e80dfe16deaf2fe164dc2d8e50e38a002a8e231d4b3
+   06b1653f162d596d3bbf66389ab09a492c441927c2f035e0b282d8e45771429c
+   f4a42882773de7412cdc3af7ab0080029c7bcdd7d495636938d97cd3677896df
+   3d730decb0a96b9a6750d461e6bc15f32f55eeb561d2ce6fe086f8f12e80982f
+   a51e4e0eb0ce64ce6d671932df3bb8bcd8f2c88d4155bba06292d52aef94a921
+   7c6600d45079c7529875b25efcfd9a13f68abbb9b9cc08181595891425be0523
+   5e2c2ecb63eccc12242f34ce3535801cc54b1e183731706bd97c9b13a1d185c1
+   5625510c566a0125b6750743dfaed34715f311d60ecd720f25c6e01a8451b389
+   b0ee78ff1d87063e2651a6168eb36822eb829dd951e0563ca3d7c7cf70711fee
+   76b019e00e956290eb869a7ddbc84cfe43c177647a148d8e3aec096c22f5a078
+   8e10d2205b9a17c0259567376376e00c4448f84493aecd8a6712213a214f1f6c
+   3aa0405ff2f85754e94811b8a1f82ac6a31b3c5533ef4f2b0694e0791b029f54
+   050dff32dd1b07dfc139be24321b94b3a13ea729fe7fd255660602a05d8709c0
+   084744bd49483980ad2486df39e6f7f16fd0f5b8af6fedaa7b41e20a3a0bbebd
+   63d39f91397b4ceddaaf4c2a217cc66fd8dfa8204bd788761215bbdc923f071b
+   ebb7fe8b8b39b3b333265b38cb88683dfd4b5c47945349598ca3e372b33ec6c5
+   dbbf915b76e78287445e55fbe3ec9eda19d0880274591a719311604e3eeeed64
+   96dbcbb8450cad6ba877c8ea2280ce72c85d993a84be3ef75b5dcb8c23e991b1
+   3af8b1b96ef8d64070e81c112d745297dba338cb84fd2fbe66a8f33015441cbe
+   23ca4077c91444624971b7931fd7f0924a310620b067529565a07fcb15a0fd2f
+   cfd6bdf9501cd345d94c02071de2e340611accd291b46f5c603bae11724c8a7f
+   c4ecf616e6b036c8292a0485ed0c7c8cb4dac4ca7ccd6e347ef30a63d137146d
+   569bea73854c322824d3bb5ef987288d2bc8883137c600a6b912f3327a0c4fc2
+   f4f1bbf60efac9f1926534f60fe5a061828555a64c171980fdde4000a6869198
+   msg4:
+   1bb5e63bc1d3d66f431cb6d174b6703d953723c921f5cba1d32b63455d0b8acb
+   4e3c6330657d38012cbd647cfabebfc2e01a5f63866bc34fd98746dda9a31118
+   373e210afd51e7e3bf2424a81a9d838331ea4f04027dc3d9d1d79e7f9ccade2f
+   6dc75557755e82281ce895051afde7986e179439ac4c78350f3513871d174500
+   55865240b82f920c889d476922b0339599ea7145863448022091db19b207c109
+   eff6ef68527a90872bf37df8e5e6b2f2c7f9699f782ed8a2b59c5e7e04ae317d
+   fac5bf89140cba50e33260793cfdf772c2b007f138b9c6f4e857a828b6638c94
+   202cce94956f0ec9996dde8a1639f826a04bfc16e316c6ca7b2307f0556cfbe5
+   505f3b2573e4cd5c7a0e9ece721539e96997e1944288d832bd7ff94da109cd0d
+   aa5cbb79d0029747fe034c6cea72e4105be8fc932223c75258f537e5a2cda415
+   3c6a373141c4ed3f4d68de998264daee04af415407179bd89752d537e28eae53
+   e2171ead8be28c83e93268079a6eeb503073f89cd0aa8722a8609f2069c5dd65
+   e29b99d25f2743275fbf20c3082afd26db08b3521101e5057547de15c1d49d30
+   5f7e249ef0ce620255e69a7d9c9fadb13d178d0361eda50c0cd4f1b4cc79307c
+   0cacf7540dbd8f4b8255fe0a9d1ea8cd2079f90d97727e17cf75f22c7866c7aa
+   b337e8813de0dc7ee637c766d7ba7974a223c586097a59884b0fbd2396f25631
+   1b2b737bd839287994548793dc43c49ae4b47cf48cee571d2be76dd7c04495c5
+   befd9f4b4f5531d0229bfc267a2c2c569323c8737b7e98a29645c0520ec4baa2
+   579b6b298b1c45918c2bc28fc25741e86a42d18342a2dc98b02753d6f584829a
+   9fef83ac718e5bdef469e01a85a352c4467ddf96addde9bb7af649d1941fc371
+   06eaa75fd870a2926dd617fe01cd914294abcbc780b5145abf2f976f757ee04b
+   46f32260078a9c9bdcb8ed92a6e8d4b37b65dba28203b226a0d9ecf44488cdda
+   cae72469223c4fa41dc05d87a8f762235b159d9186ca789818aeae70b03d4c9b
+   7b5c5f4ab85eb56e8002fb54aa5517edc51cc2a7c44c46184b458dc797d26483
+   c6f8a896e3ee1e2b8f3666e97178618a2cee85d8a186738f879c115d02f1a366
+   a2308312d5525d8c3563d2d2e3125997c047f44c79057089326baccdb0d6f9a5
+   af7e5d68ec78f17dfb98276eb34e7dc3089b9439c016fe8ea3e45d6ceae8df82
+   3033f202502a5ca295541aec8b8dad0489b8cdaac8604953114a89f8468162f9
+   ffa7c1e00fabdf56f4738357f22faf7f3bab1bac998d94ca2a6d8ef6cbb6e24b
+   87819ca6241809699ecd1f9697afb275d550c62c14636a2aeee86a2f18d6c885
+   abe35e04c695da848931a096b368117ac385dccbb2aa83c75e0328000da4ef31
+   3be8c633bf64fe80398c80aadb1aef62c3e5389a0b62555a20479e51804214ca
+   d5fedbd307eec8ec9209fbaebf87dd131f68304062a0fbc6cd47d13b77fad015
+   305912250fd183704bfb8a5f9c19adb0595f0cc5d1e4acc78ef89b8efb2c3976
+   fbc642d5ede5e5636376513b77e4a253db41316241679c8eb926c221777c2fe0
+   0b645008be77e103297fe2cb59f648e6e69852bb9dec535ddb12bc593ddb45eb
+   0b94cd9a61fe3905128d65336060e31a5175b1a8d344e67c4b93c4a228989e69
+   msg5:
+   12775f7ca2ca2ed02229f577c1da782917f5b2097ff38c76dfc2b2495a106b70
+
+   # Outputs
+   key: 449e3dbd30117643ed3bdc78289dbb07c158ec7085f439c508813fff856b8e62
+   th: 994569e229cfa9c6c1986b118d688e735bfa33fe013cce858a4a69bb597d81e1
+
+E.5.2.  Incorrect server_confirm
+
+   This test vector uses the inputs, randomness, and messages msg1 to
+   msg4 of Appendix E.5.1.  A server that receives the following msg5
+   raises an AuthenticationError.
+
+   msg5:
+   13775f7ca2ca2ed02229f577c1da782917f5b2097ff38c76dfc2b2495a106b70
+
+E.5.3.  Wrong Password
+
+   In this test vector, the client runs the protocol with client_PRS
+   instead of the registered PRS.  OQUAKE.Finish at the server returns
+   random_key, and the client raises an AuthenticationError on receipt
+   of msg4.
+
+   # Inputs
+   PRS: 70617373776f7264
+   salt:
+   8e88aecb7ad695567cb7c4b48fc41edcf1cb1adfe1a990a2d33e81aa5de02b59
+   U: 636c69656e74
+   S: 736572766572
+   sid: afa3f8d790ddb09b5ec5b137b3673628
+   public_context:
+   00000010afa3f8d790ddb09b5ec5b137b367362800000006636c69656e740000
+   0006736572766572
+   secret_context:
+   client_PRS: 77726f6e672070617373776f7264
+
+   # Randomness
+   kem_blind:
+   f327b5ccef0d7c249e8598e02036b8b34dd036da1f0eb79dfdce07bf61d3a5d5
+   cpace_ya:
+   e0b6d06d432560280a6f15fd21b372f5e572c76091586164f66f0b139b13d8b3
+   cpace_yb:
+   87e8d3a3f20cf59584954a5b88b0290fae13950e63e85ece1a43005127541af8
+   keygen_seed:
+   d30f9497783cdf7f835a0eb87ff72623f51b00292b9766cb0c089c68d354f99b
+   2b815271ae29e666ce4912477114cfffdcd6d4804fc8718d3031a98090e7d05b
+   kemeleon_m:
+   4567725574285524412479118180070268523173
+   3189614764122988195248002645185953521794
+   5346793645985749529627698781893394013311
+   7480348256781391904521126196694462393734
+   oquake_r:
+   85df3a5ae66b6c2f6a5ed95e178b7110d2f8e449d0fe5de7a67e42098fbe71f3
+   3394b56eb0d76a198d1bf4c2ad045d0650e4a83489f1f1ff7f043e8b93ae7a57
+   encaps_m:
+   e531946f170229dc57c11d876863dee09309f9049335654743e460a3d6293a62
+   random_key:
+   0b6a42ca7f7854b840a61a6750275eea5903b2aea9488c4bb6002086fa981311
+   kem_encaps_eseed:
+   0b7714fba342e4a36bdf0ed87030d98dfeb7a5ee4a35d8ce2792be6e277356ae
+   17253290da2dea3c70ccf1622ae5191d5f503655bc3327660120cfa4275d39d7
+
+   # Messages
+   reg_msg:
+   8e88aecb7ad695567cb7c4b48fc41edcf1cb1adfe1a990a2d33e81aa5de02b59
+   0c241042d248feda762712356f02edfdf3a61fa5e4639c6bd779a06f95dc9e36
+   d9441116501a2a7cb37ac6727f363e139c5a9e0266ffa18c6fe199db5b936836
+   6ca8667ce49612366cb3cdd41af6801922c62614c85e71d1892ea00b0c996c89
+   4bc92650c8bad60be704384e1ca63ed4127e5c78d4685d34f316988c235a87a9
+   3fca769608c47e64879b2252e2107f1a32560ec99314dc6bf0a27ef5512d9504
+   2cb1b9ac240202aaf6ade70842300b88567866f6c03c12771cda83a0b06ba265
+   d92a2630c48a29232100b62fb57470f3aa05d067a8eba7bea919663bbbe8905c
+   9dda9f12026863064954b1adbf0c4eba705dedb99d9b12417824c5b44a1a41c6
+   7caf516b26f1c82c41a278241759a04eff432fc9a323c8a1aa6462b1b9519098
+   9229b67ba738176f91a56100448bb310aaaa85784209c1bf0a3c876a6c338840
+   c6240df1687047086def12c583a4ac02c00e5243cafa7345b0d32a4d1826abfc
+   7e9700816684cfd141799851ab51a3bcf4eace23452716fc535576482df8ac37
+   404f0e9234c3413fdc045159a8449d38765e8a051ef7ad51d796e6d860170317
+   427536f16b97c468afa93508631c49b20c7862925efed46d3488a8af9c50cf49
+   045f83b63b68793a361422ac7db4590fac9113a1c5953f92448d1620e73b6fcb
+   d11f04d93aaf648d3839140bb1b34ca53fa0aa5d56c08caf5b4fb25c4c68f41e
+   b0fc679e59c610b04092b6b9d71b3923b2a54f1aae94253dec278cd8b852718b
+   7e2f38414c506b63a34eb8bc62acfc6a32f75702732eba8b9a83b383eef47e67
+   da594a2a6cfcfc88e561822e1caaab03b76298b3e40ab815b7ce72d918960b9c
+   583a4fc4628538f8822b2573604b7d108a6037a6361d461661d1056c03c740b0
+   c990ac34fce20e99e62d3d92a778f6061fc90c503709d5148b5b74642ec65d20
+   762aa6bc8420005c69c7c9bfe9ae5093a2b94b617dd46adcb0c705e1776868a8
+   d2e72b5aa11b96405ecaa8887f175dc1f616208ab2537254f2587635177055cc
+   cc4840ac316cbc89c2b951c03db371c6fbc112c14520b288ba861414f077cdd1
+   23a459a00c88357914223b41f125fac961b4e016d808a8c36cb2503b3def9cc0
+   d5e55930799a0f989ae5062aaae04f35a4117030c4eef35647f31a43094d77b3
+   009ae30868f37a650b6faf85ad4a600f85f8352dc82a71b72d1d274639563e77
+   49c178638943f950bb1088f62a450f7655af903728d3a61ab2ad298c29bfc00a
+   7109a6b293b18e3581810508c026b9200b87954200c10c144ebc7fb5161fd7e6
+   66bb93cae237ce94a8290b444ea1d5181e792990f4579eab7186ab3d8e98a87e
+   014d2ef6cf55f5ace7fc0ab7e0b2c0192c32602e6fa32a773a488b9582479b75
+   d72879973286a0d8643f543733971d456c97011a91cb95a2272982f3c6758ba7
+   bcc726a9b87670f49478bb46ba7c23c4ac7687eb35814e5c68e852c8bb577ebb
+   05303c0a382acc0f6931abe68910ef1a0ade0ca1795bae488349beb700526ccd
+   eab462ae059221b9958c664de1079a1dc6006d32ccccd028289c23a68437d663
+   7d4bd93857ecce25d67be566221d6cab97d352de3594ecb737d7fbc8519aa4ef
+   d0061ad79cf4b5b9003532b43225cfe5ca36713a51d80ae6ec2e2bc09df3b447
+   a9db123d9b4a87e2d037a5e892b0cdb57fb2ca5687981dc7918e20a255a6396c
+   6579f3c7faa7de35e3d2d43c643792b26774a98ccdba44a8450926b16e0bab2d
+   f327b5ccef0d7c249e8598e02036b8b34dd036da1f0eb79dfdce07bf61d3a5d5
+   0006636c69656e740006736572766572
+   msg1:
+   002017569a58fccd75d6f21eddb82925456a059d457c85961437dce27a478a74
+   922a
+   msg2:
+   0020a9abfb9fc19621759dee5a46b7a1e32f35eac6747843e30a6fce9840f2da
+   fa4a64c317057aa5d78f0a28399dde68292e5aeedda86f6dd10bf8d99fa9048c
+   3d663053470ef619888701fff7669a287702ad11a77e37bdaf5fb0391328eae0
+   30c3d18be96c5ab10127428c325e30718a6b1bd37bd9f5489b6ef1ce822c6d49
+   4822ea7a3ddda729e87e7befc85cdb17681f00cfacd2f197c3c0a06ccfb0efcb
+   9356598b0a9b71313427ed21747c1b89c5d87393747441ae49693e1b5872fdd1
+   54729c6e6e5d1768e94d75357f666d4e4f3b0be9098b393b953d35e7520fc405
+   d2d8ad389c41df51746e016f01af3a6fe8a69368184c250b993faaae22550e2e
+   d56ef19c34def9b630f9366c202264fd8c5c2fea269d6b1743295d539a97c95f
+   3a4e94910f471f995392ddc20fae25314ffd90d30038259c7cb1eff6a3f59ce7
+   a35e2020f3e473b855bbb02933892a0aea35db625c8f513be772d96367026ff8
+   c35775918c110ddf0f193f2ef6afcef4c7c43d61f033d81e1822264536c3aba0
+   f92590d4c35f5787da505d885f9144c7aa6547220db4a62ee37bf938b7d64bfa
+   cd260bdaad6e7fec71608c63dc0b36bf3e20bfa76f557eadf2dea719b7a56731
+   1aa8bf6251eac6d8375144c4758e07f7854a200bc34bf532b2febc2d6b6f7692
+   37431dd3e7eee404a0fa3cffbd3429074bebb86952a397ce91705e8c9f5c17c2
+   3026d31eded82a05e1d18bced9e565e97595573bccaa39e7d23b0b9688b8fea2
+   bf2f1298502523bffea5a5e8a0cabac95c6b410f1f422e25de99314fb724190c
+   bcc114ab3e2b0fbe9d23c0096d4f4c86fd315b810d552b11023918f6b5af1cb6
+   413871601eb6079f9664bdf5f264ab80a25e2823e10f2d3853b6dcbf725a26bc
+   5841b77d0950788fe7a776ac2fe44fa215e7d6ea1159df846a422ea90a61daaf
+   605f2fe3f0b5d9ed58677fa2d37b7b7170279f5069ee947d0d0ebeb5da005db5
+   1d3a2a3c3ddbff173be70b891156533789d0a4e2c9aa2fe9f1724ba53ba8d146
+   d916e7c05009245fa3771fe1d26103035174745933314e4ccae142975df0d8b4
+   7cdb9a7612fb71c798f2bc7afd3973cc965ee4a0a58bfe55ab04a04490710dba
+   dadb167c4d9340a8b5ae8b1facd6d9397d58f86aa15e0644748a82e3e036c782
+   734fd0d389c6840c4b71e3858595d92f4ce0f46ffd1012ab7d11eb8dd880e3b4
+   e595fcdd2793f97d18ab5e004b8d2de8a626a49d82a00d719ada3e34925c131c
+   0a58787d36624a0c49204f5176af202a521391bad2958a6967e2a16e570dc489
+   58110027e20fa9d97c59eea9daa4ec90ea5c40e6eeaeec220c220b478b751d66
+   103eac8e524ffc5241c3499a711c647d708c7f916586d466e4920ee31f2c492e
+   1bacde9e8089666f4e9968414078f6ce4af883db3d5ff9aa95f5bfc51bcddb26
+   77a491d3c31f672db8d2cdb192ac996726b447d01532205a4e4fee870da086f8
+   dc94d0c561651d921b99cf911d3de928a17013b65263f7f5939fdd8405a032e4
+   abaee6d16e7ec3f3ac3b1e1229614c386bc6f4d8d33a201eb7ba8f179b52a318
+   bfcf6457b6a12a261e4660e1dbe9cc75babe31c060ff90b946f0df9a983d7c95
+   6d529a243731c42f996a0fbb713743f07020b36cdb18ea33a1448ece28396748
+   eb8d12eb5bd06575787c45c81c413ee21a687c9ce90343fc34c401af20184e44
+   b47da8564ef9259e536f976b43a63282d47587ab1623c5e50a02e107c2e406e9
+   8aff9f68e117d5a1a0edb7251e450604a155ba6e9921d7e447a8a385fdc9b732
+   da195204e6480a13ca4851ee444afbedc2d62f07af96c60f977116aa8f155ece
+   47260dd93809d5d45e3901a74a4221cea9a8e7748d9ae6aabc69d5a1d536cc96
+   771d26d1eeb34778be271191aee52eef58b154f0703c96526750836993b4a0c4
+   9b0ec53a5687bd5462c1b7436580859f3c5a59edbf24a4b4449748b9f07a3695
+   41734eccb82a684b91d63787f8b6dcec5cb02d8e3418fe415ebb407ccae9a649
+   5d0881118a0dd55206a1db90343b9ac39c93b99bcd663461f52d91bd196881ca
+   17915556f3e2122361ee93f6f8eb3e33f57d49852532b97dc6ce9bd321d0034f
+   5f63e965831cf1a561cf79d4bec917803aa722320ce4e6b1eae254a5aab36362
+   ddb2950100cfaf87cdcbd9407d541ab73d3e3e8928f801d7d56b83c9f108b3fe
+   d85299acabafa1e28fa67bd509d598bdb9b14fe779f0395d21aa07c40cfc69ca
+   d1c9bfe1c2588c3f61e13889a7c359745b5e533e821797ca91366cdb145a789f
+   45d3abcb0e0e98ad92c29ddaed44f57070797087004db1c0187e65a0a32a3f10
+   708cb3d810dc311e836da7847b73aa6e8b49b1a5e19c12934da8f40d41b0
+   msg3:
+   0222620f0b6a82cb22d7ee867ef533c4188a847f5336e7a55bd8699d0dd7cb5d
+   0859d81ecbe1716987673fd24af1848343aeefe7362bc708be0074574d7d623b
+   7cf6e288b3acddff9663e56077d5e37c012073f38dcb2140da4b24178c85db18
+   269d84afa9dd4a6a504965814867386ff199f4583ec9f4e3d80be0cedf866fdd
+   5cd8f5fd8308f57bc19e3dcc88c99ad2898f7523da25d8f8de198d672b9a85cf
+   4ca371dff0e82345d4ff706b79e11bd1a51a3dbc7178eff11559eb3afbdda51c
+   23d675ef0d62c8ea1a7acc8c5d2f63671795834625484ee43d4641806490659b
+   305d1832ddad26e4210677cb627d71b8563b02031221e1ab0eee96f033433ce6
+   fd792e0a97d8c0371268b071ac9fd2ac5c9978090dee39f2328f6058d663a006
+   ac4dca25f1b8e68e8cd5ac833aac88f8e85de03c184e4859794823999fec236c
+   b2e73c1f25a3c6a478a737147b9e72ae3f1c3612d4bc58dd55a4678a87e1d350
+   5b910d2eb3c2dd143f56304cc71fedc861a6495f244bebf72f763e63b6910553
+   d66c277e369803c84a6daa92c8d6526a22f635e5ddd61052e9facd0cee429cc9
+   24ff0d6cfe8553948d77ec2f0d1e87f9ef8f809f83fb16cda54b83a8685a2d57
+   c3d7d9dedfd4cced48c72415dda6282e297eaee6394662bb72351c5b9c820661
+   9123cfbb0922f358370a3783c2acc5d30e8b2af1cb57d32852bbbc7b101d5bd6
+   4fec7e0dd02418f910b2b20b989d6aec711d298034e5722547d29ce21506a8f3
+   ab96457f6affb2ed9a8ecaa19e9c7a1bf60e8ce47ed66de5dd053f21f6c7ebb7
+   3a138e286f034a1f8fc2ccff4e7e8743e674320521414cdd52266ed2bbb6d3a2
+   16e49757dd414fa5e88df9c6733e6124d3a8649af056ad0a2598eafdf335fc92
+   cefef3693bf232dcdcbb0f38958d7d201b70d7c1ed6ce1ffa8a6ef28b49bb2f0
+   1d20455273e008fc6cef815f3d691a7d857d26c1befb1c5c84c13c047ee3a35e
+   335b4646d5ec9d2894d416e293b16ad65a79b125444776ae4c99437a59eef4a7
+   122b6a71354ff14558a9ccbdd81381cefc5c8fc272a6de18e7424153a049d263
+   34c3dac1d50c22b1c1c340ec0758e4c05e073c53276a8af42191e962653cd25b
+   488b1b851db65d96c690353e4b21487488ec192ba1f5c966c9279fe60bd4316b
+   8a972cb978de9853816a60fb31f0216d7a070f7d99cb947145748f8b8c3c2417
+   0dabee55bc85a11f100dc8a3b5914c3f1da3d3bcda884feb7e52b8e4470a72f1
+   b553c74170db20bd453f7afd0b410da9eb3ffd5d5bcd41e1a0680c5e2ce04285
+   12a0c553e9731ba1bf46a9666a50ee6b39cb312f6d816334b6a997c58d3b9756
+   39c7d5d73fd491f0f6fc8e1c4038b35aa094e4d6db15d831e57a27b9db0b715d
+   e0ea2491b93770619fdcd2de3f32c83205869e08d5ebc6e0b4970fd96359e0e1
+   9f83175d8429db7178cd6c3ffaa6ed5fe102c665a9d17728a7388152102d0f55
+   ff8e01a4d01c0ae6e9b197778962c09f127cc06bd0a43161b03771536bd91f4e
+   01419f6ef595aee864b63fdc22715c3ff72fa37d0aef8bf8bc1c8d7c5c1b8960
+   f1596168db6b46124f68dfc9ace13d4a57389475b25772dd893e639a65d0d7e9
+   5a87c141dc545b1ab7b76c5b3da9a57c580e300f2bc223d009c1e2792b1d4a26
+   ccec5c086970a072caf3965ee478e4274a06ec9c7fa24796f20f877f18968def
+   9dd1d85f1d324223537a5ecb82182c43bad6aefed1a6aaeb7261ef79afd94a09
+   bc3c7e0766274daba7346ec7633b45a47613afd30312927244e6e02d0b67f2c3
+   e67aafa78314495579f4ce619672d7a30aabd8d5128ba781a02b2701a2906ce5
+   23c2bfd3b94c3cc869e7b7ad72c340776fdab9b65c201b8542514c582f00cc1e
+   1f2964cbe89f8dd024be7d891d9ccd990e763458dcac8e9e2d0c5dee2e98c895
+   f11a7b4866b8ed5a16522bd58f8119b0225181f6aeb42ce7164320b8684ebf3b
+   94477d781644e2164f264905850bfe41b22a2b59dab27eaa42b71467294ac42c
+   6e6041c10b4062b4c5210be2b6a2b6f63632bb110a506f3d9d6445e5eb42ef43
+   f51cc223e3cb6edf305516e638269036982925236a1db43df8b491181eea0c2a
+   ccf15dda6adefce41b1135efd429b7ab2e8098cba4914bd2b72bd4fdca0033eb
+   b0f6878a0cf84f1216950b00f0bdd11ac4f6efeb4e2d4e8630d0a1fb8c67f9ba
+   c26dca600343a086f5b1f838d7ce206d5fe1128bc6983444b368161d0d74bc5d
+   msg4:
+   c8d895faccb6ef3998061b5806238a1579d75d761d6dd7e055dc44022d3fa210
+   d7ce73271f1631f9f31ec3d0c4f64bd99beab082b0bc6d13ffee76d06dfa66ea
+   f2ab412c4111413fbd54305f1bd52f214d4d081cb11e303cdfd80fb2e157c1a1
+   51dbff1ae9b7b46c274ff7d5a3b294216e53710341db703b3058daf841311c76
+   8105430496b252a96ce76dc9f76eb554e938ad31443363be3f7bcc9be4426b10
+   cc63a380dadd12769cd740b4590812efcd53347e7dfe6d7eee3a412cb4bec68a
+   7e572256cec39273d8cd5968997b688c83a0e9b59e8309c383b5781004f9aa6d
+   7d19b6cc326ead21727763ef6980666ab23d1987971a531ace62f497d285df5a
+   cf502eddccb5af6beb11067345bf32331febc9f0f7cddb8f983b701933436188
+   f784b2318d0fbdf04074a3e36e235571956ec304a74ede784fa16c33ccd265b2
+   ca1bbfaba57276be9dd483de39e48ee8f01977faeac41071ee2dd4bff5e00e4b
+   222a699bdc162a85e020f794da6f732874148975f9bcfd9d6561096df232c3f6
+   95c3f4736ef7c467f9009479f3b6be84a0421b44c34ab319e3d6ca54d026e46e
+   cd8b3ebd7e647db433b8aa0ba900916f611397a4055eccfd99c9b4bd1fc3263c
+   997a78115bf872b6a8f6e4c842d22c730668dfa584d8d2bedfbf35a640f34f94
+   d11cefe53fdd045bebc38baa173c6627ea70bfac4c26b5b2085505ad38f0b4e5
+   d6ddce0f20aa504eb8489c4e6ad1e8b9da1dcef8fd920255c406c9efd87354c4
+   f09279820559ed1e0b545dd0dd10e8548583dcd0dab9568a52789f4ef278120e
+   318a1d70bc55c03b5d33ca856dfb5efaf919237336530b2b2791cdba79d6f740
+   c4bc64b6489ef0d97a711da1e482dbb5d87ac96032a6feb6fec9d7e8aa4f4150
+   7be92e8d5b171268e938b70331e5877f9bfaedf8de227eb1f67171abf5167455
+   292c12e71bf21314ce1870ca8e62768143d359d1799a14876269085aa89a3139
+   756fa69a438346caaddeb5cbaf27cbf6967eea27d602dabb65a88aea0a65a3bb
+   dbba31b3aeedc3e89324ba7d60d44434c2e7e49b20fc6832fe7c4d782fb20966
+   7e52965467c47514e671a2c95b9548935bc2efe670e06bf4091db65772e81efb
+   364df9fd4bdc3283c859eff3c8b218dfea374487cf79e601d96f6bc3c7a10e12
+   32738297c33d6fd46b281f413e3261c6e8908ea58f3707a27b6ea4d900b06180
+   544af0cba33df6fe90ba3aa9a0052cd676c8acf6cc74251b23126a97c5753d32
+   ee17e182551ca0492d98877678ae6660f85ed78f614889910578f17a84ad0f51
+   5eb3fd13d8a9c1d0f00223df2ed9f24628c83188c5dcf99c7b84fb86d9020036
+   0c0603b3a614e80a3809d44ce8499e2e89500e8dedb3bb9950b300cf47b82773
+   3a067801fb0be79a94b6ccdfbbca2117e23ca7497e75b9253f096a4cc1066eb8
+   4bc0858dbb01013dc1d934fc2a4c0ce931bb8e092c93e6056462be5da285d096
+   f6f1f2683cb2a04c003935530897d789485fc3bc8a8a353746322317027a0cc9
+   f89ef189fbdf15e970d570b057f71b99e6347f5f8f991aa9e926d55447856959
+   745d7bbc5e76703616b982109788e257120774ca6aa997346cf05b57ca4bff05
+   4464e92b6f00f62c62818dc7f35f83d0b3bc0fad63380e1ae896c323c0cc9feb
+
+   # Error
+   AuthenticationError, raised by the client on receipt of msg4
+
+E.5.4.  Neutral Element
+
+   A server that receives the following msg1, in which Ya is the neutral
+   element of G_X25519, raises a CPaceError, regardless of its other
+   inputs.  [CPACE] lists further points for which CPace must abort.
+
+   msg1:
+   0020000000000000000000000000000000000000000000000000000000000000
+   0000
 
 Authors' Addresses
 
