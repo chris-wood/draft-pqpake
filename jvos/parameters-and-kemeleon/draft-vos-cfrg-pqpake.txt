@@ -5,10 +5,10 @@
 Network Working Group                                             J. Vos
 Internet-Draft                                               Apple, Inc.
 Intended status: Informational                                S. Jarecki
-Expires: 15 April 2027                  University of California, Irvine
+Expires: 16 April 2027                  University of California, Irvine
                                                               C. A. Wood
                                                              Apple, Inc.
-                                                         12 October 2026
+                                                         13 October 2026
 
 
         Hybrid Post-Quantum Password Authenticated Key Exchange
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 April 2027.
+   This Internet-Draft will expire on 16 April 2027.
 
 Copyright Notice
 
@@ -131,15 +131,16 @@ Table of Contents
    10. Implementation Considerations
    11. Security Considerations
      11.1.  Hybrid Design
-     11.2.  Retroactive Password and Session Key Recovery
-     11.3.  Identities
-       11.3.1.  Symmetric PAKE identities
-       11.3.2.  Asymmetric PAKE identities
-     11.4.  Verifier Compromise
-     11.5.  Timing Attacks and Tempo
-     11.6.  Related Work
-       11.6.1.  Existing Solutions and Their Gaps
-       11.6.2.  Ongoing Research
+     11.2.  Security Against Quantum Attackers
+     11.3.  Retroactive Password and Session Key Recovery
+     11.4.  Identities
+       11.4.1.  Symmetric PAKE identities
+       11.4.2.  Asymmetric PAKE identities
+     11.5.  Verifier Compromise
+     11.6.  Timing Attacks and Tempo
+     11.7.  Related Work
+       11.7.1.  Existing Solutions and Their Gaps
+       11.7.2.  Ongoing Research
    12. Readiness for CFRG Engagement
    13. IANA Considerations
    14. References
@@ -200,7 +201,7 @@ Table of Contents
    retroactively recover the password itself from the harvested
    transcript.  Since passwords are long-lived credentials, this grants
    a quantum-capable attacker indefinite impersonation capability rather
-   than a one-time confidentiality loss; see Section 11.2 for a detailed
+   than a one-time confidentiality loss; see Section 11.3 for a detailed
    treatment of this attack.  Upgrading both protocols to provide post-
    quantum security is non-trivial, especially as there are no known
    efficient constructions for certain building blocks used in these
@@ -245,7 +246,7 @@ Table of Contents
        is only relevant here if a post-quantum threat model is assumed
        at all, and even then this is a comparatively weak motivating
        example for a PQ-PAKE: because the password is used exactly once,
-       retroactively recovering it (see Section 11.2) has little value
+       retroactively recovering it (see Section 11.3) has little value
        to an attacker, as there is no future session to impersonate.
        HNDL against the resulting channel's _traffic_ remains a
        legitimate concern, but that concern is the same one that
@@ -619,7 +620,7 @@ def Encaps(upk):
    public_context and the secret_context are optional; a party that does
    not use one passes the empty string b"" (equivalently, None).  Two
    parties obtain matching session keys only if their PRS,
-   public_context, and secret_context match.  See Section 11.3 for more
+   public_context, and secret_context match.  See Section 11.4 for more
    discussion about the identities and how they are chosen in practice.
 
    The public_context is constructed from the optional sid, U, and S
@@ -663,9 +664,10 @@ def Encaps(upk):
    using 2 rounds of a Feistel network to password-encrypt the BUA-sKEM
    public key.  The OQUAKE protocol is based on the "NoIC" protocol
    analyzed in [ABJ25].  If the BUA-sKEM provides security against
-   quantum-enabled attacks, then so does OQUAKE.  OQUAKE implements the
-   common interface described in Section 5: it consists of two messages
-   sent between initiator and responder, produced by the functions Init,
+   quantum-enabled attacks, then so does OQUAKE.  Section 11.2 discusses
+   to what extent this has been proven.  OQUAKE implements the common
+   interface described in Section 5: it consists of two messages sent
+   between initiator and responder, produced by the functions Init,
    Respond, and Finish, described below.  Both parties take as input a
    password-related string PRS, a public_context, and a secret_context.
    Upon completion, both parties obtain matching session keys if their
@@ -703,7 +705,7 @@ def Encaps(upk):
    The specification follows the design as presented in [VJWYMS25], with
    the splittable KEM technique described in [TEMPO], which prevents
    timing attacks caused by rejection sampling in ML-KEM.  See
-   Section 11.5 for more information on the timing attack and this fix.
+   Section 11.6 for more information on the timing attack and this fix.
 
    The byte-level encoding of the OQUAKE protocol messages is specified
    in Appendix C.
@@ -1153,7 +1155,7 @@ def InitiatorFinish(PRS, public_context, secret_context, state, resp_msg):
    employ a salt, a user account identifier, and an optional server
    identifier.  These identifiers identify the registration and do not
    have to be equal to any identifiers in the public_context; see
-   Section 11.3.2.  The material required for the verifier is generated
+   Section 11.4.2.  The material required for the verifier is generated
    as follows:
 
 GenVerifierMaterial
@@ -1561,12 +1563,13 @@ def Verify(state, response):
 
    CPaceOQUAKE+ is the hybrid aPAKE obtained by applying the
    transformation of Section 8.1 to CPaceOQUAKE (Section 7).  It is a
-   five-message aPAKE that provides security against both classical and
-   quantum-capable attackers.  The first three messages are entirely
-   CPaceOQUAKE, while the last two messages are the password
-   confirmation protocol.  An application can omit the last message; see
-   Section 8.1.3.  To ensure hybrid post-quantum security, the KEM used
-   during password confirmation must be a hybrid KEM.
+   five-message aPAKE designed to provide security against both
+   classical and quantum-capable attackers (Section 11.2).  The first
+   three messages are entirely CPaceOQUAKE, while the last two messages
+   are the password confirmation protocol.  An application can omit the
+   last message; see Section 8.1.3.  To ensure hybrid post-quantum
+   security, the KEM used during password confirmation must be a hybrid
+   KEM.
 
    Upon successful completion of the entire protocol, the client and
    server will share a symmetric key that was authenticated by knowledge
@@ -2183,7 +2186,7 @@ def ResponderFinish(state, msg5):
    attacker that can break the D-MLWE assumption can distinguish ML-KEM
    public keys and ciphertexts from random bitstrings, and can therefore
    mount an offline dictionary attack against the OQUAKE transcript.
-   Section 11.2 treats this failure mode, and its consequences for both
+   Section 11.3 treats this failure mode, and its consequences for both
    the password and the session key, in general terms; the sequential
    composition described in Section 7 is what prevents it from applying
    to the original PRS here, since OQUAKE receives an effective password
@@ -2201,7 +2204,22 @@ def ResponderFinish(state, msg5):
    composition design has been independently analyzed by at least three
    different groups, improving overall confidence in the design.
 
-11.2.  Retroactive Password and Session Key Recovery
+11.2.  Security Against Quantum Attackers
+
+   The security proofs of the protocols in this document are in the
+   universal composability (UC) framework under the classical random
+   oracle model.  [BJ26] shows that OQUAKE-style protocols do not
+   realize the standard UC PAKE functionality against attackers with
+   quantum access to the random oracle, because a simulator cannot
+   extract the password.  Note that this does not lead to an attack that
+   recovers passwords or keys, and [BJ26] does prove stand-alone game-
+   based security in the quantum random oracle model for a closely
+   related protocol.  CPace is only quantum-annoying [ES21]: a quantum
+   attacker must solve a discrete logarithm per password guess.  The
+   security of CPaceOQUAKE and CPaceOQUAKE+ against quantum attackers
+   therefore relies on that of OQUAKE.
+
+11.3.  Retroactive Password and Session Key Recovery
 
    A PAKE is unconditionally password hiding if its protocol messages
    remain statistically independent of the password even when every
@@ -2241,7 +2259,7 @@ def ResponderFinish(state, msg5):
    password is changed.  Retroactive password recovery is therefore
    strictly worse for a PAKE than HNDL is for plain key exchange, which
    is why deploying a post-quantum KEM only at the transport layer, as
-   discussed in Section 11.6, does not address the risk that a classical
+   discussed in Section 11.7, does not address the risk that a classical
    PAKE poses on its own.
 
    This principle applies directly to classical Diffie-Hellman-based
@@ -2283,14 +2301,14 @@ def ResponderFinish(state, msg5):
    guarantee than any single-primitive PAKE, classical or post-quantum
    alone, can offer.
 
-11.3.  Identities
+11.4.  Identities
 
    Client and server identities are essential to authenticated key
    exchange protocols, and PAKEs are no exception.  This section
    discusses the role and importance of identities in the PAKE protocols
    specified in this document.
 
-11.3.1.  Symmetric PAKE identities
+11.4.1.  Symmetric PAKE identities
 
    PAKEs are often analyzed in the universal composability (UC)
    framework, which imposes several requirements on the protocols: (1)
@@ -2327,7 +2345,7 @@ def ResponderFinish(state, msg5):
    [[OPEN ISSUE: adjust the requirements for the identities in OQUAKE on
    the basis on the bare PAKE analysis]]
 
-11.3.2.  Asymmetric PAKE identities
+11.4.2.  Asymmetric PAKE identities
 
    In contrast to the symmetric PAKE setting, party identities in the
    asymmetric PAKE setting play a different role.  The very nature of
@@ -2368,7 +2386,7 @@ def ResponderFinish(state, msg5):
    longevity and uniqueness of their party identifiers when
    instantiating these protocols.
 
-11.4.  Verifier Compromise
+11.5.  Verifier Compromise
 
    An attacker that obtains a client's verifier (v, pk) can perform an
    offline password guessing attack against it, and it can impersonate
@@ -2383,7 +2401,7 @@ def ResponderFinish(state, msg5):
    send the client ciphertexts of its choice, the KEM must be IND-CCA
    secure (Section 4.1).
 
-11.5.  Timing Attacks and Tempo
+11.6.  Timing Attacks and Tempo
 
    OQUAKE (without the fix from [TEMPO]) is subject to a timing attack
    due to how the ML-KEM expands the key-generation seed (rho) to a
@@ -2402,7 +2420,7 @@ def ResponderFinish(state, msg5):
    The Tempo fix addresses this issue by ensuring that input to
    SampleNTT is not secret-dependent.
 
-11.6.  Related Work
+11.7.  Related Work
 
    This section relates the protocols in this document to existing
    standardized PAKEs and to the broader post-quantum PAKE research
@@ -2410,7 +2428,7 @@ def ResponderFinish(state, msg5):
    it remains an active research problem, and why the state of the art
    is nonetheless mature enough for CFRG to engage with it.
 
-11.6.1.  Existing Solutions and Their Gaps
+11.7.1.  Existing Solutions and Their Gaps
 
    OPAQUE-3DH and SPAKE2+ are standardized aPAKEs, and CPace [CPACE] is
    an emerging symmetric PAKE, but all three are purely classical
@@ -2426,12 +2444,12 @@ def ResponderFinish(state, msg5):
    handshake transcript.  If that classical PAKE's underlying hard
    problem is later broken, the _password_ itself becomes retroactively
    recoverable from the harvested transcript, as detailed in
-   Section 11.2, independent of whatever post-quantum protection was
+   Section 11.3, independent of whatever post-quantum protection was
    applied to the surrounding transport.  This is the concrete gap that
    simply layering a post-quantum KEM around an existing classical PAKE
    does not close, and it is the gap this document addresses directly.
 
-11.6.2.  Ongoing Research
+11.7.2.  Ongoing Research
 
    [[EDITOR'S NOTE: remove in the final version of this document]]
 
@@ -2452,13 +2470,13 @@ def ResponderFinish(state, msg5):
    been standardized.  The security analysis backing this document's
    specific composition [VJWYMS25] is similarly new.  Concretely,
    [TEMPO] identifies and fixes a timing side channel in OQUAKE's ML-KEM
-   key-generation step (see Section 11.5) that was only discovered in
+   key-generation step (see Section 11.6) that was only discovered in
    2025, after OQUAKE's core compiler had already been analyzed,
    illustrating that this design space is still being hardened rather
    than settled.  Likewise, this document currently carries an open
    issue regarding whether OQUAKE's proof of security extends to the UC
    bare PAKE model without requiring party or session identifiers (see
-   Section 11.3.1); this extension is believed to hold on the basis of
+   Section 11.4.1); this extension is believed to hold on the basis of
    the existing NoIC/OQUAKE analysis in [ABJ25] but has not yet been
    published.  Finally, no single compiler approach has yet converged as
    the preferred solution across the range of use cases in Section 2:
@@ -2581,10 +2599,19 @@ def ResponderFinish(state, msg5):
               quantum computers make SHARCS obsolete?", n.d.,
               <https://cr.yp.to/papers.html#collisioncost>.
 
+   [BJ26]     Bartusek, J. and J. Januzelli, "Natural Barriers to
+              Quantum Extraction: On the Post-Quantum (In)security of
+              (O)EKE and Masny-Rindal OT", n.d.,
+              <https://eprint.iacr.org/2026/2280>.
+
    [CMST25]   Carrier, K., Meyer-Hilfiger, C., Shen, Y., and J.-P.
               Tillich, "Assessing the Impact of a Variant of MATZOV's
               Dual Attack on Kyber", n.d.,
               <https://eprint.iacr.org/2022/1750>.
+
+   [ES21]     Eaton, E. and D. Stebila, "The 'quantum annoying' property
+              of password-authenticated key exchange protocols", n.d.,
+              <https://eprint.iacr.org/2021/696>.
 
    [Grover96] Grover, L. K., "A fast quantum mechanical algorithm for
               database search", n.d.,
@@ -2711,9 +2738,10 @@ Appendix A.  Deriving parameters
    best known quantum attack on ML-KEM.  For classical attackers, we use
    the classical equivalent, which is C0 core-SVP [Ogilvie26] [CMST25];
    see [ADPS16] for the core-SVP methodology.  Given that the security
-   proofs are in the classical random oracle model, we use a heuristic
-   to estimate security against quantum attackers: we consider a
-   quadratic speed-up [Grover96] for random oracle terms in which the
+   proofs are in the classical random oracle model, and that their UC
+   security does not carry over to quantum attackers [BJ26], we use a
+   heuristic to estimate security against quantum attackers: we consider
+   a quadratic speed-up [Grover96] for random oracle terms in which the
    attacker must find a value matching a target, but we do not consider
    a speed-up related to collision finding since quantum collision
    search is not known to be cheaper than classical collision search
