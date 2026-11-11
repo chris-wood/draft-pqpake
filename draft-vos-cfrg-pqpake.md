@@ -415,7 +415,7 @@ These additional properties are crucial for the security of OQUAKE. In
 other words, one MUST NOT use a KEM that has no uniform public keys
 and/or no anonymous ciphertexts in place of a UPK-ANO-KEM.
 
-In this specification, we also require a third property: the KEM must be splittable. A splittable KEM (sKEM) implements the `Split(pk) -> (ut, ⍴)` function and its inverse, which takes a public key and splits it into a part `⍴` that is independent of the KEM's secret key and can therefore be made public, and a part `ut` that does depend on the secret key. This property allows parties to perform variable-time operations on `⍴` without revealing information about the secret key. We use N⍴ to denote the byte-length of ⍴ and Nt to denote the byte-length of ut. We use `Combine(ut, ⍴) -> pk` to refer to the inverse operation of `Split`.
+In this specification, we also require a third property: the KEM must be splittable. A splittable KEM (sKEM) implements the `Split(pk) -> (ut, rho)` function and its inverse, which takes a public key and splits it into a part `rho` that is independent of the KEM's secret key and can therefore be made public, and a part `ut` that does depend on the secret key. This property allows parties to perform variable-time operations on `rho` without revealing information about the secret key. We use Nrho to denote the byte-length of rho and Nt to denote the byte-length of ut. We use `Combine(ut, rho) -> pk` to refer to the inverse operation of `Split`.
 
 In the remainder of this specification, we abbreviate 'splittable binary UPK-ANO-KEM' as BUA-sKEM.
 This specification uses variants of ML-KEM-768 and ML-KEM-1024 {{FIPS203}}, which we denote by
@@ -439,13 +439,13 @@ no rejection sampling and cannot fail, rather than the rejection-sampling varian
 kept secret {{KEMELEON}}. ML-BUA-sKEM sets Kemeleon's statistical distance parameter
 Kemeleon.t to 132, which bounds the statistical distance between an encoded public key
 and a uniform byte string as required in {{params-oquake}}.
-Because `Kemeleon.EncodeEk` leaves the final 32 bytes (⍴) of the encoding untouched,
+Because `Kemeleon.EncodeEk` leaves the final 32 bytes (rho) of the encoding untouched,
 the resulting uniform public key remains splittable in the same way as the
 underlying ML-KEM public key.
 
 This document uses the following parameter sets.
 
-| Parameter set    | ML-KEM      | Kemeleon.t |  Npk |  Nt  | N⍴ |  Nct |
+| Parameter set    | ML-KEM      | Kemeleon.t |  Npk |  Nt  | Nrho |  Nct |
 |------------------|-------------|------------|------|------|----|------|
 | ML-BUA-sKEM-768  | ML-KEM-768  |     132    | 1205 | 1173 | 32 | 1088 |
 | ML-BUA-sKEM-1024 | ML-KEM-1024 |     132    | 1596 | 1564 | 32 | 1568 |
@@ -474,7 +474,7 @@ def KeyGen():
 With Kemeleon.t = 132, Kemeleon encodes each polynomial of an ML-KEM encapsulation key in 391 bytes instead of 384, so the uniform public keys produced by ML-BUA-sKEM are longer than those produced by ML-KEM.
 ML-BUA-sKEM encodes each integer output by Kemeleon's VectorEncode as a little-endian byte string of 391 bytes, and Kemeleon.DecodeEk decodes it in the same way.
 The final 32 bytes of the public key still represent the part that does not depend on the secret key.
-For this reason, N⍴ = 32 and Nt = ML-BUA-sKEM.Npk - 32.
+For this reason, Nrho = 32 and Nt = ML-BUA-sKEM.Npk - 32.
 
 For ML-BUA-sKEM, the split operation is defined as follows.
 
@@ -486,12 +486,12 @@ Input:
 
 Output:
 - ut, part of the uniform public key that depends on the secret key
-- ⍴, part of the uniform public key that does NOT depend on the secret key
+- rho, part of the uniform public key that does NOT depend on the secret key
 
 def Split(upk):
   ut = upk[0 : ML-BUA-sKEM.Nt]
-  ⍴ = upk[ML-BUA-sKEM.Nt : ML-BUA-sKEM.Npk]
-  return ut, ⍴
+  rho = upk[ML-BUA-sKEM.Nt : ML-BUA-sKEM.Npk]
+  return ut, rho
 ~~~
 
 For ML-BUA-sKEM, the inverse of the split operation is concatenation.
@@ -501,13 +501,13 @@ ML-BUA-sKEM.Combine
 
 Input:
 - ut, part of the uniform public key that depends on the secret key
-- ⍴, part of the uniform public key that does NOT depend on the secret key
+- rho, part of the uniform public key that does NOT depend on the secret key
 
 Output:
 - upk, an ML-BUA-sKEM public key, a byte string of ML-BUA-sKEM.Npk bytes
 
-def Combine(ut, ⍴):
-  return ut || ⍴
+def Combine(ut, rho):
+  return ut || rho
 ~~~
 
 ML-BUA-sKEM encapsulation undoes the uniform encoding performed during key generation before calling ML-KEM.Encaps on the non-uniform public key.
@@ -704,23 +704,23 @@ def Init(PRS, public_context, secret_context):
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
   (sk, pk) = BUA-sKEM.KeyGen()
-  (ut, ⍴) = BUA-sKEM.Split(pk)
+  (ut, rho) = BUA-sKEM.Split(pk)
 
   r = random(Nr)
 
-  // T = XOR(ut, H(effective_PRS, ⍴, r))
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || r)
+  // T = XOR(ut, H(effective_PRS, rho, r))
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || rho || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   T = XOR(ut, T_pad)
 
-  // s = XOR(r, H(effective_PRS, ⍴, T))
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || T)
+  // s = XOR(r, H(effective_PRS, rho, T))
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || rho || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", Nr)
   s = XOR(r, s_pad)
 
-  msg = (s, T, ⍴)
+  msg = (s, T, rho)
 
-  return State(effective_PRS, sk, pk, ⍴, s, T, public_context), msg
+  return State(effective_PRS, sk, pk, rho, s, T, public_context), msg
 ~~~
 
 ## Response
@@ -749,30 +749,30 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def Respond(PRS, public_context, secret_context, init_msg):
-  (s, T, ⍴) = init_msg
+  (s, T, rho) = init_msg
 
   prk_ePRS = KDF.Extract(PRS, DST || "OQUAKE-context" ||
                          lv_encode(public_context) || lv_encode(secret_context))
   effective_PRS = KDF.Expand(prk_ePRS, DST || "effective_PRS", Nkey)
 
-  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || T)
+  prk_s_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || rho || T)
   s_pad = KDF.Expand(prk_s_pad, DST || "s_pad", Nr)
   r = XOR(s, s_pad)
 
-  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || ⍴ || r)
+  prk_T_pad = KDF.Extract(effective_PRS, DST || "OQUAKE" || rho || r)
   T_pad = KDF.Expand(prk_T_pad, DST || "T_pad", BUA-sKEM.Nt)
   ut = XOR(T, T_pad)
 
-  pk = BUA-sKEM.Combine(ut, ⍴)
+  pk = BUA-sKEM.Combine(ut, rho)
   (k, ct) = BUA-sKEM.Encaps(pk)
 
   prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" ||
-                       s || T || ⍴ || pk || ct || k)
+                       s || T || rho || pk || ct || k)
   h = KDF.Expand(prk_sk, DST || "confirm", Nkc)
   key = KDF.Expand(prk_sk, DST || "key", Nkey)
 
   resp_msg = (ct, h)
-  th = TH("OQUAKE", public_context, s, T, ⍴, ct, h)
+  th = TH("OQUAKE", public_context, s, T, rho, ct, h)
 
   return resp_msg, key, th
 ~~~
@@ -809,10 +809,10 @@ Parameters:
 - DST, domain separation tag, a byte string
 
 def Finish(state, resp_msg):
-  (effective_PRS, sk, pk, ⍴, s, T, public_context) = state
+  (effective_PRS, sk, pk, rho, s, T, public_context) = state
   (ct, h) = resp_msg
 
-  th = TH("OQUAKE", public_context, s, T, ⍴, ct, h)
+  th = TH("OQUAKE", public_context, s, T, rho, ct, h)
 
   try:
     k = BUA-sKEM.Decaps(ct, sk)
@@ -820,7 +820,7 @@ def Finish(state, resp_msg):
     return random(Nkey), th
 
   prk_sk = KDF.Extract(effective_PRS, DST || "OQUAKE" ||
-                       s || T || ⍴ || pk || ct || k)
+                       s || T || rho || pk || ct || k)
   h_expected = KDF.Expand(prk_sk, DST || "confirm", Nkc)
   if h != h_expected:
     return random(Nkey), th
@@ -2284,7 +2284,7 @@ In the analysis below, we require estimates for the hardness of ML-KEM.
 The analysis of NoIC {{ABJ25}}, applied to the split public key of OQUAKE as in {{TEMPO}}, gives a bound with the following terms.
 
 - BUA-sKEM security: the one-wayness, anonymity, and public key uniformity advantages of the BUA-sKEM are multiplied by `q_ses * q_H1 * q_H2`. These factors count positions for a challenge instance, so we tighten these terms as described in {{params}}. The underlying KEM then needs b >= 128 against both classical and quantum attackers. Both ML-KEM-768 and ML-KEM-1024 achieve this, but ML-KEM-512 does not.
-- Attacker-chosen seeds: in an active attack, the responder encapsulates to a public key whose seed ρ was chosen by the attacker. The reduction in {{TEMPO}} loses a factor equal to the number of seeds tried by the attacker because they may pick the most favorable of many matrices. We are not aware of any attacks that benefit from this choice, but we choose to be conservative in this regard. As a margin in case such an attack is found, this document prefers configurations that use ML-KEM-1024 ({{configurations}}): without tightening this term, ML-KEM-1024 still achieves approximately 118 bits of security against classical and 104 bits against quantum attackers, compared with 86 and 75 bits for ML-KEM-768, respectively.
+- Attacker-chosen seeds: in an active attack, the responder encapsulates to a public key whose seed rho was chosen by the attacker. The reduction in {{TEMPO}} loses a factor equal to the number of seeds tried by the attacker because they may pick the most favorable of many matrices. We are not aware of any attacks that benefit from this choice, but we choose to be conservative in this regard. As a margin in case such an attack is found, this document prefers configurations that use ML-KEM-1024 ({{configurations}}): without tightening this term, ML-KEM-1024 still achieves approximately 118 bits of security against classical and 104 bits against quantum attackers, compared with 86 and 75 bits for ML-KEM-768, respectively.
 - Public key encoding (Kemeleon): the public key uniformity advantage also includes the statistical distance between encoded KEM public keys and uniform bytestrings. An attacker can test this once per password guess, so this distance must be at most 2^-128 per public key. This treats the encoding's statistical distance separately from the public key uniformity of ML-KEM itself. In the paper, this would require an additional game hop that replaces all encoded public keys by uniform byte strings at a cost of at most t times the per-key distance. Kemeleon.EncodeEk meets this when we set Kemeleon's statistical distance parameter (Kemeleon.t) to at least 132 (Kemeleon allows values that match 76 + 8x).
 - Decryption failure: the term `q_ses * δ` requires a failure probability δ of at most 2^-128. ML-KEM's failure probability is below 2^-138 for all parameter sets {{FIPS203}}.
 - Randomness s: the proof requires that each message (s, T) sent by an attacker corresponds to at most one password guess. This fails when one of the attacker's hash outputs matches one of the roughly t^2 hash values it obtained earlier, which happens with probability approximately t^3 / 2^(8 * Nr), where s has Nr bytes. We treat this as a search for one of these roughly t^2 target values, which a quantum attacker succeeds in with probability approximately t^4 / 2^(8 * Nr). To achieve a security level of 128 against quantum attackers, we need Nr >= 64.
@@ -2513,18 +2513,18 @@ it to the returned value.
 
 ## OQUAKE Message Encoding
 
-The OQUAKE initiator message `(s, T, ⍴)`, produced by OQUAKE.Init and consumed by
+The OQUAKE initiator message `(s, T, rho)`, produced by OQUAKE.Init and consumed by
 OQUAKE.Respond ({{oquake}}), is encoded as:
 
 ~~~
-init_msg = s || T || ⍴
+init_msg = s || T || rho
 ~~~
 
-where `s` has `Nr` bytes, `T` has `BUA-sKEM.Nt` bytes, and `⍴` has `N⍴`
+where `s` has `Nr` bytes, `T` has `BUA-sKEM.Nt` bytes, and `rho` has `Nrho`
 bytes. On receipt, the fields are recovered as
 `s = init_msg[0 : Nr]`,
 `T = init_msg[Nr : Nr + BUA-sKEM.Nt]`, and
-`⍴ = init_msg[Nr + BUA-sKEM.Nt : Nr + BUA-sKEM.Nt + N⍴]`.
+`rho = init_msg[Nr + BUA-sKEM.Nt : Nr + BUA-sKEM.Nt + Nrho]`.
 
 The OQUAKE responder message `(ct, h)`, produced by OQUAKE.Respond and consumed by
 OQUAKE.Finish, is encoded as:
@@ -2626,7 +2626,7 @@ protocol data unit. A specification that maps these protocols onto such a transp
 can define its own framing, including carrying the fields of a single protocol message
 in more than one transport message or PDU. This is possible because no value derived
 by these protocols depends on how a message is framed: every key, confirmation value,
-and transcript hash is computed from individual named fields -- `Ya`, `Yb`, `s`, `T`, `⍴`,
+and transcript hash is computed from individual named fields -- `Ya`, `Yb`, `s`, `T`, `rho`,
 `ct`, `h`, `enc_c`, `k`, `client_confirm`, `server_confirm`, the public and secret contexts --
 and never from the concatenated message as a whole.
 Re-framing a message therefore cannot change any derived value, and does not
@@ -2670,7 +2670,7 @@ for the other configurations follow from their respective field lengths.
 | Message | Fields                | X25519, 1024 | P-384, 1024 | X25519, 768 |
 |---------|-----------------------|--------------|-------------|-------------|
 |  msg1   | CPace Ya              |      34      |      99     |      34     |
-|  msg2   | CPace Yb, s, T, ⍴     |     1694     |     1759    |     1303    |
+|  msg2   | CPace Yb, s, T, rho     |     1694     |     1759    |     1303    |
 |  msg3   | ct, h                 |     1600     |     1600    |     1120    |
 |  msg4   | enc_c, client_confirm |     1184     |     1729    |     1184    |
 |  msg5   | server_confirm        |      32      |      32     |      32     |
