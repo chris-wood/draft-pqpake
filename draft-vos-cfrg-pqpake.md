@@ -327,7 +327,7 @@ clarify which deployments motivate a post-quantum aPAKE such as CPaceOQUAKE+, an
    future session to impersonate. HNDL against the resulting channel's traffic remains a
    legitimate concern, but that concern is the same one that motivates post-quantum key exchange
    generally and is not specific to the PAKE. However, even still, existing PAKEs such as SRP,
-   OQUAKE, and SPAKE2+ fail to provide post-quantum security.
+   OPAQUE-3DH, and SPAKE2+ fail to provide post-quantum security.
 3. Password confirmation over an already-secure channel (long-lived password; PAKE does not
    establish the channel). The channel's confidentiality and post-quantum security come from
    elsewhere, e.g., a hybrid KEM used in the surrounding transport protocol, and the PAKE is used
