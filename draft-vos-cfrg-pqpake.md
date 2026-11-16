@@ -247,7 +247,7 @@ for each protocol.
 
 # Introduction
 
-Password-Authenticated Key Agreement (PAKE) schemes are interactive
+Password-Authenticated Key Exchange (PAKE) schemes are interactive
 protocols that allow the participants to authenticate each other and
 derive shared cryptographic keys using a (weaker) shared password.
 PAKEs have a wide variety of use cases in practice, ranging from
@@ -255,7 +255,7 @@ device pairing to client-server authentication; see {{use-cases}}
 for more details.
 
 PAKEs can be symmetric or asymmetric. In a symmetric setting, both
-parties share a password and use that authentication. SPAKE2
+parties share a password and use it for authentication. SPAKE2
 and CPace are examples of symmetric PAKEs.
 
 Asymmetric (or Augmented) Password Authenticated Key Exchange (aPAKE)
@@ -281,7 +281,7 @@ disclose the traffic of one harvested session, but can retroactively recover the
 from the harvested transcript. Since passwords are, or can be, long-lived credentials, this grants a
 quantum-capable attacker indefinite impersonation capability rather than a one-time confidentiality
 loss; see {{retroactive-recovery}} for a detailed treatment of this attack.
-Upgrading both protocols to provide post-quantum security is non-trivial, especially as
+Upgrading existing protocols to provide post-quantum security is non-trivial, especially as
 there are no known efficient constructions for certain building blocks used in these
 protocols (such as the OPRF used in OPAQUE-3DH). As the threat of quantum-capable
 attackers looms, the viability of existing aPAKE protocols in practice diminishes in time.
@@ -293,7 +293,8 @@ with hybrid designs, wherein a classical and post-quantum variant are combined s
 that the overall protocol remains secure so long as either assumption underlying the
 two variants, or their implementations, is secure. This protects against vulnerabilities
 in either the classical or post-quantum components. However, unlike traditional
-key exchange algorithms, combining PAKE protocol is not straightforward.
+key exchange algorithms, combining PAKE protocol is not straightforward;
+see {{VJWYMS25}} for more details.
 
 To summarize, there is a gap that the industry needs to fill: post-quantum
 secure symmetric and asymmetric PAKEs. This document specifically addresses
@@ -321,30 +322,30 @@ clarify which deployments motivate a post-quantum aPAKE such as CPaceOQUAKE+, an
 
 1. Device pairing (ephemeral password; PAKE establishes the channel). Two devices bootstrap a
    secure channel using a short-lived, high-entropy, one-time password or PIN, e.g., displayed on
-   one device and typed into the other. A quantum-capable attacker is only relevant here if a
+   one device and typed into the other. 
+   A quantum-capable attacker is only relevant here if a
    post-quantum threat model is assumed at all, and even then this is a comparatively weak
    motivating example for a PQ-PAKE: because the password is used exactly once, retroactively
    recovering it (see {{retroactive-recovery}}) has little value to an attacker, as there is no
    future session to impersonate. HNDL against the resulting channel's traffic remains a
    legitimate concern, but that concern is the same one that motivates post-quantum key exchange
-   generally and is not specific to the PAKE. However, even still, existing PAKEs such as SRP,
+   generally and is not specific to the PAKE. Even still, existing PAKEs such as SRP,
    OPAQUE-3DH, and SPAKE2+ fail to provide post-quantum security.
-3. Password confirmation over an already-secure channel (long-lived password; PAKE does not
+2. Password confirmation over an already-secure channel (long-lived password; PAKE does not
    establish the channel). The channel's confidentiality and post-quantum security come from
    elsewhere, e.g., a hybrid KEM used in the surrounding transport protocol, and the PAKE is used
    only to bind knowledge of a long-lived password to that channel. The full machinery of a
    PQ aPAKE is not required to realize this case in isolation.
-4. Long-lived-password pairing (long-lived password; PAKE establishes the channel). This is
+3. Long-lived-password pairing (long-lived password; PAKE establishes the channel). This is
    the classic aPAKE deployment, e.g., a client authenticating to a server with an account
    password. It is also the case where retroactive password recovery is most damaging. Specifically,
    because the password is reused indefinitely, recovering it does not merely disclose one
    harvested session's traffic, it lets the attacker impersonate the client in every future
-   session until the password is changed. This is the primary use case targeted by CPaceOQUAKE+.
-   There are many systems in this position today, including the WhatsApp and Messenger end-to-end
-   encrypted backups {{WA-BACKUP}}, as well as Apple's iCloud Keychain escrow service verifies
-   the user's security code with SRP {{APPLE-ESCROW}}. It's also the foundation for settings such
-   as 802.11 WiFi authentication.
-6. Degenerate case (ephemeral password; PAKE does not establish the channel). Included only
+   session until the password is changed. There are many systems in this position today, including
+   the WhatsApp and Messenger end-to-end
+   encrypted backups {{WA-BACKUP}}, as well as Apple's iCloud Keychain escrow service 
+   {{APPLE-ESCROW}}. It is also the foundation for settings such as 802.11 WiFi authentication.
+4. Degenerate case (ephemeral password; PAKE does not establish the channel). Included only
    for completeness of the taxonomy above; it is not a motivating use case since there is little
    reason to spend a one-time password confirming a channel that the password neither secures nor
    will be reused for.
@@ -620,7 +621,7 @@ This document specifies four PAKE protocols:
   {{augmented-pakes}}.
 
 All PAKEs in this document share a common interface. Each takes as input a
-password-related string PRS (or a verifier derived from it), a public_context,
+password-related string PRS (or a password verifier derived from it), a public_context,
 and a secret_context. The augmented PAKEs additionally take the registration
 inputs described in {{apake-transform}}. The public_context binds public session information that
 both parties agree on, such as an optional session identifier sid and optional
