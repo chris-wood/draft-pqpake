@@ -298,6 +298,7 @@ key exchange algorithms, combining PAKE protocol is not straightforward.
 To summarize, there is a gap that the industry needs to fill: post-quantum
 secure symmetric and asymmetric PAKEs. This document specifically addresses
 that gap. It specifies four PAKE variants:
+
 1. A post-quantum symmetric PAKE, OQUAKE;
 2. A hybrid symmetric PAKE, CPaceOQUAKE, which runs the classical PAKE CPace and OQUAKE sequentially; and
 3. Augmented versions of both, OQUAKE+ and CPaceOQUAKE+.
