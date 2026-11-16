@@ -265,14 +265,14 @@ without relying on a public key infrastructure (PKI) and without
 disclosing passwords to servers or other entities other than the client
 machine. The only stage where PKI is required is during a client's registration.
 OPAQUE-3DH {{?OPAQUE=I-D.irtf-cfrg-opaque}} and SPAKE2+ {{?SPAKE2PLUS=RFC9383}}
-are two examples of specified aPAKE protocols. 
+are two examples of specified aPAKE protocols.
 
 Existing PAKEs such as SPAKE2, CPace, SPAKE2+, and OPAQUE-3DH, provide
 security in classical threat models. However, in the presence
 of a quantum-capable attacker, they fail to provide the desired level of
 security. For example, SPAKE2+ and OPAQUE-3DH are vulnerable to a Harvest Now, Decrypt
 Later (HNDL) attack executed by a quantum-capable attacker, in which the
-attacker learns the shared secret and uses it to compromise application traffic. 
+attacker learns the shared secret and uses it to compromise application traffic.
 
 For a password-authenticated protocol, this HNDL threat is
 more severe than for plain (unauthenticated) key exchange: breaking underlying classical
@@ -322,7 +322,7 @@ clarify which deployments motivate a post-quantum aPAKE such as CPaceOQUAKE+, an
 
 1. Device pairing (ephemeral password; PAKE establishes the channel). Two devices bootstrap a
    secure channel using a short-lived, high-entropy, one-time password or PIN, e.g., displayed on
-   one device and typed into the other. 
+   one device and typed into the other.
    A quantum-capable attacker is only relevant here if a
    post-quantum threat model is assumed at all, and even then this is a comparatively weak
    motivating example for a PQ-PAKE: because the password is used exactly once, retroactively
@@ -343,7 +343,7 @@ clarify which deployments motivate a post-quantum aPAKE such as CPaceOQUAKE+, an
    harvested session's traffic, it lets the attacker impersonate the client in every future
    session until the password is changed. There are many systems in this position today, including
    the WhatsApp and Messenger end-to-end
-   encrypted backups {{WA-BACKUP}}, as well as Apple's iCloud Keychain escrow service 
+   encrypted backups {{WA-BACKUP}}, as well as Apple's iCloud Keychain escrow service
    {{APPLE-ESCROW}}. It is also the foundation for settings such as 802.11 WiFi authentication.
 4. Degenerate case (ephemeral password; PAKE does not establish the channel). Included only
    for completeness of the taxonomy above; it is not a motivating use case since there is little
