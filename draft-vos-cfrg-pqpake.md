@@ -29,7 +29,7 @@ author:
  -
     ins: C. A. Wood
     name: Christopher A. Wood
-    organization: Apple, Inc.
+    organization: Cloudflare
     email: caw@heapingbits.net
 
 
@@ -214,50 +214,71 @@ informative:
     author:
       -
         name: Daniel J. Bernstein
+  WA-BACKUP:
+    title: "Security of End-To-End Encrypted Backups"
+    author:
+      org: WhatsApp
+    target: https://www.whatsapp.com/security/WhatsApp_Security_Encrypted_Backups_Whitepaper.pdf
+  APPLE-ESCROW:
+    title: "Escrow security for iCloud Keychain"
+    author:
+      org: Apple Inc.
+    target: https://support.apple.com/guide/security/sec3e341e75d/web
 
 
 --- abstract
 
-This document describes four post-quantum password authenticated key
-exchange (PAKE) protocols: OQUAKE, OQUAKE+, CPaceOQUAKE, and CPaceOQUAKE+.
-OQUAKE and OQUAKE+ are standalone PAKEs that both offer security against
+This document focuses on the problem of password authenticated key exchange
+in a post-quantum setting, a gap for which there does not exist any protocol
+suitable for deployment. Given PAKE uses in settings such as device pairing
+and client-server authentication, this gap has real world security consequences.
+This document addresses this gap with four post-quantum password
+authenticated key exchange (PAKE) protocols: OQUAKE, OQUAKE+, CPaceOQUAKE, and
+CPaceOQUAKE+. OQUAKE and OQUAKE+ are standalone PAKEs that both offer security against
 a quantum-capable attacker. OQUAKE is a symmetric PAKE, suitable for use
 cases where both parties share a view of the password. OQUAKE+ is an
 augmented version of OQUAKE suitable for client-server settings where only
 one party (the client) knows the password. CPaceOQUAKE is a hybrid PAKE
 that runs a classical PAKE (CPace) and OQUAKE sequentially, and CPaceOQUAKE+
-is its augmented version. This document
-also provides recommended configurations for each protocol.
+is its augmented version. This document also provides recommended configurations
+for each protocol.
 
 --- middle
 
 # Introduction
 
+Password-Authenticated Key Agreement (PAKE) schemes are interactive
+protocols that allow the participants to authenticate each other and
+derive shared cryptographic keys using a (weaker) shared password.
+PAKEs have a wide variety of use cases in practice, ranging from
+device pairing to client-server authentication; see {{use-cases}}
+for more details.
+
+PAKEs can be symmetric or asymmetric. In a symmetric setting, both
+parties share a password and use that authentication. SPAKE2
+and CPace are examples of symmetric PAKEs.
+
 Asymmetric (or Augmented) Password Authenticated Key Exchange (aPAKE)
 protocols are designed to provide password authentication and
-mutually authenticated key exchange in a client-server setting without
-relying on a public key infrastructure (PKI) and without
+mutually authenticated key exchange in a client-server setting
+without relying on a public key infrastructure (PKI) and without
 disclosing passwords to servers or other entities other than the client
 machine. The only stage where PKI is required is during a client's registration.
-
-In the asymmetric PAKE setting, the client first registers a password
-verifier with the server. A verifier is a value that is derived from the
-password and which the server will later use to verify the client
-knowledge of the password. After registration, the client uses its password
-and the server uses the corresponding verifier to establish an authenticated
-shared secret such that the server learns nothing of the client's password.
-
 OPAQUE-3DH {{?OPAQUE=I-D.irtf-cfrg-opaque}} and SPAKE2+ {{?SPAKE2PLUS=RFC9383}}
-are two examples of specified aPAKE protocols. These protocols provide
+are two examples of specified aPAKE protocols. 
+
+Existing PAKEs such as SPAKE2, CPace, SPAKE2+, and OPAQUE-3DH, provide
 security in classical threat models. However, in the presence
-of a quantum-capable attacker, both OPAQUE and SPAKE2+ fail to provide the
-desired level of security. Both protocols are vulnerable to a Harvest Now, Decrypt
-Later (HNDL) attack executed by a quantum-capable attacker, in which the attacker learns the shared secret and uses it
-to compromise application traffic. For a password-authenticated protocol, this HNDL threat is
+of a quantum-capable attacker, they fail to provide the desired level of
+security. For example, SPAKE2+ and OPAQUE-3DH are vulnerable to a Harvest Now, Decrypt
+Later (HNDL) attack executed by a quantum-capable attacker, in which the
+attacker learns the shared secret and uses it to compromise application traffic. 
+
+For a password-authenticated protocol, this HNDL threat is
 more severe than for plain (unauthenticated) key exchange: breaking underlying classical
 assumption of a PAKE that is not unconditionally password hiding does not merely
 disclose the traffic of one harvested session, but can retroactively recover the password itself
-from the harvested transcript. Since passwords are long-lived credentials, this grants a
+from the harvested transcript. Since passwords are, or can be, long-lived credentials, this grants a
 quantum-capable attacker indefinite impersonation capability rather than a one-time confidentiality
 loss; see {{retroactive-recovery}} for a detailed treatment of this attack.
 Upgrading both protocols to provide post-quantum security is non-trivial, especially as
@@ -265,21 +286,28 @@ there are no known efficient constructions for certain building blocks used in t
 protocols (such as the OPRF used in OPAQUE-3DH). As the threat of quantum-capable
 attackers looms, the viability of existing aPAKE protocols in practice diminishes in time.
 
-This document addresses that gap. It specifies a post-quantum symmetric PAKE,
-OQUAKE; a hybrid symmetric PAKE, CPaceOQUAKE, which runs the classical PAKE CPace
-and OQUAKE sequentially; and augmented versions of both, OQUAKE+ and
-CPaceOQUAKE+. The
-sequential composition is what yields the hybrid guarantee: the resulting
-protocol remains secure as long as either the classical or the post-quantum
-component does, so an attacker must break both to recover the password. The
-design securely composes multiple existing primitives {{VJWYMS25}}.
+Moreover, depending on the threat model, transitioning to a pure, post-quantum
+PAKE may not be desirable. Post-quantum PAKEs are new, meaning that both their design and
+implementations are new. In practice, hedging against failures in either is done
+with hybrid designs, wherein a classical and post-quantum variant are combined such
+that the overall protocol remains secure so long as either assumption underlying the
+two variants, or their implementations, is secure. This protects against vulnerabilities
+in either the classical or post-quantum components. However, unlike traditional
+key exchange algorithms, combining PAKE protocol is not straightforward.
+
+To summarize, there is a gap that the industry needs to fill: post-quantum
+secure symmetric and asymmetric PAKEs. This document specifically addresses
+that gap. It specifies four PAKE variants:
+1. A post-quantum symmetric PAKE, OQUAKE;
+2. A hybrid symmetric PAKE, CPaceOQUAKE, which runs the classical PAKE CPace and OQUAKE sequentially; and
+3. Augmented versions of both, OQUAKE+ and CPaceOQUAKE+.
 
 CPaceOQUAKE+ is the protocol intended for the common client-server deployment,
 and is the primary focus of this document. {{use-cases}} describes the
 deployments these protocols are and are not meant to serve, and
 {{configurations}} provides recommended configurations for each.
 
-# PAKE Use Cases {#use-cases}
+# PAKE Use Cases  {#use-cases}
 
 PAKE deployments vary along two largely independent dimensions: how long a password is used
 for, and what role the PAKE plays in the surrounding protocol. A password can be an ephemeral,
@@ -296,21 +324,26 @@ clarify which deployments motivate a post-quantum aPAKE such as CPaceOQUAKE+, an
    post-quantum threat model is assumed at all, and even then this is a comparatively weak
    motivating example for a PQ-PAKE: because the password is used exactly once, retroactively
    recovering it (see {{retroactive-recovery}}) has little value to an attacker, as there is no
-   future session to impersonate. HNDL against the resulting channel's *traffic* remains a
+   future session to impersonate. HNDL against the resulting channel's traffic remains a
    legitimate concern, but that concern is the same one that motivates post-quantum key exchange
-   generally and is not specific to the PAKE.
-2. Password confirmation over an already-secure channel (long-lived password; PAKE does not
+   generally and is not specific to the PAKE. However, even still, existing PAKEs such as SRP,
+   OQUAKE, and SPAKE2+ fail to provide post-quantum security.
+3. Password confirmation over an already-secure channel (long-lived password; PAKE does not
    establish the channel). The channel's confidentiality and post-quantum security come from
    elsewhere, e.g., a hybrid KEM used in the surrounding transport protocol, and the PAKE is used
    only to bind knowledge of a long-lived password to that channel. The full machinery of a
    PQ aPAKE is not required to realize this case in isolation.
-3. Long-lived-password pairing (long-lived password; PAKE establishes the channel). This is
+4. Long-lived-password pairing (long-lived password; PAKE establishes the channel). This is
    the classic aPAKE deployment, e.g., a client authenticating to a server with an account
    password. It is also the case where retroactive password recovery is most damaging. Specifically,
    because the password is reused indefinitely, recovering it does not merely disclose one
    harvested session's traffic, it lets the attacker impersonate the client in every future
    session until the password is changed. This is the primary use case targeted by CPaceOQUAKE+.
-4. Degenerate case (ephemeral password; PAKE does not establish the channel). Included only
+   There are many systems in this position today, including the WhatsApp and Messenger end-to-end
+   encrypted backups {{WA-BACKUP}}, as well as Apple's iCloud Keychain escrow service verifies
+   the user's security code with SRP {{APPLE-ESCROW}}. It's also the foundation for settings such
+   as 802.11 WiFi authentication.
+6. Degenerate case (ephemeral password; PAKE does not establish the channel). Included only
    for completeness of the taxonomy above; it is not a motivating use case since there is little
    reason to spend a one-time password confirming a channel that the password neither secures nor
    will be reused for.
