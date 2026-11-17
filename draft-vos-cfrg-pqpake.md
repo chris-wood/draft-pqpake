@@ -224,6 +224,23 @@ informative:
     author:
       org: Apple Inc.
     target: https://support.apple.com/guide/security/sec3e341e75d/web
+  BRAVE-ACCOUNTS:
+    title: "Brave Accounts: your password never leaves your device, ever."
+    author:
+      org: Brave
+    date: 2026-08-27
+    target: https://brave.com/blog/brave-accounts/
+  MATTER:
+    title: "Matter Specification"
+    author:
+      org: Connectivity Standards Alliance
+    target: https://csa-iot.org/developer-resource/specifications-download-request/
+  MAGIC-WORMHOLE:
+    title: "Magic Wormhole"
+    author:
+      -
+        name: Brian Warner
+    target: https://magic-wormhole.readthedocs.io/
 
 
 --- abstract
@@ -293,7 +310,7 @@ with hybrid designs, wherein a classical and post-quantum variant are combined s
 that the overall protocol remains secure so long as either assumption underlying the
 two variants, or their implementations, is secure. This protects against vulnerabilities
 in either the classical or post-quantum components. However, unlike traditional
-key exchange algorithms, combining PAKE protocol is not straightforward;
+key exchange algorithms, combining PAKEs is not straightforward;
 see {{VJWYMS25}} for more details.
 
 To summarize, there is a gap that the industry needs to fill: post-quantum
@@ -306,49 +323,102 @@ that gap. It specifies four PAKE variants:
 
 CPaceOQUAKE+ is the protocol intended for the common client-server deployment,
 and is the primary focus of this document. {{use-cases}} describes the
-deployments these protocols are and are not meant to serve, and
+deployments that motivate each protocol, and
 {{configurations}} provides recommended configurations for each.
 
-# PAKE Use Cases  {#use-cases}
+# Post-Quantum PAKE Use Cases {#use-cases}
 
-PAKE deployments vary along two largely independent dimensions: how long a password is used
-for, and what role the PAKE plays in the surrounding protocol. A password can be an ephemeral,
-high-entropy, one-time secret (e.g., a pairing code shown on a screen), or a long-lived,
-human-memorable credential that is reused across many protocol runs. Independently, the PAKE can
-be the mechanism that establishes the resulting secure channel, or it can run over a channel that
-is already secure for other reasons, in which case the PAKE serves only to confirm knowledge of
-the password over that channel. Crossing these two dimensions gives four cases, which helps
-clarify which deployments motivate a post-quantum aPAKE such as CPaceOQUAKE+, and which do not.
+A PAKE provides three security properties:
 
-1. Device pairing (ephemeral password; PAKE establishes the channel). Two devices bootstrap a
-   secure channel using a short-lived, high-entropy, one-time password or PIN, e.g., displayed on
-   one device and typed into the other.
-   A quantum-capable attacker is only relevant here if a
-   post-quantum threat model is assumed at all, and even then this is a comparatively weak
-   motivating example for a PQ-PAKE: because the password is used exactly once, retroactively
-   recovering it (see {{retroactive-recovery}}) has little value to an attacker, as there is no
-   future session to impersonate. HNDL against the resulting channel's traffic remains a
-   legitimate concern, but that concern is the same one that motivates post-quantum key exchange
-   generally and is not specific to the PAKE. Even still, existing PAKEs such as SRP,
-   OPAQUE-3DH, and SPAKE2+ fail to provide post-quantum security.
-2. Password confirmation over an already-secure channel (long-lived password; PAKE does not
-   establish the channel). The channel's confidentiality and post-quantum security come from
-   elsewhere, e.g., a hybrid KEM used in the surrounding transport protocol, and the PAKE is used
-   only to bind knowledge of a long-lived password to that channel. The full machinery of a
-   PQ aPAKE is not required to realize this case in isolation.
-3. Long-lived-password pairing (long-lived password; PAKE establishes the channel). This is
-   the classic aPAKE deployment, e.g., a client authenticating to a server with an account
-   password. It is also the case where retroactive password recovery is most damaging. Specifically,
-   because the password is reused indefinitely, recovering it does not merely disclose one
-   harvested session's traffic, it lets the attacker impersonate the client in every future
-   session until the password is changed. There are many systems in this position today, including
-   the WhatsApp and Messenger end-to-end
-   encrypted backups {{WA-BACKUP}}, as well as Apple's iCloud Keychain escrow service
-   {{APPLE-ESCROW}}. It is also the foundation for settings such as 802.11 WiFi authentication.
-4. Degenerate case (ephemeral password; PAKE does not establish the channel). Included only
-   for completeness of the taxonomy above; it is not a motivating use case since there is little
-   reason to spend a one-time password confirming a channel that the password neither secures nor
-   will be reused for.
+Confidentiality:
+: The parties establish a shared session key, and thereby a confidential channel, without
+  relying on a PKI.
+
+Authentication:
+: A party only successfully completes the protocol with a peer that knows the password or, in an aPAKE,
+  with a server that holds a verifier for it. An active attacker can test at most one password
+  guess per session.
+
+Password hiding:
+: An attacker that records a session, including any traffic protected with its session key, or even an attacker that obtains the session key directly,
+  cannot later mount an offline dictionary attack on the password.
+
+A quantum attacker can break all three properties of the classical PAKEs deployed today
+({{retroactive-recovery}}). Which of these properties must be protected against quantum attacks, and which must also be hedged against a failure of a new post-quantum alternative, may be decided based on how long the password remains valuable. The following sections
+describe the two resulting classes of use cases, long-lived human passwords
+({{use-cases-long-lived}}) and temporary-use passwords for device pairing ({{use-cases-ephemeral}}),
+and the protocol that this document recommends for each.
+
+## Long-Lived Human Passwords {#use-cases-long-lived}
+
+The most common aPAKE deployment authenticates a user to a server with a human-memorable
+password, e.g., to log in to an account. For example, the Brave browser logs users in to their
+Brave Account using OPAQUE {{BRAVE-ACCOUNTS}}. Other similar use cases include WhatsApp and Messenger end-to-end
+encrypted backups {{WA-BACKUP}} and Apple's iCloud Keychain escrow service {{APPLE-ESCROW}}, which
+rely on an aPAKE to protect user data. Users keep such passwords for years and often reuse them
+across services. Even if they do not reuse their password, passwords are often related, so their secrecy is crucial.
+
+All three properties matter in this setting, but password hiding matters most. Because the
+password is long-lived, an attacker that recovers it from a harvested transcript can impersonate
+the user in every future session until the password is changed, and on every other service where
+it is reused ({{retroactive-recovery}}). Running a classical aPAKE inside a TLS connection with
+post-quantum key exchange is not a substitute: deployments use an aPAKE precisely so that the
+password stays hidden from any party that terminates or impersonates that TLS connection, such
+as a load balancer or CDN {{BRAVE-ACCOUNTS}}, and a classical aPAKE loses this guarantee against
+a quantum-capable attacker.
+
+Moreover, the transition to post-quantum PAKEs must not weaken the password hiding property. Classical aPAKEs
+hide the password from classical attackers based on well-studied assumptions, whereas a purely
+post-quantum aPAKE relies on newer assumptions, newer protocols, and newer implementations. If these turn out to
+be weaker than expected, every transcript recorded in the meantime becomes subject to an offline
+dictionary attack. These deployments therefore call for hybrid password hiding: the password stays
+hidden as long as either the classical or the post-quantum assumptions hold. In this specification, CPaceOQUAKE+
+provides hybrid password hiding along with hybrid confidentiality and authentication
+({{hybrid-design}}), while the server only stores a verifier.
+
+Some deployments with long-lived passwords require both parties to know the password. This is
+the case, for example, in Wi-Fi networks that use the Simultaneous Authentication of Equals (SAE)
+handshake of IEEE 802.11. Such deployments can use CPaceOQUAKE, which provides the same hybrid
+protection but, like any symmetric PAKE, does not protect the password if a party's stored state
+is compromised.
+
+OQUAKE+ may serve client-server deployments whose policy requires the exclusive use of post-quantum
+algorithms. It needs one round trip fewer than CPaceOQUAKE+, but does not provide hybrid password
+hiding.
+
+## Temporary-Use Passwords and Device Pairing {#use-cases-ephemeral}
+
+A common use case is for two devices to set up a secure channel based on a short code or PIN, e.g., displayed on one
+device and entered into the other. Such a code is typically valid for only a few minutes, so
+password hiding matters little: an attacker that recovers the code after it has expired gains
+nothing. For example, Magic Wormhole {{MAGIC-WORMHOLE}} transfers files between two computers
+using SPAKE2 with a code that can be used only once. As another example, Matter {{MATTER}} commissions smart-home devices on IP networks using
+SPAKE2+ with a short setup code that can only be used during a short commissioning window, and then uses the resulting channel to provision the device with
+the credentials of the home network and an operational certificate.
+
+Confidentiality and authentication certainly need post-quantum protection today. The pairing
+channel is typically used to provision long-term secrets, such as network credentials, so
+harvesting a pairing session exposes those secrets even though the code itself has expired.
+Moreover, many device pairing deployments involve lightweight devices that often remain in use for many years with few or no software updates. A
+device that ships with a classical PAKE will still be paired, e.g., after a reset or a change of
+owner, once quantum-capable attackers exist. Against SPAKE2 or SPAKE2+, such an attacker only
+needs to compute a single discrete logarithm in advance to recover the code from one protocol
+run, well within its lifetime, and use it to pair with the device ({{retroactive-recovery}}). The
+quantum annoyance of CPace {{ES21}} only raises this cost to one discrete logarithm per guess, and a short PIN does not require many guesses.
+Since the PAKE in such a device cannot be replaced later, it needs to be post-quantum from the
+start.
+
+These deployments thus need a PAKE with post-quantum confidentiality and authentication, but not
+necessarily password hiding. Use cases that involve low crypto agility (such as for lightweight smart-home devices) call for PAKEs that hedge against a failure of their new post-quantum components, which
+makes CPaceOQUAKE the natural choice. Deployments in which the device stores only a verifier for
+its code, such as Matter, can use CPaceOQUAKE+ instead.
+If updating the PAKE at a later time is not considered challenging and no long-lived secrets are sent over the
+channel, one can use OQUAKE or OQUAKE+ instead.
+
+Finally, some deployments must complete the PAKE in a single round trip. For example, the PAKE extension
+for TLS 1.3 {{?TLS-PAKE=I-D.ietf-tls-pake}} carries one PAKE message in the ClientHello and one
+in the ServerHello. CPaceOQUAKE requires three messages and does not fit this flow, whereas
+OQUAKE requires two. OQUAKE may therefore be a suitable post-quantum alternative where no more roundtrips can be permitted.
 
 # Conventions and Definitions
 
@@ -2256,8 +2326,8 @@ party or session identifiers (see {{symmetric-identities}}); this extension is b
 the basis of the existing NoIC/OQUAKE analysis in {{ABJ25}} but has not yet been published. Finally,
 no single compiler approach
 has yet converged as the preferred solution across the range of use cases in {{use-cases}}: designs
-optimized for case 3 (this document's target) make different tradeoffs than designs optimized for,
-e.g., case 1 or case 2.
+optimized for long-lived passwords ({{use-cases-long-lived}}), this document's primary target, make
+different tradeoffs than designs optimized for, e.g., device pairing ({{use-cases-ephemeral}}).
 
 # Readiness for CFRG Engagement
 
