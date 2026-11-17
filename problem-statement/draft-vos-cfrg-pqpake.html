@@ -1059,7 +1059,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Vos, et al.</td>
-<td class="center">Expires 20 May 2027</td>
+<td class="center">Expires 21 May 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1072,12 +1072,12 @@ svg {
 <dd class="internet-draft">draft-vos-cfrg-pqpake-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-11-16" class="published">16 November 2026</time>
+<time datetime="2026-11-17" class="published">17 November 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-05-20">20 May 2027</time></dd>
+<dd class="expires"><time datetime="2027-05-21">21 May 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1147,7 +1147,7 @@ for each protocol.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 20 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 21 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1177,13 +1177,21 @@ for each protocol.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
-            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-pake-use-cases" class="internal xref">PAKE Use Cases</a></p>
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-post-quantum-pake-use-cases" class="internal xref">Post-Quantum PAKE Use Cases</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1" class="keepWithNext"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-long-lived-human-passwords" class="internal xref">Long-Lived Human Passwords</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.2">
+                <p id="section-toc.1-1.2.2.2.1" class="keepWithNext"><a href="#section-2.2" class="auto internal xref">2.2</a>.  <a href="#name-temporary-use-passwords-and" class="internal xref">Temporary-Use Passwords and Device Pairing</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
             <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
-                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-notation-and-terminology" class="internal xref">Notation and Terminology</a></p>
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-notation-and-terminology" class="internal xref">Notation and Terminology</a></p>
 </li>
             </ul>
 </li>
@@ -1585,7 +1593,7 @@ with hybrid designs, wherein a classical and post-quantum variant are combined s
 that the overall protocol remains secure so long as either assumption underlying the
 two variants, or their implementations, is secure. This protects against vulnerabilities
 in either the classical or post-quantum components. However, unlike traditional
-key exchange algorithms, combining PAKE protocol is not straightforward;
+key exchange algorithms, combining PAKEs is not straightforward;
 see <span>[<a href="#VJWYMS25" class="cite xref">VJWYMS25</a>]</span> for more details.<a href="#section-1-6" class="pilcrow">¶</a></p>
 <p id="section-1-7">To summarize, there is a gap that the industry needs to fill: post-quantum
 secure symmetric and asymmetric PAKEs. This document specifically addresses
@@ -1603,62 +1611,114 @@ that gap. It specifies four PAKE variants:<a href="#section-1-7" class="pilcrow"
       </ol>
 <p id="section-1-9">CPaceOQUAKE+ is the protocol intended for the common client-server deployment,
 and is the primary focus of this document. <a href="#use-cases" class="auto internal xref">Section 2</a> describes the
-deployments these protocols are and are not meant to serve, and
+deployments that motivate each protocol, and
 <a href="#configurations" class="auto internal xref">Section 9</a> provides recommended configurations for each.<a href="#section-1-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="use-cases">
 <section id="section-2">
-      <h2 id="name-pake-use-cases">
-<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-pake-use-cases" class="section-name selfRef">PAKE Use Cases</a>
+      <h2 id="name-post-quantum-pake-use-cases">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-post-quantum-pake-use-cases" class="section-name selfRef">Post-Quantum PAKE Use Cases</a>
       </h2>
-<p id="section-2-1">PAKE deployments vary along two largely independent dimensions: how long a password is used
-for, and what role the PAKE plays in the surrounding protocol. A password can be an ephemeral,
-high-entropy, one-time secret (e.g., a pairing code shown on a screen), or a long-lived,
-human-memorable credential that is reused across many protocol runs. Independently, the PAKE can
-be the mechanism that establishes the resulting secure channel, or it can run over a channel that
-is already secure for other reasons, in which case the PAKE serves only to confirm knowledge of
-the password over that channel. Crossing these two dimensions gives four cases, which helps
-clarify which deployments motivate a post-quantum aPAKE such as CPaceOQUAKE+, and which do not.<a href="#section-2-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-2-2">
-<li id="section-2-2.1">
-          <p id="section-2-2.1.1">Device pairing (ephemeral password; PAKE establishes the channel). Two devices bootstrap a
-secure channel using a short-lived, high-entropy, one-time password or PIN, e.g., displayed on
-one device and typed into the other.
-A quantum-capable attacker is only relevant here if a
-post-quantum threat model is assumed at all, and even then this is a comparatively weak
-motivating example for a PQ-PAKE: because the password is used exactly once, retroactively
-recovering it (see <a href="#retroactive-recovery" class="auto internal xref">Section 11.3</a>) has little value to an attacker, as there is no
-future session to impersonate. HNDL against the resulting channel's traffic remains a
-legitimate concern, but that concern is the same one that motivates post-quantum key exchange
-generally and is not specific to the PAKE. Even still, existing PAKEs such as SRP,
-OPAQUE-3DH, and SPAKE2+ fail to provide post-quantum security.<a href="#section-2-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li id="section-2-2.2">
-          <p id="section-2-2.2.1">Password confirmation over an already-secure channel (long-lived password; PAKE does not
-establish the channel). The channel's confidentiality and post-quantum security come from
-elsewhere, e.g., a hybrid KEM used in the surrounding transport protocol, and the PAKE is used
-only to bind knowledge of a long-lived password to that channel. The full machinery of a
-PQ aPAKE is not required to realize this case in isolation.<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li id="section-2-2.3">
-          <p id="section-2-2.3.1">Long-lived-password pairing (long-lived password; PAKE establishes the channel). This is
-the classic aPAKE deployment, e.g., a client authenticating to a server with an account
-password. It is also the case where retroactive password recovery is most damaging. Specifically,
-because the password is reused indefinitely, recovering it does not merely disclose one
-harvested session's traffic, it lets the attacker impersonate the client in every future
-session until the password is changed. There are many systems in this position today, including
-the WhatsApp and Messenger end-to-end
-encrypted backups <span>[<a href="#WA-BACKUP" class="cite xref">WA-BACKUP</a>]</span>, as well as Apple's iCloud Keychain escrow service
-<span>[<a href="#APPLE-ESCROW" class="cite xref">APPLE-ESCROW</a>]</span>. It is also the foundation for settings such as 802.11 WiFi authentication.<a href="#section-2-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li id="section-2-2.4">
-          <p id="section-2-2.4.1">Degenerate case (ephemeral password; PAKE does not establish the channel). Included only
-for completeness of the taxonomy above; it is not a motivating use case since there is little
-reason to spend a one-time password confirming a channel that the password neither secures nor
-will be reused for.<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
-</li>
-      </ol>
+<p id="section-2-1">A PAKE provides three security properties:<a href="#section-2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-2">
+        <dt id="section-2-2.1">Confidentiality:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.2">
+          <p id="section-2-2.2.1">The parties establish a shared session key, and thereby a confidential channel, without
+relying on a PKI.<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.3">Authentication:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.4">
+          <p id="section-2-2.4.1">A party only successfully completes the protocol with a peer that knows the password or, in an aPAKE,
+with a server that holds a verifier for it. An active attacker can test at most one password
+guess per session.<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.5">Password hiding:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.6">
+          <p id="section-2-2.6.1">An attacker that records a session, including any traffic protected with its session key, or even an attacker that obtains the session key directly,
+cannot later mount an offline dictionary attack on the password.<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-2-3">A quantum attacker can break all three properties of the classical PAKEs deployed today
+(<a href="#retroactive-recovery" class="auto internal xref">Section 11.3</a>). Which of these properties must be protected against quantum attacks, and which must also be hedged against a failure of a new post-quantum alternative, may be decided based on how long the password remains valuable. The following sections
+describe the two resulting classes of use cases, long-lived human passwords
+(<a href="#use-cases-long-lived" class="auto internal xref">Section 2.1</a>) and temporary-use passwords for device pairing (<a href="#use-cases-ephemeral" class="auto internal xref">Section 2.2</a>),
+and the protocol that this document recommends for each.<a href="#section-2-3" class="pilcrow">¶</a></p>
+<div id="use-cases-long-lived">
+<section id="section-2.1">
+        <h3 id="name-long-lived-human-passwords">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-long-lived-human-passwords" class="section-name selfRef">Long-Lived Human Passwords</a>
+        </h3>
+<p id="section-2.1-1">The most common aPAKE deployment authenticates a user to a server with a human-memorable
+password, e.g., to log in to an account. For example, the Brave browser logs users in to their
+Brave Account using OPAQUE <span>[<a href="#BRAVE-ACCOUNTS" class="cite xref">BRAVE-ACCOUNTS</a>]</span>. Other similar use cases include WhatsApp and Messenger end-to-end
+encrypted backups <span>[<a href="#WA-BACKUP" class="cite xref">WA-BACKUP</a>]</span> and Apple's iCloud Keychain escrow service <span>[<a href="#APPLE-ESCROW" class="cite xref">APPLE-ESCROW</a>]</span>, which
+rely on an aPAKE to protect user data. Users keep such passwords for years and often reuse them
+across services. Even if they do not reuse their password, passwords are often related, so their secrecy is crucial.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<p id="section-2.1-2">All three properties matter in this setting, but password hiding matters most. Because the
+password is long-lived, an attacker that recovers it from a harvested transcript can impersonate
+the user in every future session until the password is changed, and on every other service where
+it is reused (<a href="#retroactive-recovery" class="auto internal xref">Section 11.3</a>). Running a classical aPAKE inside a TLS connection with
+post-quantum key exchange is not a substitute: deployments use an aPAKE precisely so that the
+password stays hidden from any party that terminates or impersonates that TLS connection, such
+as a load balancer or CDN <span>[<a href="#BRAVE-ACCOUNTS" class="cite xref">BRAVE-ACCOUNTS</a>]</span>, and a classical aPAKE loses this guarantee against
+a quantum-capable attacker.<a href="#section-2.1-2" class="pilcrow">¶</a></p>
+<p id="section-2.1-3">Moreover, the transition to post-quantum PAKEs must not weaken the password hiding property. Classical aPAKEs
+hide the password from classical attackers based on well-studied assumptions, whereas a purely
+post-quantum aPAKE relies on newer assumptions, newer protocols, and newer implementations. If these turn out to
+be weaker than expected, every transcript recorded in the meantime becomes subject to an offline
+dictionary attack. These deployments therefore call for hybrid password hiding: the password stays
+hidden as long as either the classical or the post-quantum assumptions hold. In this specification, CPaceOQUAKE+
+provides hybrid password hiding along with hybrid confidentiality and authentication
+(<a href="#hybrid-design" class="auto internal xref">Section 11.1</a>), while the server only stores a verifier.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
+<p id="section-2.1-4">Some deployments with long-lived passwords require both parties to know the password. This is
+the case, for example, in Wi-Fi networks that use the Simultaneous Authentication of Equals (SAE)
+handshake of IEEE 802.11. Such deployments can use CPaceOQUAKE, which provides the same hybrid
+protection but, like any symmetric PAKE, does not protect the password if a party's stored state
+is compromised.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
+<p id="section-2.1-5">OQUAKE+ may serve client-server deployments whose policy requires the exclusive use of post-quantum
+algorithms. It needs one round trip fewer than CPaceOQUAKE+, but does not provide hybrid password
+hiding.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="use-cases-ephemeral">
+<section id="section-2.2">
+        <h3 id="name-temporary-use-passwords-and">
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-temporary-use-passwords-and" class="section-name selfRef">Temporary-Use Passwords and Device Pairing</a>
+        </h3>
+<p id="section-2.2-1">A common use case is for two devices to set up a secure channel based on a short code or PIN, e.g., displayed on one
+device and entered into the other. Such a code is typically valid for only a few minutes, so
+password hiding matters little: an attacker that recovers the code after it has expired gains
+nothing. For example, Magic Wormhole <span>[<a href="#MAGIC-WORMHOLE" class="cite xref">MAGIC-WORMHOLE</a>]</span> transfers files between two computers
+using SPAKE2 with a code that can be used only once. As another example, Matter <span>[<a href="#MATTER" class="cite xref">MATTER</a>]</span> commissions smart-home devices on IP networks using
+SPAKE2+ with a short setup code that can only be used during a short commissioning window, and then uses the resulting channel to provision the device with
+the credentials of the home network and an operational certificate.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2-2">Confidentiality and authentication certainly need post-quantum protection today. The pairing
+channel is typically used to provision long-term secrets, such as network credentials, so
+harvesting a pairing session exposes those secrets even though the code itself has expired.
+Moreover, many device pairing deployments involve lightweight devices that often remain in use for many years with few or no software updates. A
+device that ships with a classical PAKE will still be paired, e.g., after a reset or a change of
+owner, once quantum-capable attackers exist. Against SPAKE2 or SPAKE2+, such an attacker only
+needs to compute a single discrete logarithm in advance to recover the code from one protocol
+run, well within its lifetime, and use it to pair with the device (<a href="#retroactive-recovery" class="auto internal xref">Section 11.3</a>). The
+quantum annoyance of CPace <span>[<a href="#ES21" class="cite xref">ES21</a>]</span> only raises this cost to one discrete logarithm per guess, and a short PIN does not require many guesses.
+Since the PAKE in such a device cannot be replaced later, it needs to be post-quantum from the
+start.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+<p id="section-2.2-3">These deployments thus need a PAKE with post-quantum confidentiality and authentication, but not
+necessarily password hiding. Use cases that involve low crypto agility (such as for lightweight smart-home devices) call for PAKEs that hedge against a failure of their new post-quantum components, which
+makes CPaceOQUAKE the natural choice. Deployments in which the device stores only a verifier for
+its code, such as Matter, can use CPaceOQUAKE+ instead.
+If updating the PAKE at a later time is not considered challenging and no long-lived secrets are sent over the
+channel, one can use OQUAKE or OQUAKE+ instead.<a href="#section-2.2-3" class="pilcrow">¶</a></p>
+<p id="section-2.2-4">Finally, some deployments must complete the PAKE in a single round trip. For example, the PAKE extension
+for TLS 1.3 <span>[<a href="#TLS-PAKE" class="cite xref">TLS-PAKE</a>]</span> carries one PAKE message in the ClientHello and one
+in the ServerHello. CPaceOQUAKE requires three messages and does not fit this flow, whereas
+OQUAKE requires two. OQUAKE may therefore be a suitable post-quantum alternative where no more roundtrips can be permitted.<a href="#section-2.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="conventions-and-definitions">
@@ -4274,8 +4334,8 @@ party or session identifiers (see <a href="#symmetric-identities" class="auto in
 the basis of the existing NoIC/OQUAKE analysis in <span>[<a href="#ABJ25" class="cite xref">ABJ25</a>]</span> but has not yet been published. Finally,
 no single compiler approach
 has yet converged as the preferred solution across the range of use cases in <a href="#use-cases" class="auto internal xref">Section 2</a>: designs
-optimized for case 3 (this document's target) make different tradeoffs than designs optimized for,
-e.g., case 1 or case 2.<a href="#section-11.7.2-2" class="pilcrow">¶</a></p>
+optimized for long-lived passwords (<a href="#use-cases-long-lived" class="auto internal xref">Section 2.1</a>), this document's primary target, make
+different tradeoffs than designs optimized for, e.g., device pairing (<a href="#use-cases-ephemeral" class="auto internal xref">Section 2.2</a>).<a href="#section-11.7.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4402,6 +4462,10 @@ engagement itself provides, rather than a prerequisite to starting that engageme
         <dd>
 <span class="refAuthor">Bartusek, J.</span> and <span class="refAuthor">J. Januzelli</span>, <span class="refTitle">"Natural Barriers to Quantum Extraction: On the Post-Quantum (In)security of (O)EKE and Masny-Rindal OT"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2026/2280">https://eprint.iacr.org/2026/2280</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="BRAVE-ACCOUNTS">[BRAVE-ACCOUNTS]</dt>
+        <dd>
+<span class="refAuthor">Brave</span>, <span class="refTitle">"Brave Accounts: your password never leaves your device, ever."</span>, <time datetime="2026-08-27" class="refDate">27 August 2026</time>, <span>&lt;<a href="https://brave.com/blog/brave-accounts/">https://brave.com/blog/brave-accounts/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="CMST25">[CMST25]</dt>
         <dd>
 <span class="refAuthor">Carrier, K.</span>, <span class="refAuthor">Meyer-Hilfiger, C.</span>, <span class="refAuthor">Shen, Y.</span>, and <span class="refAuthor">J.-P. Tillich</span>, <span class="refTitle">"Assessing the Impact of a Variant of MATZOV's Dual Attack on Kyber"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2022/1750">https://eprint.iacr.org/2022/1750</a>&gt;</span>. </dd>
@@ -4438,6 +4502,14 @@ engagement itself provides, rather than a prerequisite to starting that engageme
         <dd>
 <span class="refAuthor">Lyu, Y.</span>, <span class="refAuthor">Liu, S.</span>, and <span class="refAuthor">S. Han</span>, <span class="refTitle">"Efficient Asymmetric PAKE Compiler from KEM and AE"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2024/1400">https://eprint.iacr.org/2024/1400</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="MAGIC-WORMHOLE">[MAGIC-WORMHOLE]</dt>
+        <dd>
+<span class="refAuthor">Warner, B.</span>, <span class="refTitle">"Magic Wormhole"</span>, <span>n.d.</span>, <span>&lt;<a href="https://magic-wormhole.readthedocs.io/">https://magic-wormhole.readthedocs.io/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="MATTER">[MATTER]</dt>
+        <dd>
+<span class="refAuthor">Connectivity Standards Alliance</span>, <span class="refTitle">"Matter Specification"</span>, <span>n.d.</span>, <span>&lt;<a href="https://csa-iot.org/developer-resource/specifications-download-request/">https://csa-iot.org/developer-resource/specifications-download-request/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="Ogilvie26">[Ogilvie26]</dt>
         <dd>
 <span class="refAuthor">Ogilvie, T.</span>, <span class="refTitle">"On the Concrete Hardness Gap Between MLWE and LWE"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2026/279">https://eprint.iacr.org/2026/279</a>&gt;</span>. </dd>
@@ -4453,6 +4525,10 @@ engagement itself provides, rather than a prerequisite to starting that engageme
 <dt id="TEMPO">[TEMPO]</dt>
         <dd>
 <span class="refAuthor">Arriaga, A.</span>, <span class="refAuthor">Barbosa, M.</span>, and <span class="refAuthor">S. Jarecki</span>, <span class="refTitle">"Tempo: ML-KEM to PAKE Compiler Resilient to Timing Attacks"</span>, <span>n.d.</span>, <span>&lt;<a href="https://eprint.iacr.org/2025/1399">https://eprint.iacr.org/2025/1399</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="TLS-PAKE">[TLS-PAKE]</dt>
+        <dd>
+<span class="refAuthor">Bauman, L.</span>, <span class="refAuthor">Benjamin, D.</span>, <span class="refAuthor">Menon, S.</span>, and <span class="refAuthor">C. A. Wood</span>, <span class="refTitle">"A Password Authenticated Key Exchange Extension for TLS 1.3"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-tls-pake-02</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-tls-pake-02">https://datatracker.ietf.org/doc/html/draft-ietf-tls-pake-02</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="VJWYMS25">[VJWYMS25]</dt>
         <dd>
